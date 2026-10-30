@@ -29,7 +29,7 @@ function isActive(to: string): boolean {
 function signOut(): void {
   clearAuth()
   menuOpen.value = false
-  router.push('/login')
+  router.push('/auth')
 }
 
 function onDocumentClick(e: MouseEvent): void {

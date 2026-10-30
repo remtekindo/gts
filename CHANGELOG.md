@@ -5,6 +5,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-10-30
+
+### Added
+- Public landing page at `/` (hero, materials, how-it-works, pricing with the real
+  Rp75rb/Rp199rb/Rp349rb tiers, CTA band). Signed-in visitors see "Open dashboard"
+  instead of "Sign in".
+
+### Changed
+- Login page moved from `/login` to `/auth` (all internal references updated).
+
 ## [0.3.0] - 2026-10-30
 
 ### Added

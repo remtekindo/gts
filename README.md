@@ -56,7 +56,7 @@ pnpm install
 pnpm dev
 ```
 
-Open http://localhost:3000/login — any username/password signs in (mock auth).
+Open http://localhost:3000 — the public landing page. Sign in at http://localhost:3000/auth (mock auth: any non-empty credentials work).
 
 ```bash
 pnpm typecheck   # vue-tsc, must pass with 0 errors
@@ -75,8 +75,8 @@ app/
     default.vue            # Global topbar + footer, with auth guard (hub, profile)
     material.vue           # Material topbar + footer, with auth guard
   pages/
-    index.vue              # Redirect: login | auto-enter single material | hub
-    login.vue              # layout: false — split-screen mock login
+    index.vue              # Public landing page (hero, materials, how-it-works, pricing)
+    auth.vue               # layout: false — split-screen mock login (route: /auth)
     materials/index.vue    # "My Materials" hub: owned cards + coming-soon upsell
     m/[slug]/index.vue     # Material dashboard (keep pages under m/[slug]/ as siblings:
     m/[slug]/papers/index.vue          #  a [slug].vue file would swallow them as children

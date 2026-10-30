@@ -13,7 +13,7 @@ function paperCount(slug: string): number {
 
 onMounted(() => {
   auth.value = getAuth()
-  if (!auth.value) router.replace('/login')
+  if (!auth.value) router.replace('/auth')
 })
 </script>
 

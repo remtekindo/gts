@@ -7,7 +7,7 @@ const router = useRouter()
 const material = computed(() => getMaterialOrFallback(route.params.slug as string))
 
 onMounted(() => {
-  if (!getAuth()) router.replace('/login')
+  if (!getAuth()) router.replace('/auth')
 })
 </script>
 

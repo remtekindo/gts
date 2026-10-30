@@ -8,7 +8,7 @@ const auth = ref<AuthState | null>(null)
 function signOut(): void {
   clearAuth()
   menuOpen.value = false
-  router.push('/login')
+  router.push('/auth')
 }
 
 function onDocumentClick(e: MouseEvent): void {

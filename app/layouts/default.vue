@@ -2,7 +2,7 @@
 const router = useRouter()
 
 onMounted(() => {
-  if (!getAuth()) router.replace('/login')
+  if (!getAuth()) router.replace('/auth')
 })
 </script>
 

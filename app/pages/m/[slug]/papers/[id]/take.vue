@@ -51,7 +51,7 @@ function skillLabel(skill: string): string {
 
 onMounted(() => {
   if (!getAuth()) {
-    router.replace('/login')
+    router.replace('/auth')
     return
   }
   answers.value = loadAnswers(paper.value.id, attempt.value)
