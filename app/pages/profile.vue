@@ -53,11 +53,25 @@ function changePassword(): void {
   confirmPw.value = ''
 }
 
-const enrollHistory = [
+const staticEnrollHistory = [
   { paper: 'TOEIC Listening & Reading — Full Simulation 01', date: 'Oct 28, 2026', status: 'In progress' },
   { paper: 'TOEIC Listening & Reading — Full Simulation 03', date: 'Oct 21, 2026', status: 'Completed' },
   { paper: 'Reading Drill Pack — Parts 5 to 7', date: 'Oct 15, 2026', status: 'Completed' }
 ]
+
+/** Enroll history with the user's free-test attempts prepended (newest first). */
+const enrollHistory = computed(() => {
+  const r = getResult('free-test')
+  if (!r) return staticEnrollHistory
+  return [
+    {
+      paper: t('freeTest.historyName'),
+      date: new Date(r.finishedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+      status: 'Completed'
+    },
+    ...staticEnrollHistory
+  ]
+})
 
 const tabs = computed(() => [
   { id: 'profile', label: t('profile.myProfile') },

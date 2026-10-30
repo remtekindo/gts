@@ -128,8 +128,14 @@ function onExpire(): void {
             </div>
             <span class="text-xs font-semibold text-slate-300 tabular-nums whitespace-nowrap">{{ answeredCount }}/{{ questions.length }} ({{ progressPct }}%)</span>
           </div>
-          <div class="ml-auto">
+          <div class="ml-auto flex items-center gap-2">
             <CountdownTimer :total-seconds="1800" @expire="onExpire" />
+            <button
+              class="text-xs font-semibold px-4 py-2 rounded-xl bg-amber-400 text-amber-950 hover:bg-amber-500 transition-colors"
+              @click="confirmSubmit = true"
+            >
+              {{ t('take.submitQuiz') }}
+            </button>
           </div>
         </div>
       </div>
@@ -187,14 +193,6 @@ function onExpire(): void {
           </div>
         </div>
 
-        <div class="mt-5 text-center">
-          <button
-            class="text-sm font-semibold px-8 py-3.5 rounded-xl bg-amber-400 text-amber-950 hover:bg-amber-500 transition-colors"
-            @click="confirmSubmit = true"
-          >
-            {{ t('take.submitQuiz') }}
-          </button>
-        </div>
       </main>
 
       <div class="fixed bottom-0 inset-x-0 z-40 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-700 shadow-[0_-4px_16px_rgba(0,0,0,0.06)]">

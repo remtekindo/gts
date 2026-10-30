@@ -315,6 +315,11 @@ export default {
     totalScore: 'Total score',
     retakeBtn: 'Retake free test',
     goMaterials: 'Explore full materials',
-    signInToContinue: 'Please sign in to view your result.'
+    signInToContinue: 'Please sign in to view your result.',
+    reviewTitle: 'Review your answers',
+    reviewSub: 'Every question with the correct answer marked.',
+    correctAnswer: 'Correct answer',
+    yourAnswer: 'Your answer',
+    historyName: 'Free Test — General English'
   }
 }

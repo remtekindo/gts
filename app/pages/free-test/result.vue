@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { FREE_TEST_QUESTIONS, FREE_TEST_SECTIONS } from '~/data/mock'
-import { loadFreeAnswers, clearFreeAnswers, type AnswerMap } from '~/utils/storage'
+import { loadFreeAnswers, clearFreeAnswers, saveResult, getResult, type AnswerMap } from '~/utils/storage'
 
 definePageMeta({ layout: false })
 
@@ -32,10 +32,35 @@ onMounted(() => {
   })
   sectionScores.value = scores
   totalCorrect.value = scores.reduce((sum, s) => sum + s.correct, 0)
+  // Record the free test in the user's class history (profile -> Enroll History).
+  const prev = getResult('free-test')
+  saveResult({
+    paperId: 'free-test',
+    attempt: (prev?.attempt ?? 0) + 1,
+    score: Math.round((totalCorrect.value / FREE_TEST_QUESTIONS.length) * 100),
+    cefr: '',
+    correct: totalCorrect.value,
+    total: FREE_TEST_QUESTIONS.length,
+    answers: pending,
+    finishedAt: new Date().toISOString()
+  })
   clearFreeAnswers()
 })
 
 const pct = computed(() => Math.round((totalCorrect.value / FREE_TEST_QUESTIONS.length) * 100))
+
+const reviewSections = computed(() =>
+  FREE_TEST_SECTIONS.map(s => ({
+    id: s.id,
+    label: sectionLabel(s.id),
+    questions: FREE_TEST_QUESTIONS.filter(q => q.section === s.id)
+  }))
+)
+
+const isCorrect = (n: number): boolean => {
+  const q = FREE_TEST_QUESTIONS.find(x => x.number === n)
+  return !!q && answers.value?.[n] === q.correctLetter
+}
 </script>
 
 <template>
@@ -98,6 +123,55 @@ const pct = computed(() => Math.round((totalCorrect.value / FREE_TEST_QUESTIONS.
           >
             <p class="text-xs font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">{{ sectionLabel(s.id) }}</p>
             <p class="mt-2 text-3xl font-extrabold text-slate-900 dark:text-slate-100 tabular-nums">{{ s.correct }}<span class="text-lg text-slate-400 dark:text-slate-500">/{{ s.total }}</span></p>
+          </div>
+        </div>
+
+        <div class="mt-10">
+          <h2 class="text-xl font-extrabold text-slate-900 dark:text-slate-100">{{ t('freeTest.reviewTitle') }}</h2>
+          <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">{{ t('freeTest.reviewSub') }}</p>
+          <div class="mt-5 space-y-4">
+            <div
+              v-for="q in FREE_TEST_QUESTIONS"
+              :key="q.number"
+              class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 p-5"
+            >
+              <div class="flex items-center gap-2 flex-wrap">
+                <span class="text-xs font-bold text-slate-400 dark:text-slate-500">Q{{ q.number }}</span>
+                <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400">
+                  {{ sectionLabel(q.section) }}
+                </span>
+                <span v-if="isCorrect(q.number)" class="ml-auto text-sm font-extrabold text-emerald-600">✓</span>
+                <span v-else class="ml-auto text-sm font-extrabold text-red-500">✗</span>
+              </div>
+              <p class="mt-2 text-sm font-medium text-slate-800 dark:text-slate-100 leading-relaxed">{{ q.stem }}</p>
+              <div class="mt-3 space-y-2">
+                <div
+                  v-for="opt in q.options"
+                  :key="opt.letter"
+                  class="flex items-center gap-3 rounded-xl border px-3.5 py-2.5 text-sm"
+                  :class="opt.letter === q.correctLetter
+                    ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-950/40'
+                    : (answers?.[q.number] === opt.letter
+                      ? 'border-red-400 bg-red-50 dark:bg-red-950/30'
+                      : 'border-slate-200 dark:border-slate-700')"
+                >
+                  <span class="font-bold text-slate-500 dark:text-slate-400 w-5 shrink-0">{{ opt.letter }}</span>
+                  <span class="text-slate-700 dark:text-slate-200">{{ opt.text }}</span>
+                  <span
+                    v-if="opt.letter === q.correctLetter"
+                    class="ml-auto text-[11px] font-bold text-emerald-600 uppercase tracking-wide shrink-0"
+                  >
+                    {{ t('freeTest.correctAnswer') }}
+                  </span>
+                  <span
+                    v-else-if="answers?.[q.number] === opt.letter"
+                    class="ml-auto text-[11px] font-bold text-red-500 uppercase tracking-wide shrink-0"
+                  >
+                    {{ t('freeTest.yourAnswer') }}
+                  </span>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 

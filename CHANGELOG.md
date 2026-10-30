@@ -5,6 +5,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [0.6.1] - 2026-10-31
+
+### Fixed
+- Free test: answer options shuffled in the question bank (correct answers
+  were all option A — now distributed A/B/C/D), so answers can't be guessed.
+- Free test: submit button moved from below the questions to the top bar,
+  next to the timer.
+- Free test result: full answer review — every question shown with the
+  correct answer marked green and the user's pick marked red.
+- Free test attempts are now recorded in Profile → Enroll History.
+
+
 ## [0.6.0] - 2026-10-30
 
 ### Added

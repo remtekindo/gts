@@ -315,6 +315,11 @@ export default {
     totalScore: 'Skor total',
     retakeBtn: 'Ulangi tes gratis',
     goMaterials: 'Jelajahi materi lengkap',
-    signInToContinue: 'Silakan masuk untuk melihat hasilmu.'
+    signInToContinue: 'Silakan masuk untuk melihat hasilmu.',
+    reviewTitle: 'Periksa jawabanmu',
+    reviewSub: 'Semua soal dengan jawaban benar ditandai.',
+    correctAnswer: 'Jawaban benar',
+    yourAnswer: 'Jawabanmu',
+    historyName: 'Tes Gratis — Bahasa Inggris Umum'
   }
 }
