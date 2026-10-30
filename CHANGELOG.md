@@ -5,6 +5,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-10-30
+
+### Added
+- Register mode on the `/auth` page: the login form toggles to a register form
+  (full name, email, password, confirm password) via the "Register" / "Sign in"
+  links. Includes validation (required fields, email format, min 6-char password,
+  password match). Mock register signs the user straight in.
+
 ## [0.4.0] - 2026-10-30
 
 ### Added

@@ -5,8 +5,12 @@ definePageMeta({ layout: false })
 
 const router = useRouter()
 
+const mode = ref<'login' | 'register'>('login')
 const username = ref('')
+const name = ref('')
+const email = ref('')
 const password = ref('')
+const confirmPassword = ref('')
 const remember = ref(false)
 const showPassword = ref(false)
 const error = ref('')
@@ -15,14 +19,47 @@ onMounted(() => {
   if (getAuth()) router.replace(postLoginPath())
 })
 
-function signIn(): void {
+function switchMode(next: 'login' | 'register'): void {
+  mode.value = next
   error.value = ''
-  if (!username.value.trim() || !password.value) {
-    error.value = 'Please enter your username and password.'
+  username.value = ''
+  name.value = ''
+  email.value = ''
+  password.value = ''
+  confirmPassword.value = ''
+}
+
+function submit(): void {
+  error.value = ''
+  if (mode.value === 'login') {
+    if (!username.value.trim() || !password.value) {
+      error.value = 'Please enter your username and password.'
+      return
+    }
+    // Mock auth: any credentials are accepted in this demo build.
+    setAuth({ username: username.value.trim(), remember: remember.value })
+    router.push(postLoginPath())
     return
   }
-  // Mock auth: any credentials are accepted in this demo build.
-  setAuth({ username: username.value.trim(), remember: remember.value })
+  // Register mode
+  if (!name.value.trim() || !email.value.trim() || !password.value || !confirmPassword.value) {
+    error.value = 'Please fill in all fields.'
+    return
+  }
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.value.trim())) {
+    error.value = 'Please enter a valid email address.'
+    return
+  }
+  if (password.value.length < 6) {
+    error.value = 'Password must be at least 6 characters.'
+    return
+  }
+  if (password.value !== confirmPassword.value) {
+    error.value = 'Passwords do not match.'
+    return
+  }
+  // Mock register: any valid input creates the demo account.
+  setAuth({ username: name.value.trim(), remember: true })
   router.push(postLoginPath())
 }
 </script>
@@ -66,17 +103,39 @@ function signIn(): void {
           <span class="w-9 h-9 rounded-lg bg-blue-600 text-white font-extrabold flex items-center justify-center text-xs">GTS</span>
           <span class="text-sm font-semibold text-slate-800">Global Testing System</span>
         </div>
-        <h2 class="text-2xl font-extrabold text-slate-800">Welcome!</h2>
-        <p class="mt-1 text-sm text-slate-500">Sign in to continue to your dashboard.</p>
+        <h2 class="text-2xl font-extrabold text-slate-800">{{ mode === 'login' ? 'Welcome!' : 'Create account' }}</h2>
+        <p class="mt-1 text-sm text-slate-500">{{ mode === 'login' ? 'Sign in to continue to your dashboard.' : 'Register to start your free daily test.' }}</p>
 
-        <form class="mt-6 space-y-4" @submit.prevent="signIn">
-          <div>
+        <form class="mt-6 space-y-4" @submit.prevent="submit">
+          <div v-if="mode === 'login'">
             <label for="login-username" class="block text-sm font-medium text-slate-600 mb-1.5">Email or Username</label>
             <input
               id="login-username"
               v-model="username"
               type="text"
               autocomplete="username"
+              placeholder="you@example.com"
+              class="w-full rounded-xl border border-slate-300 px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+          <div v-if="mode === 'register'">
+            <label for="register-name" class="block text-sm font-medium text-slate-600 mb-1.5">Full name</label>
+            <input
+              id="register-name"
+              v-model="name"
+              type="text"
+              autocomplete="name"
+              placeholder="Your name"
+              class="w-full rounded-xl border border-slate-300 px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+          <div v-if="mode === 'register'">
+            <label for="register-email" class="block text-sm font-medium text-slate-600 mb-1.5">Email</label>
+            <input
+              id="register-email"
+              v-model="email"
+              type="email"
+              autocomplete="email"
               placeholder="you@example.com"
               class="w-full rounded-xl border border-slate-300 px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
@@ -109,7 +168,19 @@ function signIn(): void {
             </div>
           </div>
 
-          <div class="flex items-center justify-between text-sm">
+          <div v-if="mode === 'register'">
+            <label for="register-confirm" class="block text-sm font-medium text-slate-600 mb-1.5">Confirm password</label>
+            <input
+              id="register-confirm"
+              v-model="confirmPassword"
+              type="password"
+              autocomplete="new-password"
+              placeholder="••••••••"
+              class="w-full rounded-xl border border-slate-300 px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+
+          <div v-if="mode === 'login'" class="flex items-center justify-between text-sm">
             <label class="flex items-center gap-2 text-slate-600 cursor-pointer">
               <input v-model="remember" type="checkbox" class="w-4 h-4 rounded accent-blue-600" />
               Remember me
@@ -123,10 +194,21 @@ function signIn(): void {
             type="submit"
             class="w-full rounded-xl bg-blue-600 text-white font-semibold py-3 text-sm hover:bg-blue-700 transition-colors"
           >
-            Sign in
+            {{ mode === 'login' ? 'Sign in' : 'Create account' }}
           </button>
 
-          <p class="text-center text-xs text-slate-400">Demo build — any credentials will sign you in.</p>
+          <p class="text-center text-sm text-slate-500">
+            <template v-if="mode === 'login'">
+              Don’t have an account?
+              <button type="button" class="font-semibold text-blue-600 hover:text-blue-700" @click="switchMode('register')">Register</button>
+            </template>
+            <template v-else>
+              Already have an account?
+              <button type="button" class="font-semibold text-blue-600 hover:text-blue-700" @click="switchMode('login')">Sign in</button>
+            </template>
+          </p>
+
+          <p class="text-center text-xs text-slate-400">Demo build — {{ mode === 'login' ? 'any credentials will sign you in.' : 'any valid input will create your account.' }}</p>
         </form>
       </div>
     </div>
