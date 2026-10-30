@@ -9,7 +9,7 @@ onMounted(() => {
   displayName.value = getDisplayName()
 })
 
-const username = computed(() => displayName.value || auth.value?.username || 'there')
+const username = computed(() => displayName.value || auth.value?.username || 'Guest')
 
 const stats = [
   { label: 'Points', value: '1,250', sub: '+120 this week' },
