@@ -149,27 +149,38 @@ function saveNotes(): void {
           </button>
         </div>
       </div>
-      <!-- Sub-header -->
-      <div class="bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 border-b border-slate-200 dark:border-slate-700">
+      <!-- Sub-header: transparent in dark mode so it blends seamlessly with the navy header -->
+      <div class="bg-white dark:bg-transparent text-slate-700 dark:text-slate-200 border-b border-slate-200 dark:border-white/10">
         <div class="max-w-6xl mx-auto px-4 py-2.5 flex items-center gap-3 flex-wrap">
           <div class="flex items-center gap-2 min-w-44 flex-1 max-w-xs">
-            <div class="flex-1 h-2 rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
+            <div class="flex-1 h-2 rounded-full bg-slate-100 dark:bg-white/15 overflow-hidden">
               <div class="h-full bg-blue-600 rounded-full transition-all" :style="{ width: `${progressPct}%` }" />
             </div>
-            <span class="text-xs font-semibold text-slate-500 dark:text-slate-400 tabular-nums whitespace-nowrap">{{ answeredCount }}/{{ questions.length }} ({{ progressPct }}%)</span>
+            <span class="text-xs font-semibold text-slate-500 dark:text-slate-300 tabular-nums whitespace-nowrap">{{ answeredCount }}/{{ questions.length }} ({{ progressPct }}%)</span>
           </div>
           <div class="flex items-center gap-2 ml-auto">
             <button
-              class="text-xs font-semibold px-3 py-1.5 rounded-full border border-slate-300 dark:border-slate-600 hover:border-blue-400 hover:text-blue-600 transition-colors"
+              class="w-9 h-9 rounded-full border border-slate-300 dark:border-white/30 flex items-center justify-center text-slate-600 dark:text-slate-200 hover:border-blue-400 dark:hover:border-white/60 hover:text-blue-600 dark:hover:text-white transition-colors"
+              :title="t('take.instruction')"
+              :aria-label="t('take.instruction')"
               @click="showInstructions = true"
             >
-              {{ t('take.instruction') }}
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <circle cx="12" cy="12" r="9" />
+                <path stroke-linecap="round" d="M12 11v5" />
+                <path stroke-linecap="round" d="M12 8h.01" />
+              </svg>
             </button>
             <button
-              class="text-xs font-semibold px-3 py-1.5 rounded-full border border-slate-300 dark:border-slate-600 hover:border-blue-400 hover:text-blue-600 transition-colors"
+              class="w-9 h-9 rounded-full border border-slate-300 dark:border-white/30 flex items-center justify-center text-slate-600 dark:text-slate-200 hover:border-blue-400 dark:hover:border-white/60 hover:text-blue-600 dark:hover:text-white transition-colors"
+              :title="t('take.notes')"
+              :aria-label="t('take.notes')"
               @click="notesOpen = true"
             >
-              {{ t('take.notes') }}
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 20h9" />
+                <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
+              </svg>
             </button>
             <CountdownTimer :total-seconds="totalSeconds" @expire="onExpire" />
           </div>

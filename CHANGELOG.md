@@ -5,6 +5,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [0.6.2] - 2026-10-31
+
+### Fixed
+- Landing hero now actually renders dark in dark mode (the 0.6.0 build
+  shipped without the dark gradient variants — verified against the
+  published commit, not just the working copy).
+- Test interface: the sub-header row (progress, Instruction, Notes, timer)
+  is now transparent in dark mode so it blends seamlessly with the navy
+  header; timer pill and progress track adjusted for contrast on navy.
+- Test interface: Instruction and Notes text buttons replaced with
+  icon-only circular buttons (tooltips + aria-labels kept).
+
+
 ## [0.6.1] - 2026-10-31
 
 ### Fixed

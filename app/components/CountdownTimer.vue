@@ -35,7 +35,7 @@ onUnmounted(() => {
 <template>
   <span
     class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-semibold tabular-nums"
-    :class="urgent ? 'bg-red-100 text-red-700' : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200'"
+    :class="urgent ? 'bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-200' : 'bg-slate-100 dark:bg-white/10 text-slate-700 dark:text-slate-200'"
   >
     <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
       <circle cx="12" cy="12" r="9" />

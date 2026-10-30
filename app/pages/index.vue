@@ -92,7 +92,7 @@ const steps = computed(() => [
 
     <!-- Hero -->
     <section class="relative overflow-hidden">
-      <div class="absolute inset-0 bg-gradient-to-b from-blue-50 via-white to-white pointer-events-none" />
+      <div class="absolute inset-0 bg-gradient-to-b from-blue-50 via-white to-white dark:from-blue-950 dark:via-slate-950 dark:to-slate-950 pointer-events-none" />
       <div class="relative max-w-6xl mx-auto px-4 pt-20 pb-16 text-center">
         <span class="inline-flex text-xs font-semibold px-3 py-1.5 rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-200">
           {{ t('landing.badge') }}
