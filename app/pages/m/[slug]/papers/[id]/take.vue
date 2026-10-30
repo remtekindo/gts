@@ -3,6 +3,8 @@ import { getMaterialOrFallback, getPaperOrFallback, partsForMaterial, questionsF
 import type { Question } from '~/data/mock'
 import type { AnswerMap } from '~/utils/storage'
 
+const { t } = useLocale()
+
 definePageMeta({ layout: false })
 
 const route = useRoute()
@@ -124,11 +126,11 @@ function saveNotes(): void {
 </script>
 
 <template>
-  <div class="min-h-screen bg-slate-100 text-slate-800 pb-36">
+  <div class="min-h-screen bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 pb-36">
     <!-- Dark navy header -->
     <header class="bg-slate-900 text-white sticky top-0 z-40">
       <div class="max-w-6xl mx-auto px-4 h-16 flex items-center">
-        <span class="w-8 h-8 rounded-lg bg-white/10 font-extrabold flex items-center justify-center text-[10px] tracking-tight shrink-0">GTS</span>
+        <span class="w-8 h-8 rounded-lg bg-white dark:bg-slate-900/10 font-extrabold flex items-center justify-center text-[10px] tracking-tight shrink-0">GTS</span>
         <h1 class="absolute left-1/2 -translate-x-1/2 text-sm md:text-base font-semibold truncate max-w-[50%]">
           {{ paper.title }}
         </h1>
@@ -137,37 +139,37 @@ function saveNotes(): void {
             class="text-xs font-semibold px-3.5 py-2 rounded-full border border-white/40 hover:bg-white/10 transition-colors"
             @click="confirmExit = true"
           >
-            Save &amp; Exit
+            {{ t('take.saveExit') }}
           </button>
           <button
             class="text-xs font-semibold px-3.5 py-2 rounded-full bg-amber-400 text-amber-950 hover:bg-amber-500 transition-colors"
             @click="confirmSubmit = true"
           >
-            Submit Quiz
+            {{ t('take.submitQuiz') }}
           </button>
         </div>
       </div>
       <!-- Sub-header -->
-      <div class="bg-white text-slate-700 border-b border-slate-200">
+      <div class="bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 border-b border-slate-200 dark:border-slate-700">
         <div class="max-w-6xl mx-auto px-4 py-2.5 flex items-center gap-3 flex-wrap">
           <div class="flex items-center gap-2 min-w-44 flex-1 max-w-xs">
-            <div class="flex-1 h-2 rounded-full bg-slate-100 overflow-hidden">
+            <div class="flex-1 h-2 rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
               <div class="h-full bg-blue-600 rounded-full transition-all" :style="{ width: `${progressPct}%` }" />
             </div>
-            <span class="text-xs font-semibold text-slate-500 tabular-nums whitespace-nowrap">{{ answeredCount }}/{{ questions.length }} ({{ progressPct }}%)</span>
+            <span class="text-xs font-semibold text-slate-500 dark:text-slate-400 tabular-nums whitespace-nowrap">{{ answeredCount }}/{{ questions.length }} ({{ progressPct }}%)</span>
           </div>
           <div class="flex items-center gap-2 ml-auto">
             <button
-              class="text-xs font-semibold px-3 py-1.5 rounded-full border border-slate-300 hover:border-blue-400 hover:text-blue-600 transition-colors"
+              class="text-xs font-semibold px-3 py-1.5 rounded-full border border-slate-300 dark:border-slate-600 hover:border-blue-400 hover:text-blue-600 transition-colors"
               @click="showInstructions = true"
             >
-              Instruction
+              {{ t('take.instruction') }}
             </button>
             <button
-              class="text-xs font-semibold px-3 py-1.5 rounded-full border border-slate-300 hover:border-blue-400 hover:text-blue-600 transition-colors"
+              class="text-xs font-semibold px-3 py-1.5 rounded-full border border-slate-300 dark:border-slate-600 hover:border-blue-400 hover:text-blue-600 transition-colors"
               @click="notesOpen = true"
             >
-              Notes
+              {{ t('take.notes') }}
             </button>
             <CountdownTimer :total-seconds="totalSeconds" @expire="onExpire" />
           </div>
@@ -177,7 +179,7 @@ function saveNotes(): void {
 
     <!-- Question card -->
     <main class="max-w-3xl mx-auto px-4 pt-6">
-      <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 md:p-8">
+      <div class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm p-6 md:p-8">
         <div class="flex items-center justify-between gap-3 flex-wrap">
           <p class="text-xs font-bold uppercase tracking-widest text-blue-600">
             Part {{ current.part }} · {{ partInfo(current.part)?.label }}
@@ -185,34 +187,34 @@ function saveNotes(): void {
           <div class="flex items-center gap-2">
             <button
               :disabled="idx === 0"
-              class="text-xs font-semibold px-3.5 py-2 rounded-xl border border-slate-300 disabled:opacity-40 hover:border-blue-400 hover:text-blue-600 transition-colors"
+              class="text-xs font-semibold px-3.5 py-2 rounded-xl border border-slate-300 dark:border-slate-600 disabled:opacity-40 hover:border-blue-400 hover:text-blue-600 transition-colors"
               @click="prev"
             >
-              ← Previous
+              {{ t('take.prev') }}
             </button>
             <button
               :disabled="idx === questions.length - 1"
-              class="text-xs font-semibold px-3.5 py-2 rounded-xl border border-slate-300 disabled:opacity-40 hover:border-blue-400 hover:text-blue-600 transition-colors"
+              class="text-xs font-semibold px-3.5 py-2 rounded-xl border border-slate-300 dark:border-slate-600 disabled:opacity-40 hover:border-blue-400 hover:text-blue-600 transition-colors"
               @click="next"
             >
-              Next →
+              {{ t('take.next') }}
             </button>
           </div>
         </div>
 
-        <p class="mt-4 text-sm font-semibold text-slate-400">Question {{ current.number }} of {{ questions.length }}</p>
+        <p class="mt-4 text-sm font-semibold text-slate-400 dark:text-slate-500">{{ t('take.questionOf', { n: current.number, total: questions.length }) }}</p>
 
         <div v-if="current.audioNote" class="mt-3">
           <AudioPlayer />
         </div>
 
-        <div v-if="current.context" class="mt-4 rounded-xl bg-slate-50 border border-slate-200 p-4 text-sm text-slate-600 leading-relaxed whitespace-pre-line">
+        <div v-if="current.context" class="mt-4 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-700 p-4 text-sm text-slate-600 dark:text-slate-300 leading-relaxed whitespace-pre-line">
           {{ current.context }}
         </div>
 
-        <p class="mt-4 text-base font-medium text-slate-800 leading-relaxed">{{ current.stem }}</p>
+        <p class="mt-4 text-base font-medium text-slate-800 dark:text-slate-200 leading-relaxed">{{ current.stem }}</p>
 
-        <div class="mt-5 space-y-2.5" role="radiogroup" :aria-label="`Question ${current.number}`">
+        <div class="mt-5 space-y-2.5" role="radiogroup" :aria-label="t('take.questionOf', { n: current.number, total: questions.length })">
           <button
             v-for="opt in current.options"
             :key="opt.letter"
@@ -220,26 +222,26 @@ function saveNotes(): void {
             :aria-checked="answers[current.number] === opt.letter"
             class="w-full flex items-center gap-3 text-left rounded-xl border-2 px-4 py-3.5 transition-colors"
             :class="answers[current.number] === opt.letter
-              ? 'border-blue-600 bg-blue-50'
-              : 'border-slate-200 hover:border-blue-300 bg-white'"
+              ? 'border-blue-600 bg-blue-50 dark:bg-blue-950 dark:bg-blue-950'
+              : 'border-slate-200 dark:border-slate-700 hover:border-blue-300 bg-white dark:bg-slate-900'"
             @click="choose(opt.letter)"
           >
             <span
               class="w-6 h-6 shrink-0 rounded-full border-2 flex items-center justify-center"
-              :class="answers[current.number] === opt.letter ? 'border-blue-600' : 'border-slate-300'"
+              :class="answers[current.number] === opt.letter ? 'border-blue-600' : 'border-slate-300 dark:border-slate-600'"
             >
               <span v-if="answers[current.number] === opt.letter" class="w-3 h-3 rounded-full bg-blue-600" />
             </span>
-            <span class="text-sm font-bold text-slate-500 w-5 shrink-0">{{ opt.letter }}</span>
-            <span class="text-sm text-slate-700">{{ opt.text }}</span>
+            <span class="text-sm font-bold text-slate-500 dark:text-slate-400 w-5 shrink-0">{{ opt.letter }}</span>
+            <span class="text-sm text-slate-700 dark:text-slate-200">{{ opt.text }}</span>
           </button>
         </div>
       </div>
-      <p class="mt-4 text-center text-xs text-slate-400">Demo build — answers are stored locally in your browser.</p>
+      <p class="mt-4 text-center text-xs text-slate-400 dark:text-slate-500">{{ t('take.demoNote') }}</p>
     </main>
 
     <!-- Fixed bottom palette -->
-    <div class="fixed bottom-0 inset-x-0 z-40 bg-white border-t border-slate-200 shadow-[0_-4px_16px_rgba(0,0,0,0.06)]">
+    <div class="fixed bottom-0 inset-x-0 z-40 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-700 shadow-[0_-4px_16px_rgba(0,0,0,0.06)]">
       <div class="max-w-6xl mx-auto px-4 py-3">
         <QuestionPalette
           :parts="paletteParts"
@@ -254,24 +256,24 @@ function saveNotes(): void {
     <Teleport to="body">
       <div v-if="showInstructions" class="fixed inset-0 z-50 flex items-center justify-center p-4">
         <div class="absolute inset-0 bg-slate-900/60" />
-        <div class="relative bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[85vh] flex flex-col">
-          <div class="px-6 py-5 border-b border-slate-200">
-            <h2 class="text-lg font-extrabold text-slate-800">Test Instructions</h2>
-            <p class="text-sm text-slate-500 mt-1">{{ paper.title }} · {{ paper.durationMinutes }} minutes · {{ questions.length }} demo questions</p>
+        <div class="relative bg-white dark:bg-slate-900 rounded-2xl shadow-xl w-full max-w-2xl max-h-[85vh] flex flex-col">
+          <div class="px-6 py-5 border-b border-slate-200 dark:border-slate-700">
+            <h2 class="text-lg font-extrabold text-slate-800 dark:text-slate-200">{{ t('take.instructionsTitle') }}</h2>
+            <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">{{ paper.title }} · {{ paper.durationMinutes }} {{ t('overview.minutes') }} · {{ questions.length }} {{ t('take.demoQuestions') }}</p>
           </div>
           <div class="overflow-y-auto px-6 py-4 space-y-2 flex-1">
-            <div v-for="p in materialParts" :key="p.part" class="border border-slate-200 rounded-xl overflow-hidden">
+            <div v-for="p in materialParts" :key="p.part" class="border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden">
               <button
-                class="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-slate-50"
+                class="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-slate-50 dark:hover:bg-slate-800"
                 @click="openPart = openPart === p.part ? null : p.part"
               >
-                <span class="text-sm font-semibold text-slate-700">
+                <span class="text-sm font-semibold text-slate-700 dark:text-slate-200">
                   Part {{ p.part }} — {{ p.label }}
-                  <span class="ml-2 text-xs font-medium text-slate-400">{{ skillLabel(p.skill) }}</span>
+                  <span class="ml-2 text-xs font-medium text-slate-400 dark:text-slate-500">{{ skillLabel(p.skill) }}</span>
                 </span>
-                <span class="text-slate-400 transition-transform" :class="openPart === p.part ? 'rotate-180' : ''">▾</span>
+                <span class="text-slate-400 dark:text-slate-500 transition-transform" :class="openPart === p.part ? 'rotate-180' : ''">▾</span>
               </button>
-              <div v-if="openPart === p.part" class="px-4 pb-4 text-sm text-slate-500 leading-relaxed">
+              <div v-if="openPart === p.part" class="px-4 pb-4 text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
                 {{ p.description }}
                 <p v-if="p.skill === 'listening' || p.skill === 'speaking'" class="mt-2 text-xs text-amber-700 bg-amber-50 rounded-lg px-3 py-2">
                   Demo note: listening audio is a placeholder in this build — read the transcript in each question.
@@ -279,12 +281,12 @@ function saveNotes(): void {
               </div>
             </div>
           </div>
-          <div class="px-6 py-4 border-t border-slate-200 flex justify-end">
+          <div class="px-6 py-4 border-t border-slate-200 dark:border-slate-700 flex justify-end">
             <button
               class="text-sm font-semibold px-6 py-3 rounded-xl bg-blue-600 text-white hover:bg-blue-700 transition-colors"
               @click="showInstructions = false"
             >
-              Close &amp; Start
+              {{ t('take.closeStart') }}
             </button>
           </div>
         </div>
@@ -295,20 +297,20 @@ function saveNotes(): void {
 
     <ConfirmModal
       :open="confirmSubmit"
-      title="Submit your answers?"
-      :message="`You have answered ${answeredCount} of ${questions.length} questions (${progressPct}%). Submitted answers cannot be changed.`"
-      confirm-text="Submit"
-      cancel-text="Keep Working"
+      :title="t('take.confirmSubmitTitle')"
+      :message="t('take.confirmSubmitMsg', { a: answeredCount, t: questions.length, p: progressPct })"
+      :confirm-text="t('take.submitAnyway')"
+      :cancel-text="t('take.keepWorking')"
       @confirm="doSubmit"
       @cancel="confirmSubmit = false"
     />
 
     <ConfirmModal
       :open="confirmExit"
-      title="Save and exit?"
-      message="Your current answers will be saved locally. You can resume this attempt later from the paper overview."
-      confirm-text="Save & Exit"
-      cancel-text="Stay"
+      :title="t('take.confirmExitTitle')"
+      :message="t('take.confirmExitMsg')"
+      :confirm-text="t('take.exitAnyway')"
+      :cancel-text="t('take.stayHere')"
       @confirm="doExit"
       @cancel="confirmExit = false"
     />

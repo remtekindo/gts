@@ -18,12 +18,12 @@ const emit = defineEmits<{ confirm: []; cancel: [] }>()
   <Teleport to="body">
     <div v-if="open" class="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div class="absolute inset-0 bg-slate-900/50" @click="emit('cancel')" />
-      <div class="relative bg-white rounded-2xl shadow-xl max-w-md w-full p-6">
-        <h3 class="text-lg font-bold text-slate-800">{{ title }}</h3>
-        <p class="mt-2 text-sm text-slate-500 leading-relaxed">{{ message }}</p>
+      <div class="relative bg-white dark:bg-slate-900 rounded-2xl shadow-xl max-w-md w-full p-6">
+        <h3 class="text-lg font-bold text-slate-800 dark:text-slate-200">{{ title }}</h3>
+        <p class="mt-2 text-sm text-slate-500 dark:text-slate-400 leading-relaxed">{{ message }}</p>
         <div class="mt-6 flex justify-end gap-2">
           <button
-            class="px-4 py-2.5 rounded-xl text-sm font-semibold text-slate-600 hover:bg-slate-100"
+            class="px-4 py-2.5 rounded-xl text-sm font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100"
             @click="emit('cancel')"
           >
             {{ cancelText }}

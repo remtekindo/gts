@@ -22,18 +22,18 @@ function circleClass(n: number): string {
     const s = props.status[n]
     if (s === 'correct') return `${base} bg-green-500 border-green-500 text-white`
     if (s === 'wrong') return `${base} bg-red-500 border-red-500 text-white`
-    return `${base} bg-slate-100 border-slate-200 text-slate-400`
+    return `${base} bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-400 dark:text-slate-500`
   }
   if (n === props.current) return `${base} bg-blue-600 border-blue-600 text-white ring-2 ring-blue-200`
   if (props.answered[n]) return `${base} bg-blue-100 border-blue-300 text-blue-800`
-  return `${base} bg-white border-slate-300 text-slate-500 hover:border-blue-400`
+  return `${base} bg-white dark:bg-slate-900 border-slate-300 dark:border-slate-600 text-slate-500 dark:text-slate-400 hover:border-blue-400`
 }
 </script>
 
 <template>
   <div class="flex items-start gap-6 overflow-x-auto no-scrollbar py-1">
     <div v-for="part in parts" :key="part.label" class="shrink-0">
-      <p class="text-[11px] font-semibold uppercase tracking-wide text-slate-400 mb-1.5">{{ part.label }}</p>
+      <p class="text-[11px] font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500 mb-1.5">{{ part.label }}</p>
       <div class="flex gap-1.5">
         <button
           v-for="n in part.numbers"

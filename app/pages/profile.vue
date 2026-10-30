@@ -1,4 +1,5 @@
 <script setup lang="ts">
+const { t } = useLocale()
 const activeTab = ref<'profile' | 'password' | 'purchase' | 'enroll'>('profile')
 
 const auth = ref<AuthState | null>(null)
@@ -27,7 +28,7 @@ function onAvatarChange(e: Event): void {
 
 function saveProfile(): void {
   setDisplayName(name.value.trim())
-  savedMsg.value = 'Profile saved.'
+  savedMsg.value = t('profile.profileSaved')
   setTimeout(() => { savedMsg.value = '' }, 2500)
 }
 
@@ -35,18 +36,18 @@ function changePassword(): void {
   pwMsg.value = ''
   pwError.value = ''
   if (!currentPw.value || !newPw.value || !confirmPw.value) {
-    pwError.value = 'Please fill in all password fields.'
+    pwError.value = t('profile.errPwFields')
     return
   }
   if (newPw.value !== confirmPw.value) {
-    pwError.value = 'New passwords do not match.'
+    pwError.value = t('profile.errPwMatch')
     return
   }
   if (newPw.value.length < 8) {
-    pwError.value = 'New password must be at least 8 characters.'
+    pwError.value = t('profile.errPwLen')
     return
   }
-  pwMsg.value = 'Password updated (demo — nothing was actually changed).'
+  pwMsg.value = t('profile.pwUpdated')
   currentPw.value = ''
   newPw.value = ''
   confirmPw.value = ''
@@ -58,39 +59,39 @@ const enrollHistory = [
   { paper: 'Reading Drill Pack — Parts 5 to 7', date: 'Oct 15, 2026', status: 'Completed' }
 ]
 
-const tabs = [
-  { id: 'profile', label: 'My Profile' },
-  { id: 'password', label: 'Change Password' },
-  { id: 'purchase', label: 'Purchase History' },
-  { id: 'enroll', label: 'Enroll History' }
-] as const
+const tabs = computed(() => [
+  { id: 'profile', label: t('profile.myProfile') },
+  { id: 'password', label: t('profile.changePassword') },
+  { id: 'purchase', label: t('profile.purchaseHistory') },
+  { id: 'enroll', label: t('profile.enrollHistory') }
+] as const)
 </script>
 
 <template>
   <div class="max-w-3xl mx-auto">
     <!-- Avatar card -->
-    <div class="bg-white rounded-2xl border border-slate-200 p-6 flex items-center gap-5">
+    <div class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 p-6 flex items-center gap-5">
       <div class="w-20 h-20 rounded-full bg-slate-200 overflow-hidden flex items-center justify-center shrink-0">
         <img v-if="avatarPreview" :src="avatarPreview" alt="Avatar preview" class="w-full h-full object-cover" />
-        <span v-else class="text-2xl font-extrabold text-slate-400">{{ (name || 'G').slice(0, 1).toUpperCase() }}</span>
+        <span v-else class="text-2xl font-extrabold text-slate-400 dark:text-slate-500">{{ (name || 'G').slice(0, 1).toUpperCase() }}</span>
       </div>
       <div>
-        <h1 class="text-xl font-extrabold text-slate-800">{{ name || 'Your Name' }}</h1>
-        <p class="text-sm text-slate-400">{{ email }}</p>
-        <label class="mt-2 inline-block text-xs font-semibold px-3.5 py-2 rounded-xl border border-slate-300 text-slate-600 hover:border-blue-400 hover:text-blue-600 cursor-pointer transition-colors">
-          Change Avatar
+        <h1 class="text-xl font-extrabold text-slate-800 dark:text-slate-200">{{ name || t('profile.yourName') }}</h1>
+        <p class="text-sm text-slate-400 dark:text-slate-500">{{ email }}</p>
+        <label class="mt-2 inline-block text-xs font-semibold px-3.5 py-2 rounded-xl border border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:border-blue-400 hover:text-blue-600 cursor-pointer transition-colors">
+          {{ t('profile.changeAvatar') }}
           <input type="file" accept="image/*" class="hidden" @change="onAvatarChange" />
         </label>
       </div>
     </div>
 
     <!-- Tabs -->
-    <div class="mt-5 flex gap-2 border-b border-slate-200 overflow-x-auto no-scrollbar">
+    <div class="mt-5 flex gap-2 border-b border-slate-200 dark:border-slate-700 overflow-x-auto no-scrollbar">
       <button
         v-for="t in tabs"
         :key="t.id"
         class="relative shrink-0 px-4 py-3 text-sm font-semibold"
-        :class="activeTab === t.id ? 'text-blue-600' : 'text-slate-500 hover:text-slate-700'"
+        :class="activeTab === t.id ? 'text-blue-600' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700'"
         @click="activeTab = t.id"
       >
         {{ t.label }}
@@ -99,25 +100,25 @@ const tabs = [
     </div>
 
     <!-- My Profile -->
-    <div v-if="activeTab === 'profile'" class="mt-5 bg-white rounded-2xl border border-slate-200 p-6 space-y-4">
+    <div v-if="activeTab === 'profile'" class="mt-5 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 p-6 space-y-4">
       <div>
-        <label for="profile-email" class="block text-sm font-medium text-slate-600 mb-1.5">Email</label>
+        <label for="profile-email" class="block text-sm font-medium text-slate-600 dark:text-slate-300 mb-1.5">{{ t('profile.email') }}</label>
         <input
           id="profile-email"
           v-model="email"
           type="email"
           disabled
-          class="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-sm text-slate-400 cursor-not-allowed"
+          class="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 px-3.5 py-2.5 text-sm text-slate-400 dark:text-slate-500 cursor-not-allowed"
         />
-        <p class="mt-1 text-xs text-slate-400">Email cannot be changed.</p>
+        <p class="mt-1 text-xs text-slate-400 dark:text-slate-500">Email cannot be changed.</p>
       </div>
       <div>
-        <label for="profile-name" class="block text-sm font-medium text-slate-600 mb-1.5">Display Name</label>
+        <label for="profile-name" class="block text-sm font-medium text-slate-600 dark:text-slate-300 mb-1.5">{{ t('profile.displayName') }}</label>
         <input
           id="profile-name"
           v-model="name"
           type="text"
-          class="w-full rounded-xl border border-slate-300 px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          class="w-full rounded-xl border border-slate-300 dark:border-slate-600 px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
         />
       </div>
       <div class="flex items-center gap-3">
@@ -132,70 +133,69 @@ const tabs = [
     </div>
 
     <!-- Change Password -->
-    <div v-if="activeTab === 'password'" class="mt-5 bg-white rounded-2xl border border-slate-200 p-6 space-y-4">
+    <div v-if="activeTab === 'password'" class="mt-5 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 p-6 space-y-4">
       <div>
-        <label for="pw-current" class="block text-sm font-medium text-slate-600 mb-1.5">Current Password</label>
-        <input id="pw-current" v-model="currentPw" type="password" autocomplete="current-password" class="w-full rounded-xl border border-slate-300 px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+        <label for="pw-current" class="block text-sm font-medium text-slate-600 dark:text-slate-300 mb-1.5">{{ t('profile.currentPassword') }}</label>
+        <input id="pw-current" v-model="currentPw" type="password" autocomplete="current-password" class="w-full rounded-xl border border-slate-300 dark:border-slate-600 px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
       </div>
       <div>
-        <label for="pw-new" class="block text-sm font-medium text-slate-600 mb-1.5">New Password</label>
-        <input id="pw-new" v-model="newPw" type="password" autocomplete="new-password" class="w-full rounded-xl border border-slate-300 px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+        <label for="pw-new" class="block text-sm font-medium text-slate-600 dark:text-slate-300 mb-1.5">{{ t('profile.newPassword') }}</label>
+        <input id="pw-new" v-model="newPw" type="password" autocomplete="new-password" class="w-full rounded-xl border border-slate-300 dark:border-slate-600 px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
       </div>
       <div>
-        <label for="pw-confirm" class="block text-sm font-medium text-slate-600 mb-1.5">Confirm New Password</label>
-        <input id="pw-confirm" v-model="confirmPw" type="password" autocomplete="new-password" class="w-full rounded-xl border border-slate-300 px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+        <label for="pw-confirm" class="block text-sm font-medium text-slate-600 dark:text-slate-300 mb-1.5">{{ t('profile.confirmNewPassword') }}</label>
+        <input id="pw-confirm" v-model="confirmPw" type="password" autocomplete="new-password" class="w-full rounded-xl border border-slate-300 dark:border-slate-600 px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
       </div>
-      <p v-if="pwError" class="text-sm text-red-600 bg-red-50 rounded-xl px-3.5 py-2.5">{{ pwError }}</p>
-      <p v-if="pwMsg" class="text-sm text-green-600 bg-green-50 rounded-xl px-3.5 py-2.5">{{ pwMsg }}</p>
+      <p v-if="pwError" class="text-sm text-red-600 dark:text-red-300 bg-red-50 dark:bg-red-950/60 rounded-xl px-3.5 py-2.5">{{ pwError }}</p>
+      <p v-if="pwMsg" class="text-sm text-green-600 bg-green-50 dark:bg-green-950/60 rounded-xl px-3.5 py-2.5">{{ pwMsg }}</p>
       <button
         class="text-sm font-semibold px-5 py-2.5 rounded-xl bg-blue-600 text-white hover:bg-blue-700 transition-colors"
         @click="changePassword"
       >
-        Update Password
+        {{ t('profile.updatePassword') }}
       </button>
     </div>
 
     <!-- Purchase History -->
-    <div v-if="activeTab === 'purchase'" class="mt-5 bg-white rounded-2xl border border-slate-200 p-6">
-      <h2 class="font-bold text-slate-800">Credit Balance</h2>
+    <div v-if="activeTab === 'purchase'" class="mt-5 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 p-6">
+      <h2 class="font-bold text-slate-800 dark:text-slate-200">{{ t('profile.creditBalance') }}</h2>
       <div class="mt-3 grid grid-cols-2 gap-3">
         <div class="rounded-xl bg-amber-50 border border-amber-200 p-4">
           <p class="text-xs font-medium text-amber-700 uppercase tracking-wide">LR Credits</p>
           <p class="text-2xl font-extrabold text-amber-800">12</p>
         </div>
-        <div class="rounded-xl bg-blue-50 border border-blue-200 p-4">
+        <div class="rounded-xl bg-blue-50 dark:bg-blue-950 border border-blue-200 p-4">
           <p class="text-xs font-medium text-blue-700 uppercase tracking-wide">SW Credits</p>
           <p class="text-2xl font-extrabold text-blue-800">8</p>
         </div>
       </div>
-      <div class="mt-4 rounded-xl bg-slate-50 border border-slate-200 p-4 text-sm text-slate-500 leading-relaxed">
-        Top-ups are handled through Google Play billing in the production app.
-        This demo build does not process payments.
+      <div class="mt-4 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-700 p-4 text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
+        {{ t('profile.topupNote') }}
       </div>
-      <h3 class="mt-5 font-bold text-slate-800 text-sm">Recent purchases</h3>
-      <p class="mt-2 text-sm text-slate-400">No purchases yet.</p>
+      <h3 class="mt-5 font-bold text-slate-800 dark:text-slate-200 text-sm">{{ t('profile.recentPurchases') }}</h3>
+      <p class="mt-2 text-sm text-slate-400 dark:text-slate-500">{{ t('profile.noPurchases') }}</p>
     </div>
 
     <!-- Enroll History -->
-    <div v-if="activeTab === 'enroll'" class="mt-5 bg-white rounded-2xl border border-slate-200 overflow-hidden">
+    <div v-if="activeTab === 'enroll'" class="mt-5 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden">
       <table class="w-full text-sm">
         <thead>
-          <tr class="text-left text-xs uppercase tracking-wide text-slate-400 border-b border-slate-200">
-            <th class="px-5 py-3 font-semibold">Paper</th>
-            <th class="px-5 py-3 font-semibold hidden sm:table-cell">Date</th>
-            <th class="px-5 py-3 font-semibold text-right">Status</th>
+          <tr class="text-left text-xs uppercase tracking-wide text-slate-400 dark:text-slate-500 border-b border-slate-200 dark:border-slate-700">
+            <th class="px-5 py-3 font-semibold">{{ t('profile.thPaper') }}</th>
+            <th class="px-5 py-3 font-semibold hidden sm:table-cell">{{ t('profile.thDate') }}</th>
+            <th class="px-5 py-3 font-semibold text-right">{{ t('profile.thStatus') }}</th>
           </tr>
         </thead>
         <tbody class="divide-y divide-slate-100">
-          <tr v-for="row in enrollHistory" :key="row.paper" class="hover:bg-slate-50">
-            <td class="px-5 py-3.5 font-medium text-slate-700">{{ row.paper }}</td>
-            <td class="px-5 py-3.5 text-slate-400 hidden sm:table-cell">{{ row.date }}</td>
+          <tr v-for="row in enrollHistory" :key="row.paper" class="hover:bg-slate-50 dark:hover:bg-slate-800">
+            <td class="px-5 py-3.5 font-medium text-slate-700 dark:text-slate-200">{{ row.paper }}</td>
+            <td class="px-5 py-3.5 text-slate-400 dark:text-slate-500 hidden sm:table-cell">{{ row.date }}</td>
             <td class="px-5 py-3.5 text-right">
               <span
                 class="text-[11px] font-semibold px-2.5 py-1 rounded-full"
-                :class="row.status === 'Completed' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'"
+                :class="row.status === 'Completed' ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-200' : 'bg-amber-100 text-amber-700'"
               >
-                {{ row.status }}
+                {{ row.status === 'Completed' ? t('papers.statusCompleted') : t('papers.statusInProgress') }}
               </span>
             </td>
           </tr>

@@ -2,6 +2,8 @@
 import { getPaperOrFallback, partsForMaterial, questionsForMaterial } from '~/data/mock'
 import type { Question } from '~/data/mock'
 
+const { t } = useLocale()
+
 definePageMeta({ layout: 'material' })
 import type { AnswerMap, TestResult } from '~/utils/storage'
 import type { MarkStatus } from '~/components/QuestionPalette.vue'
@@ -55,16 +57,16 @@ function goTo(n: number): void {
 function optionClass(q: Question, letter: string): string {
   const base = 'w-full flex items-center gap-3 text-left rounded-xl border-2 px-4 py-3'
   const userPick = result.value?.answers[q.number]
-  if (letter === q.correctLetter) return `${base} border-green-500 bg-green-50`
-  if (userPick === letter) return `${base} border-red-500 bg-red-50`
-  return `${base} border-slate-200 bg-white opacity-70`
+  if (letter === q.correctLetter) return `${base} border-green-500 bg-green-50 dark:bg-green-950/60`
+  if (userPick === letter) return `${base} border-red-500 bg-red-50 dark:bg-red-950/60`
+  return `${base} border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 opacity-70`
 }
 
 function markPill(q: Question): { text: string; cls: string } | null {
   const userPick = result.value?.answers[q.number]
-  if (!userPick) return { text: 'Not answered', cls: 'bg-slate-100 text-slate-500' }
-  if (userPick === q.correctLetter) return { text: 'Correct', cls: 'bg-green-100 text-green-700' }
-  return { text: 'Wrong', cls: 'bg-red-100 text-red-700' }
+  if (!userPick) return { text: 'Not answered', cls: 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400' }
+  if (userPick === q.correctLetter) return { text: 'Correct', cls: 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-200' }
+  return { text: t('result.wrong'), cls: 'bg-red-100 text-red-700' }
 }
 </script>
 
@@ -74,19 +76,19 @@ function markPill(q: Question): { text: string; cls: string } | null {
     <div class="bg-slate-900 text-white">
       <div class="max-w-6xl mx-auto px-4 py-8">
         <div class="flex items-center justify-between">
-          <nav class="text-xs text-slate-400">
-            <NuxtLink :to="`${base}/papers/${paper.id}`" class="hover:text-white">Overview</NuxtLink>
+          <nav class="text-xs text-slate-400 dark:text-slate-500">
+            <NuxtLink :to="`${base}/papers/${paper.id}`" class="hover:text-white">{{ t('result.crumbOverview') }}</NuxtLink>
             <span class="mx-1.5">/</span>
-            <span class="text-slate-200">Result</span>
+            <span class="text-slate-200">{{ t('result.crumbResult') }}</span>
           </nav>
           <NuxtLink
             :to="`${base}/papers/${paper.id}`"
             class="inline-flex items-center gap-1.5 text-xs font-semibold px-3.5 py-2 rounded-full border border-white/30 hover:bg-white/10 transition-colors"
           >
-            ✕ Exit
+            ✕ {{ t('result.exit') }}
           </NuxtLink>
         </div>
-        <h1 class="mt-4 text-2xl font-extrabold">Test Result</h1>
+        <h1 class="mt-4 text-2xl font-extrabold">{{ t('result.title') }}</h1>
         <p class="mt-1 text-sm text-slate-300">{{ paper.title }}</p>
         <div v-if="result" class="mt-4">
           <ScorePills :score="result.score" :cefr="result.cefr" :correct="result.correct" :total="result.total" />
@@ -101,10 +103,10 @@ function markPill(q: Question): { text: string; cls: string } | null {
           v-for="p in materialParts"
           :key="p.part"
           class="shrink-0 text-xs font-semibold px-4 py-2.5 rounded-xl border transition-colors"
-          :class="activePart === p.part ? 'bg-slate-800 border-slate-800 text-white' : 'bg-white border-slate-300 text-slate-500 hover:border-slate-400'"
+          :class="activePart === p.part ? 'bg-slate-800 border-slate-800 text-white' : 'bg-white dark:bg-slate-900 border-slate-300 dark:border-slate-600 text-slate-500 dark:text-slate-400 hover:border-slate-400'"
           @click="activePart = p.part"
         >
-          Part {{ p.part }} · {{ p.label }}
+          {{ t('result.part') }} {{ p.part }} · {{ p.label }}
         </button>
       </div>
 
@@ -118,38 +120,38 @@ function markPill(q: Question): { text: string; cls: string } | null {
           v-for="q in partQuestions"
           :id="`q-${q.number}`"
           :key="q.number"
-          class="bg-white rounded-2xl border border-slate-200 p-5 scroll-mt-32"
+          class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 p-5 scroll-mt-32"
         >
           <div class="flex items-start justify-between gap-3">
-            <p class="text-sm font-bold text-slate-700">Question {{ q.number }}</p>
+            <p class="text-sm font-bold text-slate-700 dark:text-slate-200">{{ t('take.questionOf', { n: q.number, total: result.total }) }}</p>
             <span v-if="markPill(q)" class="text-[11px] font-bold px-2.5 py-1 rounded-full shrink-0" :class="markPill(q)!.cls">
               {{ markPill(q)!.text }}
             </span>
           </div>
-          <div v-if="q.context" class="mt-3 rounded-xl bg-slate-50 border border-slate-200 p-4 text-sm text-slate-600 leading-relaxed whitespace-pre-line">
+          <div v-if="q.context" class="mt-3 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-700 p-4 text-sm text-slate-600 dark:text-slate-300 leading-relaxed whitespace-pre-line">
             {{ q.context }}
           </div>
-          <p class="mt-3 text-sm text-slate-700 leading-relaxed">{{ q.stem }}</p>
+          <p class="mt-3 text-sm text-slate-700 dark:text-slate-200 leading-relaxed">{{ q.stem }}</p>
           <div class="mt-3 space-y-2">
             <div v-for="opt in q.options" :key="opt.letter" :class="optionClass(q, opt.letter)">
-              <span class="text-sm font-bold text-slate-500 w-5 shrink-0">{{ opt.letter }}</span>
-              <span class="text-sm text-slate-700 flex-1">{{ opt.text }}</span>
-              <span v-if="opt.letter === q.correctLetter" class="text-[11px] font-bold px-2 py-0.5 rounded-full bg-green-500 text-white shrink-0">Correct</span>
-              <span v-else-if="result.answers[q.number] === opt.letter" class="text-[11px] font-bold px-2 py-0.5 rounded-full bg-red-500 text-white shrink-0">Your pick</span>
+              <span class="text-sm font-bold text-slate-500 dark:text-slate-400 w-5 shrink-0">{{ opt.letter }}</span>
+              <span class="text-sm text-slate-700 dark:text-slate-200 flex-1">{{ opt.text }}</span>
+              <span v-if="opt.letter === q.correctLetter" class="text-[11px] font-bold px-2 py-0.5 rounded-full bg-green-500 text-white shrink-0">{{ t('result.correct') }}</span>
+              <span v-else-if="result.answers[q.number] === opt.letter" class="text-[11px] font-bold px-2 py-0.5 rounded-full bg-red-500 text-white shrink-0">{{ t('result.yourAnswer') }}</span>
             </div>
           </div>
-          <p class="mt-3 text-xs text-slate-500 leading-relaxed"><strong class="text-slate-600">Explanation:</strong> {{ q.explanation }}</p>
+          <p class="mt-3 text-xs text-slate-500 dark:text-slate-400 leading-relaxed"><strong class="text-slate-600 dark:text-slate-300">{{ t('result.explanation') }}:</strong> {{ q.explanation }}</p>
         </div>
       </div>
     </div>
 
     <!-- Sticky bottom palette -->
-    <div v-if="result" class="fixed bottom-0 inset-x-0 z-40 bg-white border-t border-slate-200 shadow-[0_-4px_16px_rgba(0,0,0,0.06)]">
+    <div v-if="result" class="fixed bottom-0 inset-x-0 z-40 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-700 shadow-[0_-4px_16px_rgba(0,0,0,0.06)]">
       <div class="max-w-6xl mx-auto px-4 py-3">
-        <div class="flex items-center gap-4 mb-2 text-[11px] font-semibold text-slate-500">
-          <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-green-500 inline-block" /> Correct</span>
-          <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-red-500 inline-block" /> Wrong</span>
-          <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-slate-200 inline-block" /> Unanswered</span>
+        <div class="flex items-center gap-4 mb-2 text-[11px] font-semibold text-slate-500 dark:text-slate-400">
+          <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-green-500 inline-block" /> {{ t('result.correct') }}</span>
+          <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-red-500 inline-block" /> {{ t('result.wrong') }}</span>
+          <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-slate-200 inline-block" /> {{ t('result.notAnswered') }}</span>
         </div>
         <QuestionPalette
           :parts="paletteParts"

@@ -1,9 +1,19 @@
 <script setup lang="ts">
 import { postLoginPath } from '~/utils/navigation'
 
+const { t } = useLocale()
+
 definePageMeta({ layout: false })
 
 const router = useRouter()
+const route = useRoute()
+
+/** Where to go after auth. Honors ?next=/path (local paths only). */
+function nextPath(): string {
+  const n = route.query.next
+  if (typeof n === 'string' && n.startsWith('/') && !n.startsWith('//')) return n
+  return postLoginPath()
+}
 
 const mode = ref<'login' | 'register'>('login')
 const username = ref('')
@@ -16,7 +26,7 @@ const showPassword = ref(false)
 const error = ref('')
 
 onMounted(() => {
-  if (getAuth()) router.replace(postLoginPath())
+  if (getAuth()) router.replace(nextPath())
 })
 
 function switchMode(next: 'login' | 'register'): void {
@@ -33,63 +43,62 @@ function submit(): void {
   error.value = ''
   if (mode.value === 'login') {
     if (!username.value.trim() || !password.value) {
-      error.value = 'Please enter your username and password.'
+      error.value = t('auth.errRequired')
       return
     }
     // Mock auth: any credentials are accepted in this demo build.
     setAuth({ username: username.value.trim(), remember: remember.value })
-    router.push(postLoginPath())
+    router.push(nextPath())
     return
   }
   // Register mode
   if (!name.value.trim() || !email.value.trim() || !password.value || !confirmPassword.value) {
-    error.value = 'Please fill in all fields.'
+    error.value = t('auth.errAllFields')
     return
   }
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.value.trim())) {
-    error.value = 'Please enter a valid email address.'
+    error.value = t('auth.errEmail')
     return
   }
   if (password.value.length < 6) {
-    error.value = 'Password must be at least 6 characters.'
+    error.value = t('auth.errPassLen')
     return
   }
   if (password.value !== confirmPassword.value) {
-    error.value = 'Passwords do not match.'
+    error.value = t('auth.errPassMatch')
     return
   }
   // Mock register: any valid input creates the demo account.
   setAuth({ username: name.value.trim(), remember: true })
-  router.push(postLoginPath())
+  router.push(nextPath())
 }
 </script>
 
 <template>
-  <div class="min-h-screen flex bg-slate-50">
+  <div class="min-h-screen flex bg-slate-50 dark:bg-slate-950">
     <!-- Brand panel -->
     <div class="hidden lg:flex w-1/2 bg-gradient-to-br from-blue-700 via-blue-800 to-indigo-950 text-white flex-col justify-between p-12">
       <div class="flex items-center gap-3">
-        <span class="w-11 h-11 rounded-xl bg-white/15 font-extrabold flex items-center justify-center text-sm tracking-tight">GTS</span>
+        <span class="w-11 h-11 rounded-xl bg-white dark:bg-slate-900/15 font-extrabold flex items-center justify-center text-sm tracking-tight">GTS</span>
         <span class="font-semibold leading-tight">Global Testing<br />System</span>
       </div>
       <div>
         <h1 class="text-4xl font-extrabold leading-tight">Know your level.<br />Own your score.</h1>
         <p class="mt-4 text-blue-200 max-w-md leading-relaxed">
-          Practice with realistic test simulations, get an instant predicted score,
-          and track exactly where you stand — no theory, just the test.
+          {{ t('auth.brandLine1') }} {{ t('auth.brandLine2') }}
         </p>
         <ul class="mt-8 space-y-3 text-sm text-blue-100">
           <li class="flex items-center gap-3">
-            <span class="w-6 h-6 rounded-full bg-white/15 flex items-center justify-center text-xs">✓</span>
-            Full Listening &amp; Reading simulations
+            <span class="w-6 h-6 rounded-full bg-white dark:bg-slate-900/15 flex items-center justify-center text-xs">✓</span>
+            {{ t('auth.brandF1') }}
           </li>
           <li class="flex items-center gap-3">
-            <span class="w-6 h-6 rounded-full bg-white/15 flex items-center justify-center text-xs">✓</span>
-            Instant predicted score with CEFR level
+            <span class="w-6 h-6 rounded-full bg-white dark:bg-slate-900/15 flex items-center justify-center text-xs">✓</span>
+            {{ t('auth.brandF2') }}
           </li>
           <li class="flex items-center gap-3">
-            <span class="w-6 h-6 rounded-full bg-white/15 flex items-center justify-center text-xs">✓</span>
-            Fresh practice papers every month
+            <span class="w-6 h-6 rounded-full bg-white dark:bg-slate-900/15 flex items-center justify-center text-xs">✓</span>
+            {{ t('auth.brandF3') }}
           </li>
         </ul>
       </div>
@@ -98,50 +107,51 @@ function submit(): void {
 
     <!-- Login card -->
     <div class="flex-1 flex items-center justify-center p-6">
-      <div class="w-full max-w-md bg-white rounded-2xl border border-slate-200 shadow-sm p-8">
-        <div class="lg:hidden flex items-center gap-2 mb-6">
+      <div class="w-full max-w-md bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm p-8">
+        <div class="flex items-center justify-end gap-2 mb-4"><LocaleSwitcher /><ThemeToggle /></div>
+      <div class="lg:hidden flex items-center gap-2 mb-6">
           <span class="w-9 h-9 rounded-lg bg-blue-600 text-white font-extrabold flex items-center justify-center text-xs">GTS</span>
-          <span class="text-sm font-semibold text-slate-800">Global Testing System</span>
+          <span class="text-sm font-semibold text-slate-800 dark:text-slate-200">Global Testing System</span>
         </div>
-        <h2 class="text-2xl font-extrabold text-slate-800">{{ mode === 'login' ? 'Welcome!' : 'Create account' }}</h2>
-        <p class="mt-1 text-sm text-slate-500">{{ mode === 'login' ? 'Sign in to continue to your dashboard.' : 'Register to start your free daily test.' }}</p>
+        <h2 class="text-2xl font-extrabold text-slate-800 dark:text-slate-200">{{ mode === 'login' ? t('auth.welcome') : t('auth.createTitle') }}</h2>
+        <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">{{ mode === 'login' ? t('auth.welcomeSub') : t('auth.createSub') }}</p>
 
         <form class="mt-6 space-y-4" @submit.prevent="submit">
           <div v-if="mode === 'login'">
-            <label for="login-username" class="block text-sm font-medium text-slate-600 mb-1.5">Email or Username</label>
+            <label for="login-username" class="block text-sm font-medium text-slate-600 dark:text-slate-300 mb-1.5">{{ t('auth.emailOrUsername') }}</label>
             <input
               id="login-username"
               v-model="username"
               type="text"
               autocomplete="username"
               placeholder="you@example.com"
-              class="w-full rounded-xl border border-slate-300 px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              class="w-full rounded-xl border border-slate-300 dark:border-slate-600 px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
           <div v-if="mode === 'register'">
-            <label for="register-name" class="block text-sm font-medium text-slate-600 mb-1.5">Full name</label>
+            <label for="register-name" class="block text-sm font-medium text-slate-600 dark:text-slate-300 mb-1.5">{{ t('auth.fullName') }}</label>
             <input
               id="register-name"
               v-model="name"
               type="text"
               autocomplete="name"
               placeholder="Your name"
-              class="w-full rounded-xl border border-slate-300 px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              class="w-full rounded-xl border border-slate-300 dark:border-slate-600 px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
           <div v-if="mode === 'register'">
-            <label for="register-email" class="block text-sm font-medium text-slate-600 mb-1.5">Email</label>
+            <label for="register-email" class="block text-sm font-medium text-slate-600 dark:text-slate-300 mb-1.5">{{ t('auth.email') }}</label>
             <input
               id="register-email"
               v-model="email"
               type="email"
               autocomplete="email"
               placeholder="you@example.com"
-              class="w-full rounded-xl border border-slate-300 px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              class="w-full rounded-xl border border-slate-300 dark:border-slate-600 px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
           <div>
-            <label for="login-password" class="block text-sm font-medium text-slate-600 mb-1.5">Password</label>
+            <label for="login-password" class="block text-sm font-medium text-slate-600 dark:text-slate-300 mb-1.5">{{ t('auth.password') }}</label>
             <div class="relative">
               <input
                 id="login-password"
@@ -149,11 +159,11 @@ function submit(): void {
                 :type="showPassword ? 'text' : 'password'"
                 autocomplete="current-password"
                 placeholder="••••••••"
-                class="w-full rounded-xl border border-slate-300 px-3.5 py-2.5 pr-11 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                class="w-full rounded-xl border border-slate-300 dark:border-slate-600 px-3.5 py-2.5 pr-11 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
               <button
                 type="button"
-                class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500 hover:text-slate-600"
                 :aria-label="showPassword ? 'Hide password' : 'Show password'"
                 @click="showPassword = !showPassword"
               >
@@ -169,46 +179,46 @@ function submit(): void {
           </div>
 
           <div v-if="mode === 'register'">
-            <label for="register-confirm" class="block text-sm font-medium text-slate-600 mb-1.5">Confirm password</label>
+            <label for="register-confirm" class="block text-sm font-medium text-slate-600 dark:text-slate-300 mb-1.5">{{ t('auth.confirmPassword') }}</label>
             <input
               id="register-confirm"
               v-model="confirmPassword"
               type="password"
               autocomplete="new-password"
               placeholder="••••••••"
-              class="w-full rounded-xl border border-slate-300 px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              class="w-full rounded-xl border border-slate-300 dark:border-slate-600 px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
 
           <div v-if="mode === 'login'" class="flex items-center justify-between text-sm">
-            <label class="flex items-center gap-2 text-slate-600 cursor-pointer">
+            <label class="flex items-center gap-2 text-slate-600 dark:text-slate-300 cursor-pointer">
               <input v-model="remember" type="checkbox" class="w-4 h-4 rounded accent-blue-600" />
-              Remember me
+              {{ t('auth.rememberMe') }}
             </label>
-            <a href="#" class="font-medium text-blue-600 hover:text-blue-700" @click.prevent>Forgot Password?</a>
+            <a href="#" class="font-medium text-blue-600 hover:text-blue-700" @click.prevent>{{ t('auth.forgot') }}</a>
           </div>
 
-          <p v-if="error" class="text-sm text-red-600 bg-red-50 rounded-xl px-3.5 py-2.5">{{ error }}</p>
+          <p v-if="error" class="text-sm text-red-600 dark:text-red-300 bg-red-50 dark:bg-red-950/60 rounded-xl px-3.5 py-2.5">{{ error }}</p>
 
           <button
             type="submit"
             class="w-full rounded-xl bg-blue-600 text-white font-semibold py-3 text-sm hover:bg-blue-700 transition-colors"
           >
-            {{ mode === 'login' ? 'Sign in' : 'Create account' }}
+            {{ mode === 'login' ? t('auth.signInBtn') : t('auth.createBtn') }}
           </button>
 
-          <p class="text-center text-sm text-slate-500">
+          <p class="text-center text-sm text-slate-500 dark:text-slate-400">
             <template v-if="mode === 'login'">
-              Don’t have an account?
-              <button type="button" class="font-semibold text-blue-600 hover:text-blue-700" @click="switchMode('register')">Register</button>
+              {{ t('auth.noAccount') }}
+              <button type="button" class="font-semibold text-blue-600 hover:text-blue-700" @click="switchMode('register')">{{ t('auth.registerLink') }}</button>
             </template>
             <template v-else>
-              Already have an account?
-              <button type="button" class="font-semibold text-blue-600 hover:text-blue-700" @click="switchMode('login')">Sign in</button>
+              {{ t('auth.hasAccount') }}
+              <button type="button" class="font-semibold text-blue-600 hover:text-blue-700" @click="switchMode('login')">{{ t('auth.signInBtn') }}</button>
             </template>
           </p>
 
-          <p class="text-center text-xs text-slate-400">Demo build — {{ mode === 'login' ? 'any credentials will sign you in.' : 'any valid input will create your account.' }}</p>
+          <p class="text-center text-xs text-slate-400 dark:text-slate-500">{{ mode === 'login' ? t('auth.demoLogin') : t('auth.demoRegister') }}</p>
         </form>
       </div>
     </div>

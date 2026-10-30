@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { getMaterialOrFallback, papersForMaterial } from '~/data/mock'
 
+const { t } = useLocale()
+
 definePageMeta({ layout: 'material' })
 
 const route = useRoute()
@@ -24,43 +26,47 @@ const filtered = computed(() => {
   })
 })
 
-const chips = ['All', 'Full Simulation', 'Drill Pack']
+const chips = computed(() => [
+  { value: 'All', label: t('papers.all') },
+  { value: 'Full Simulation', label: t('papers.fullSim') },
+  { value: 'Drill Pack', label: t('papers.drillPack') }
+])
 </script>
 
 <template>
   <div>
     <!-- Hero band -->
-    <div class="bg-blue-50 border-b border-blue-100">
+    <div class="bg-blue-50 dark:bg-blue-950 border-b border-blue-100">
       <div class="max-w-6xl mx-auto px-4 py-8">
-        <nav class="text-xs text-slate-400 mb-2">
-          <NuxtLink to="/materials" class="hover:text-blue-600">Materials</NuxtLink>
+        <nav class="text-xs text-slate-400 dark:text-slate-500 mb-2">
+          <NuxtLink to="/materials" class="hover:text-blue-600">{{ t('papers.crumbMaterials') }}</NuxtLink>
           <span class="mx-1.5">/</span>
-          <span class="text-slate-600">Papers</span>
+          <span class="text-slate-600 dark:text-slate-300">{{ t('papers.crumbPapers') }}</span>
         </nav>
-        <h1 class="text-2xl font-extrabold text-slate-800">{{ material.name }} — Test Papers</h1>
-        <p class="mt-1 text-sm text-slate-500">Pick a paper, take the test, and get your predicted score instantly.</p>
+        <h1 class="text-2xl font-extrabold text-slate-800 dark:text-slate-200">{{ t('papers.title', { name: material.name }) }}</h1>
+        <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">{{ t('papers.sub') }}</p>
       </div>
     </div>
 
     <div class="max-w-6xl mx-auto px-4 py-6">
       <!-- Tabs -->
-      <div class="flex gap-2 border-b border-slate-200">
+      <div class="flex gap-2 border-b border-slate-200 dark:border-slate-700">
         <button
           class="relative px-4 py-3 text-sm font-semibold"
-          :class="activeTab === 'mine' ? 'text-blue-600' : 'text-slate-500 hover:text-slate-700'"
+          :class="activeTab === 'mine' ? 'text-blue-600' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700'"
           @click="activeTab = 'mine'"
         >
-          My Papers
-          <span class="ml-1.5 text-xs px-2 py-0.5 rounded-full" :class="activeTab === 'mine' ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-500'">{{ myPapers.length }}</span>
+          {{ t('papers.myPapers') }}
+          <span class="ml-1.5 text-xs px-2 py-0.5 rounded-full" :class="activeTab === 'mine' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-200' : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400'">{{ myPapers.length }}</span>
           <span v-if="activeTab === 'mine'" class="absolute bottom-0 left-3 right-3 h-0.5 rounded-full bg-blue-600" />
         </button>
         <button
           class="relative px-4 py-3 text-sm font-semibold"
-          :class="activeTab === 'available' ? 'text-blue-600' : 'text-slate-500 hover:text-slate-700'"
+          :class="activeTab === 'available' ? 'text-blue-600' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700'"
           @click="activeTab = 'available'"
         >
-          Available Papers
-          <span class="ml-1.5 text-xs px-2 py-0.5 rounded-full" :class="activeTab === 'available' ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-500'">{{ materialPapers.length }}</span>
+          {{ t('papers.available') }}
+          <span class="ml-1.5 text-xs px-2 py-0.5 rounded-full" :class="activeTab === 'available' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-200' : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400'">{{ materialPapers.length }}</span>
           <span v-if="activeTab === 'available'" class="absolute bottom-0 left-3 right-3 h-0.5 rounded-full bg-blue-600" />
         </button>
       </div>
@@ -69,21 +75,21 @@ const chips = ['All', 'Full Simulation', 'Drill Pack']
       <div class="mt-5 flex flex-wrap items-center gap-2">
         <button
           v-for="chip in chips"
-          :key="chip"
+          :key="chip.value"
           class="text-xs font-semibold px-3.5 py-2 rounded-full border transition-colors"
-          :class="categoryFilter === chip ? 'bg-slate-800 border-slate-800 text-white' : 'bg-white border-slate-300 text-slate-600 hover:border-slate-400'"
-          @click="categoryFilter = chip"
+          :class="categoryFilter === chip.value ? 'bg-slate-800 border-slate-800 text-white' : 'bg-white dark:bg-slate-900 border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:border-slate-400'"
+          @click="categoryFilter = chip.value"
         >
-          {{ chip }}
+          {{ chip.label }}
         </button>
         <div class="relative ml-auto w-full sm:w-64">
           <input
             v-model="search"
             type="search"
-            placeholder="Search papers…"
-            class="w-full rounded-xl border border-slate-300 pl-9 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            :placeholder="t('papers.searchPh')"
+            class="w-full rounded-xl border border-slate-300 dark:border-slate-600 pl-9 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
-          <svg class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <svg class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
             <circle cx="11" cy="11" r="7" />
             <path stroke-linecap="round" d="M20 20l-3.5-3.5" />
           </svg>
@@ -94,7 +100,7 @@ const chips = ['All', 'Full Simulation', 'Drill Pack']
       <div v-if="filtered.length" class="mt-5 grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
         <PaperCard v-for="p in filtered" :key="p.id" :paper="p" :base="base" />
       </div>
-      <div v-else class="mt-5 text-center py-16 text-slate-400 text-sm bg-white rounded-2xl border border-dashed border-slate-300">
+      <div v-else class="mt-5 text-center py-16 text-slate-400 dark:text-slate-500 text-sm bg-white dark:bg-slate-900 rounded-2xl border border-dashed border-slate-300 dark:border-slate-600">
         No papers match your filters.
       </div>
     </div>

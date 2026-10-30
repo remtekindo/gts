@@ -98,3 +98,20 @@ export function getDisplayName(): string {
 export function setDisplayName(name: string): void {
   write('gts_display_name', name)
 }
+
+/* Free-test (no login) pending answers, gated behind auth at result time. */
+export function saveFreeAnswers(answers: AnswerMap): void {
+  write('gts_free_answers', answers)
+}
+
+export function loadFreeAnswers(): AnswerMap | null {
+  return read<AnswerMap>('gts_free_answers')
+}
+
+export function clearFreeAnswers(): void {
+  try {
+    localStorage.removeItem('gts_free_answers')
+  } catch {
+    /* storage unavailable */
+  }
+}

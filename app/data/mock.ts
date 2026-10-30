@@ -562,5 +562,137 @@ export function papersForMaterial(slug: string): Paper[] {
   return PAPERS.filter(p => p.materialSlug === slug)
 }
 
+/* ------------------------------------------------------------------ */
+/* Free general-English test: 15 listening + 10 reading + 5 writing.    */
+/* Original demo content. Listening items are read-and-respond (no      */
+/* audio in this build); writing items are sentence-choice questions    */
+/* so they can be auto-graded.                                         */
+/* ------------------------------------------------------------------ */
+
+export interface FreeSection {
+  id: 'listening' | 'reading' | 'writing'
+  count: number
+}
+
+export const FREE_TEST_SECTIONS: FreeSection[] = [
+  { id: 'listening', count: 15 },
+  { id: 'reading', count: 10 },
+  { id: 'writing', count: 5 }
+]
+
+export interface FreeQuestion {
+  number: number
+  section: 'listening' | 'reading' | 'writing'
+  stem: string
+  options: AnswerOption[]
+  correctLetter: string
+}
+
+type FreeSeed = Omit<FreeQuestion, 'number'>
+
+const FREE_SEEDS: FreeSeed[] = [
+  // ---- Listening: choose the best response (15) ----
+  { section: 'listening', stem: 'Choose the best response to: "Good morning! How are you today?"',
+    options: [{ letter: 'A', text: "I'm fine, thank you. And you?" }, { letter: 'B', text: 'Good night.' }, { letter: 'C', text: 'See you later.' }, { letter: 'D', text: "It's raining." }],
+    correctLetter: 'A' },
+  { section: 'listening', stem: 'Choose the best response to: "Could you open the window, please?"',
+    options: [{ letter: 'A', text: 'Of course, right away.' }, { letter: 'B', text: "I don't like windows." }, { letter: 'C', text: 'Window is glass.' }, { letter: 'D', text: "No, it's closed forever." }],
+    correctLetter: 'A' },
+  { section: 'listening', stem: 'Choose the best response to: "What time does the meeting start?"',
+    options: [{ letter: 'A', text: "At 10 o'clock in the main room." }, { letter: 'B', text: 'Time is money.' }, { letter: 'C', text: 'I like meetings.' }, { letter: 'D', text: 'Start now please.' }],
+    correctLetter: 'A' },
+  { section: 'listening', stem: 'Choose the best response to: "Would you like some coffee?"',
+    options: [{ letter: 'A', text: 'Yes, please. Black, no sugar.' }, { letter: 'B', text: 'Coffee is brown.' }, { letter: 'C', text: 'I drink every day.' }, { letter: 'D', text: 'No coffee shop.' }],
+    correctLetter: 'A' },
+  { section: 'listening', stem: 'Choose the best response to: "Where is the nearest bus stop?"',
+    options: [{ letter: 'A', text: 'Just around the corner, next to the bank.' }, { letter: 'B', text: 'Bus is big.' }, { letter: 'C', text: 'I walk always.' }, { letter: 'D', text: 'Stop here please.' }],
+    correctLetter: 'A' },
+  { section: 'listening', stem: 'Choose the best response to: "Did you finish the report?"',
+    options: [{ letter: 'A', text: 'Yes, I sent it to you this morning.' }, { letter: 'B', text: 'Report is paper.' }, { letter: 'C', text: 'Finish is good.' }, { letter: 'D', text: 'I like writing.' }],
+    correctLetter: 'A' },
+  { section: 'listening', stem: 'Choose the best response to: "How was your weekend?"',
+    options: [{ letter: 'A', text: 'It was great — I visited my parents.' }, { letter: 'B', text: 'Weekend is two days.' }, { letter: 'C', text: 'Good weekend yes.' }, { letter: 'D', text: "I don't know weekend." }],
+    correctLetter: 'A' },
+  { section: 'listening', stem: 'Choose the best response to: "Can I borrow your pen?"',
+    options: [{ letter: 'A', text: 'Sure, here you go.' }, { letter: 'B', text: 'Pen is blue.' }, { letter: 'C', text: 'Borrow is bad.' }, { letter: 'D', text: 'I have many pens.' }],
+    correctLetter: 'A' },
+  { section: 'listening', stem: 'Choose the best response to: "What do you think of the new office?"',
+    options: [{ letter: 'A', text: "It's bright and much bigger than before." }, { letter: 'B', text: 'Office is office.' }, { letter: 'C', text: 'I think yes.' }, { letter: 'D', text: 'New is good.' }],
+    correctLetter: 'A' },
+  { section: 'listening', stem: 'Choose the best response to: "Shall we meet at 3 pm tomorrow?"',
+    options: [{ letter: 'A', text: 'That works for me. See you then.' }, { letter: 'B', text: 'Meet is nice.' }, { letter: 'C', text: '3 pm is time.' }, { letter: 'D', text: 'Tomorrow maybe.' }],
+    correctLetter: 'A' },
+  { section: 'listening', stem: 'Choose the best response to: "Do you know how to get to the station?"',
+    options: [{ letter: 'A', text: 'Go straight, then turn left at the traffic light.' }, { letter: 'B', text: 'Station is far.' }, { letter: 'C', text: 'I go by car.' }, { letter: 'D', text: 'Know nothing.' }],
+    correctLetter: 'A' },
+  { section: 'listening', stem: 'Choose the best response to: "I\'m sorry I\'m late."',
+    options: [{ letter: 'A', text: "That's okay, we just started." }, { letter: 'B', text: 'Late is bad.' }, { letter: 'C', text: 'Sorry too.' }, { letter: 'D', text: "Don't be." }],
+    correctLetter: 'A' },
+  { section: 'listening', stem: 'Choose the best response to: "What did you have for lunch?"',
+    options: [{ letter: 'A', text: 'I had fried rice with an egg.' }, { letter: 'B', text: 'Lunch is food.' }, { letter: 'C', text: 'Eat at noon.' }, { letter: 'D', text: 'Have lunch yes.' }],
+    correctLetter: 'A' },
+  { section: 'listening', stem: 'Choose the best response to: "Could you help me with this box?"',
+    options: [{ letter: 'A', text: "Of course — let's lift it together." }, { letter: 'B', text: 'Box is heavy.' }, { letter: 'C', text: 'Help is good.' }, { letter: 'D', text: 'I am busy always.' }],
+    correctLetter: 'A' },
+  { section: 'listening', stem: 'Choose the best response to: "When will the package arrive?"',
+    options: [{ letter: 'A', text: 'It should arrive by Friday.' }, { letter: 'B', text: 'Package is box.' }, { letter: 'C', text: 'Arrive soon.' }, { letter: 'D', text: 'When is when.' }],
+    correctLetter: 'A' },
+  // ---- Reading: choose the correct form (10) ----
+  { section: 'reading', stem: 'She _____ to work by bus every day.',
+    options: [{ letter: 'A', text: 'go' }, { letter: 'B', text: 'goes' }, { letter: 'C', text: 'going' }, { letter: 'D', text: 'gone' }],
+    correctLetter: 'B' },
+  { section: 'reading', stem: 'The meeting _____ at 9 am yesterday.',
+    options: [{ letter: 'A', text: 'starts' }, { letter: 'B', text: 'start' }, { letter: 'C', text: 'started' }, { letter: 'D', text: 'starting' }],
+    correctLetter: 'C' },
+  { section: 'reading', stem: 'This is the _____ book I have ever read.',
+    options: [{ letter: 'A', text: 'interesting' }, { letter: 'B', text: 'more interesting' }, { letter: 'C', text: 'most interesting' }, { letter: 'D', text: 'interestinger' }],
+    correctLetter: 'C' },
+  { section: 'reading', stem: 'If it rains tomorrow, we _____ the trip.',
+    options: [{ letter: 'A', text: 'cancel' }, { letter: 'B', text: 'will cancel' }, { letter: 'C', text: 'cancelled' }, { letter: 'D', text: 'cancelling' }],
+    correctLetter: 'B' },
+  { section: 'reading', stem: 'He has worked here _____ 2019.',
+    options: [{ letter: 'A', text: 'for' }, { letter: 'B', text: 'since' }, { letter: 'C', text: 'from' }, { letter: 'D', text: 'at' }],
+    correctLetter: 'B' },
+  { section: 'reading', stem: 'Neither the manager nor the staff _____ aware of the change.',
+    options: [{ letter: 'A', text: 'is' }, { letter: 'B', text: 'were' }, { letter: 'C', text: 'was being' }, { letter: 'D', text: 'be' }],
+    correctLetter: 'B' },
+  { section: 'reading', stem: 'The keys _____ on the table this morning.',
+    options: [{ letter: 'A', text: 'was' }, { letter: 'B', text: 'were' }, { letter: 'C', text: 'is' }, { letter: 'D', text: 'are' }],
+    correctLetter: 'B' },
+  { section: 'reading', stem: 'She is interested _____ learning Japanese.',
+    options: [{ letter: 'A', text: 'on' }, { letter: 'B', text: 'at' }, { letter: 'C', text: 'in' }, { letter: 'D', text: 'for' }],
+    correctLetter: 'C' },
+  { section: 'reading', stem: 'The report must _____ by Friday.',
+    options: [{ letter: 'A', text: 'submit' }, { letter: 'B', text: 'be submitted' }, { letter: 'C', text: 'submits' }, { letter: 'D', text: 'submitting' }],
+    correctLetter: 'B' },
+  { section: 'reading', stem: '_____ the bad weather, the flight was on time.',
+    options: [{ letter: 'A', text: 'Despite' }, { letter: 'B', text: 'Although' }, { letter: 'C', text: 'Because' }, { letter: 'D', text: 'Unless' }],
+    correctLetter: 'A' },
+  // ---- Writing: choose the best sentence (5) ----
+  { section: 'writing', stem: 'Choose the best sentence for a formal email opening:',
+    options: [{ letter: 'A', text: "Hi dude, what's up?" }, { letter: 'B', text: 'Dear Mr. Hartono, I hope you are well.' }, { letter: 'C', text: 'Yo, listen up.' }, { letter: 'D', text: 'Hey you there.' }],
+    correctLetter: 'B' },
+  { section: 'writing', stem: 'Choose the best sentence to apologize for a mistake:',
+    options: [{ letter: 'A', text: 'My bad, whatever.' }, { letter: 'B', text: 'I apologize for the error and will fix it today.' }, { letter: 'C', text: "Oops, not my fault." }, { letter: 'D', text: 'Sorry not sorry.' }],
+    correctLetter: 'B' },
+  { section: 'writing', stem: 'Choose the best sentence to end a job application letter:',
+    options: [{ letter: 'A', text: "Pick me, I'm awesome." }, { letter: 'B', text: 'Thank you for your consideration. I look forward to hearing from you.' }, { letter: 'C', text: 'Call me ASAP.' }, { letter: 'D', text: 'Bye.' }],
+    correctLetter: 'B' },
+  { section: 'writing', stem: 'Choose the clearest instruction:',
+    options: [{ letter: 'A', text: 'Do the thing with the stuff.' }, { letter: 'B', text: 'Please attach the file and click Send.' }, { letter: 'C', text: 'Make it happen somehow.' }, { letter: 'D', text: 'You know what to do.' }],
+    correctLetter: 'B' },
+  { section: 'writing', stem: 'Choose the best sentence to describe a graph:',
+    options: [{ letter: 'A', text: 'Line go up fast.' }, { letter: 'B', text: 'The line rises sharply between March and June.' }, { letter: 'C', text: 'Graph is nice.' }, { letter: 'D', text: 'Up it goes.' }],
+    correctLetter: 'B' }
+]
+
+export const FREE_TEST_QUESTIONS: FreeQuestion[] = FREE_SEEDS.map((q, i) => ({
+  number: i + 1,
+  section: q.section,
+  stem: q.stem,
+  options: q.options,
+  correctLetter: q.correctLetter
+}))
+
 /** Demo-only: the take interface renders the material's mock question set for every paper. */
 export const DEMO_NOTE = 'Demo build: every paper renders its material’s mock question set.'

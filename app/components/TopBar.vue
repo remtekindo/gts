@@ -1,4 +1,5 @@
 <script setup lang="ts">
+const { t } = useLocale()
 const router = useRouter()
 
 const menuOpen = ref(false)
@@ -26,15 +27,17 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <header class="sticky top-0 z-40 bg-white border-b border-slate-200">
+  <header class="sticky top-0 z-40 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700">
     <div class="max-w-6xl mx-auto px-4 h-16 flex items-center gap-4">
       <NuxtLink to="/materials" class="flex items-center gap-2 shrink-0">
         <span class="w-9 h-9 rounded-lg bg-blue-600 text-white font-extrabold flex items-center justify-center text-xs tracking-tight">GTS</span>
-        <span class="hidden md:block text-sm font-semibold text-slate-800 leading-tight">Global Testing<br />System</span>
+        <span class="hidden md:block text-sm font-semibold text-slate-800 dark:text-slate-200 leading-tight">Global Testing<br />System</span>
       </NuxtLink>
 
       <div class="mx-auto" />
 
+      <LocaleSwitcher />
+      <ThemeToggle />
       <div ref="menuRef" class="relative shrink-0">
         <button
           class="w-9 h-9 rounded-full bg-slate-700 text-white text-xs font-bold flex items-center justify-center hover:bg-slate-600"
@@ -45,16 +48,16 @@ onUnmounted(() => {
         </button>
         <div
           v-if="menuOpen"
-          class="absolute right-0 mt-2 w-44 bg-white rounded-xl shadow-lg border border-slate-200 py-1 text-sm z-50"
+          class="absolute right-0 mt-2 w-44 bg-white dark:bg-slate-900 rounded-xl shadow-lg border border-slate-200 dark:border-slate-700 py-1 text-sm z-50"
         >
-          <div class="px-4 py-2 border-b border-slate-100">
-            <p class="font-semibold text-slate-800 truncate">{{ auth?.username || 'Guest' }}</p>
-            <p class="text-xs text-slate-400">Demo account</p>
+          <div class="px-4 py-2 border-b border-slate-100 dark:border-slate-800">
+            <p class="font-semibold text-slate-800 dark:text-slate-200 truncate">{{ auth?.username || 'Guest' }}</p>
+            <p class="text-xs text-slate-400 dark:text-slate-500">Demo account</p>
           </div>
-          <NuxtLink to="/profile" class="block px-4 py-2 text-slate-600 hover:bg-slate-50" @click="menuOpen = false">
+          <NuxtLink to="/profile" class="block px-4 py-2 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800" @click="menuOpen = false">
             Profile
           </NuxtLink>
-          <button class="w-full text-left px-4 py-2 text-red-600 hover:bg-red-50" @click="signOut">
+          <button class="w-full text-left px-4 py-2 text-red-600 dark:text-red-300 hover:bg-red-50" @click="signOut">
             Sign Out
           </button>
         </div>

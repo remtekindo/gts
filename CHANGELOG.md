@@ -5,6 +5,24 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-10-30
+
+### Added
+- Bilingual UI (English / Indonesian): all template strings moved to
+  `app/i18n/en.ts` + `app/i18n/id.ts` via a `useLocale()` composable with
+  `{param}` interpolation and English fallback; locale persisted in
+  localStorage; EN/ID switcher in topbars, landing, auth, and free-test pages.
+- Dark/light theme: Tailwind v4 class-based dark mode, `useTheme()`
+  composable persisted in localStorage, sun/moon toggle everywhere, restored
+  before first paint.
+- Free general-English test at `/free-test` — no login needed to start:
+  30 original questions (15 listening, 10 reading, 5 writing), 30-minute
+  timer, section-grouped palette. Submitting redirects to
+  `/auth?next=/free-test/result`; the result page shows a login gate for
+  guests and a per-section + total score breakdown after auth. Auth honors
+  `?next=` (local paths only). Landing hero CTA now points to `/free-test`.
+
+
 ## [0.5.0] - 2026-10-30
 
 ### Added
