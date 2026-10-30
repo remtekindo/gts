@@ -5,6 +5,22 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-10-30
+
+### Added
+- Multi-material architecture (pattern 3): materials hub at `/materials`; per-material
+  section at `/m/:slug` with its own dashboard, papers, performance, and leaderboard.
+  Login (and `/`) sends the user straight into their material when they own exactly
+  one, otherwise to the hub. Topbar material switcher moves between owned materials.
+- Demo materials: TOEIC Listening & Reading (owned), TOEIC Speaking & Writing
+  (owned, 6 demo questions across 2 parts), TOEFL iBT and IELTS Academic (coming soon).
+- `postLoginPath()` in `utils/navigation.ts`; `layouts/material.vue`;
+  `components/MaterialTopBar.vue`; `pages/materials/index.vue`.
+
+### Changed
+- All test pages moved under `m/[slug]/`; questions, parts, and papers are now
+  scoped per material (`materialSlug`). Profile stays global. Footer links updated.
+
 ## [0.2.0] - 2026-10-30
 
 ### Added

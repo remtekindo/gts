@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { Paper } from '~/data/mock'
 
-const props = defineProps<{ paper: Paper }>()
+const props = withDefaults(defineProps<{ paper: Paper; base?: string }>(), { base: '' })
 
 const statusStyle: Record<Paper['status'], string> = {
   'not-started': 'bg-slate-100 text-slate-600',
@@ -16,9 +16,9 @@ const statusLabel: Record<Paper['status'], string> = {
 }
 
 const cta = computed(() => {
-  if (props.paper.status === 'completed') return { label: 'View Result', to: `/papers/${props.paper.id}/result` }
-  if (props.paper.status === 'in-progress') return { label: 'Continue', to: `/papers/${props.paper.id}` }
-  return { label: 'Start Test', to: `/papers/${props.paper.id}` }
+  if (props.paper.status === 'completed') return { label: 'View Result', to: `${props.base}/papers/${props.paper.id}/result` }
+  if (props.paper.status === 'in-progress') return { label: 'Continue', to: `${props.base}/papers/${props.paper.id}` }
+  return { label: 'Start Test', to: `${props.base}/papers/${props.paper.id}` }
 })
 </script>
 

@@ -4,16 +4,29 @@
  * not reproduce any third-party test material. Audio is a placeholder.
  */
 
-export type Skill = 'listening' | 'reading'
+export type Skill = 'listening' | 'reading' | 'speaking' | 'writing'
 export type Difficulty = 'Beginner' | 'Intermediate' | 'Advanced'
 export type PaperStatus = 'not-started' | 'in-progress' | 'completed'
+export type MaterialStatus = 'owned' | 'coming-soon'
 
 export interface AnswerOption {
   letter: string
   text: string
 }
 
+export interface Material {
+  slug: string
+  name: string
+  tagline: string
+  description: string
+  /** Short badge shown on the material card, e.g. 'EN'. */
+  badge: string
+  status: MaterialStatus
+  credits: { label: string; balance: number }[]
+}
+
 export interface Question {
+  materialSlug: string
   number: number
   part: number
   skill: Skill
@@ -29,6 +42,7 @@ export interface Question {
 
 export interface Paper {
   id: string
+  materialSlug: string
   title: string
   category: 'Full Simulation' | 'Drill Pack'
   skillsLabel: string
@@ -41,25 +55,81 @@ export interface Paper {
 }
 
 export interface PartInfo {
+  materialSlug: string
   part: number
   skill: Skill
   label: string
   description: string
 }
 
+export const MATERIALS: Material[] = [
+  {
+    slug: 'toeic-lr',
+    name: 'TOEIC Listening & Reading',
+    tagline: 'Know your level. Own your score.',
+    description: 'Full simulations and drill packs for TOEIC Listening & Reading, with instant predicted scores and per-part breakdowns.',
+    badge: 'EN',
+    status: 'owned',
+    credits: [{ label: 'LR', balance: 12 }]
+  },
+  {
+    slug: 'toeic-sw',
+    name: 'TOEIC Speaking & Writing',
+    tagline: 'Say it. Write it. Score it.',
+    description: 'Speaking response drills and writing tasks with sample answers and self-check rubrics.',
+    badge: 'EN',
+    status: 'owned',
+    credits: [{ label: 'SW', balance: 8 }]
+  },
+  {
+    slug: 'toefl-ibt',
+    name: 'TOEFL iBT',
+    tagline: 'Coming soon.',
+    description: 'Reading, Listening, Speaking, and Writing simulations for TOEFL iBT.',
+    badge: 'EN',
+    status: 'coming-soon',
+    credits: []
+  },
+  {
+    slug: 'ielts-academic',
+    name: 'IELTS Academic',
+    tagline: 'Coming soon.',
+    description: 'Academic Reading, Listening, Writing, and Speaking practice for IELTS.',
+    badge: 'EN',
+    status: 'coming-soon',
+    credits: []
+  }
+]
+
+export function getMaterial(slug: string): Material | undefined {
+  return MATERIALS.find(m => m.slug === slug)
+}
+
+export function getMaterialOrFallback(slug: string): Material {
+  return getMaterial(slug) ?? (MATERIALS[0] as Material)
+}
+
+export function ownedMaterials(): Material[] {
+  return MATERIALS.filter(m => m.status === 'owned')
+}
+
 export const PARTS: PartInfo[] = [
-  { part: 1, skill: 'listening', label: 'Photographs', description: 'Look at each photograph and choose the statement that best describes what you see.' },
-  { part: 2, skill: 'listening', label: 'Question–Response', description: 'Listen to a question, then choose the most appropriate response.' },
-  { part: 3, skill: 'listening', label: 'Conversations', description: 'Listen to a short conversation, then answer the question about it.' },
-  { part: 4, skill: 'listening', label: 'Short Talks', description: 'Listen to a short talk or announcement, then answer the question about it.' },
-  { part: 5, skill: 'reading', label: 'Incomplete Sentences', description: 'Choose the word or phrase that best completes each sentence.' },
-  { part: 6, skill: 'reading', label: 'Text Completion', description: 'Read the passage and choose the best word or phrase for each blank.' },
-  { part: 7, skill: 'reading', label: 'Reading Comprehension', description: 'Read the passage and choose the best answer to each question.' }
+  { materialSlug: 'toeic-lr', part: 1, skill: 'listening', label: 'Photographs', description: 'Look at each photograph and choose the statement that best describes what you see.' },
+  { materialSlug: 'toeic-lr', part: 2, skill: 'listening', label: 'Question–Response', description: 'Listen to a question, then choose the most appropriate response.' },
+  { materialSlug: 'toeic-lr', part: 3, skill: 'listening', label: 'Conversations', description: 'Listen to a short conversation, then answer the question about it.' },
+  { materialSlug: 'toeic-lr', part: 4, skill: 'listening', label: 'Short Talks', description: 'Listen to a short talk or announcement, then answer the question about it.' },
+  { materialSlug: 'toeic-lr', part: 5, skill: 'reading', label: 'Incomplete Sentences', description: 'Choose the word or phrase that best completes each sentence.' },
+  { materialSlug: 'toeic-lr', part: 6, skill: 'reading', label: 'Text Completion', description: 'Read the passage and choose the best word or phrase for each blank.' },
+  { materialSlug: 'toeic-lr', part: 7, skill: 'reading', label: 'Reading Comprehension', description: 'Read the passage and choose the best answer to each question.' },
+  { materialSlug: 'toeic-sw', part: 1, skill: 'speaking', label: 'Respond to Questions', description: 'Choose the most natural spoken response to each question.' },
+  { materialSlug: 'toeic-sw', part: 2, skill: 'writing', label: 'Sentence Choice', description: 'Choose the best sentence for each writing task.' }
 ]
 
 const AUDIO_NOTE = 'Audio placeholder — no recording in this demo build.'
 
-export const QUESTIONS: Question[] = [
+type QuestionSeed = Omit<Question, 'materialSlug'>
+
+const LR_SEEDS: QuestionSeed[] = [
   // ---------- LISTENING · Part 1 ----------
   {
     number: 1, part: 1, skill: 'listening', audioNote: AUDIO_NOTE,
@@ -291,9 +361,98 @@ export const QUESTIONS: Question[] = [
   }
 ]
 
+const SW_SEEDS: QuestionSeed[] = [
+  {
+    number: 1, part: 1, skill: 'speaking',
+    stem: 'Choose the most natural spoken response to: "What do you usually do on weekends?"',
+    options: [
+      { letter: 'A', text: 'I usually go hiking with friends or visit my family.' },
+      { letter: 'B', text: 'Weekend is Saturday Sunday.' },
+      { letter: 'C', text: 'I don’t know.' },
+      { letter: 'D', text: 'Yes, weekend.' }
+    ],
+    correctLetter: 'A',
+    explanation: 'A is the only complete, natural-sounding response.'
+  },
+  {
+    number: 2, part: 1, skill: 'speaking',
+    stem: 'Choose the most natural spoken response to: "Could you describe your hometown?"',
+    options: [
+      { letter: 'A', text: 'It big city.' },
+      { letter: 'B', text: 'My hometown is a small coastal town known for its seafood market.' },
+      { letter: 'C', text: 'Hometown yes.' },
+      { letter: 'D', text: 'I from there.' }
+    ],
+    correctLetter: 'B',
+    explanation: 'B gives a clear, grammatical description with a detail.'
+  },
+  {
+    number: 3, part: 1, skill: 'speaking',
+    stem: 'Choose the most natural spoken response to: "Why do you want to improve your English?"',
+    options: [
+      { letter: 'A', text: 'Because job need.' },
+      { letter: 'B', text: 'English important.' },
+      { letter: 'C', text: 'I need it for client meetings and to read technical documentation.' },
+      { letter: 'D', text: 'For good.' }
+    ],
+    correctLetter: 'C',
+    explanation: 'C states a specific, work-related reason in full sentences.'
+  },
+  {
+    number: 4, part: 2, skill: 'writing',
+    stem: 'Choose the best sentence to reply to a client email: "Please confirm receipt of the attached invoice."',
+    options: [
+      { letter: 'A', text: 'Received.' },
+      { letter: 'B', text: 'Thank you — I confirm receipt of the invoice attached to your email.' },
+      { letter: 'C', text: 'OK I see it.' },
+      { letter: 'D', text: 'Invoice yes got.' }
+    ],
+    correctLetter: 'B',
+    explanation: 'B is polite, complete, and business-appropriate.'
+  },
+  {
+    number: 5, part: 2, skill: 'writing',
+    stem: 'Choose the best sentence to request a meeting reschedule.',
+    options: [
+      { letter: 'A', text: 'I can’t come tomorrow, another day?' },
+      { letter: 'B', text: 'Would it be possible to move tomorrow’s meeting to Thursday morning?' },
+      { letter: 'C', text: 'Meeting cancel.' },
+      { letter: 'D', text: 'Tomorrow no.' }
+    ],
+    correctLetter: 'B',
+    explanation: 'B is a polite, specific rescheduling request.'
+  },
+  {
+    number: 6, part: 2, skill: 'writing',
+    stem: 'Choose the best sentence to describe a chart showing rising sales.',
+    options: [
+      { letter: 'A', text: 'Sales go up.' },
+      { letter: 'B', text: 'The chart shows that sales increased steadily over the quarter.' },
+      { letter: 'C', text: 'Up sales very.' },
+      { letter: 'D', text: 'Chart good.' }
+    ],
+    correctLetter: 'B',
+    explanation: 'B describes the trend accurately in a full sentence.'
+  }
+]
+
+export const QUESTIONS: Question[] = [
+  ...LR_SEEDS.map(q => ({ ...q, materialSlug: 'toeic-lr' })),
+  ...SW_SEEDS.map(q => ({ ...q, materialSlug: 'toeic-sw' }))
+]
+
+export function questionsForMaterial(slug: string): Question[] {
+  return QUESTIONS.filter(q => q.materialSlug === slug)
+}
+
+export function partsForMaterial(slug: string): PartInfo[] {
+  return PARTS.filter(p => p.materialSlug === slug)
+}
+
 export const PAPERS: Paper[] = [
   {
     id: 'toeic-lr-sim-01',
+    materialSlug: 'toeic-lr',
     title: 'TOEIC Listening & Reading — Full Simulation 01',
     category: 'Full Simulation',
     skillsLabel: 'Listening & Reading',
@@ -306,6 +465,7 @@ export const PAPERS: Paper[] = [
   },
   {
     id: 'toeic-lr-sim-02',
+    materialSlug: 'toeic-lr',
     title: 'TOEIC Listening & Reading — Full Simulation 02',
     category: 'Full Simulation',
     skillsLabel: 'Listening & Reading',
@@ -318,6 +478,7 @@ export const PAPERS: Paper[] = [
   },
   {
     id: 'toeic-lr-sim-03',
+    materialSlug: 'toeic-lr',
     title: 'TOEIC Listening & Reading — Full Simulation 03',
     category: 'Full Simulation',
     skillsLabel: 'Listening & Reading',
@@ -330,6 +491,7 @@ export const PAPERS: Paper[] = [
   },
   {
     id: 'toeic-reading-drill',
+    materialSlug: 'toeic-lr',
     title: 'Reading Drill Pack — Parts 5 to 7',
     category: 'Drill Pack',
     skillsLabel: 'Reading',
@@ -342,6 +504,7 @@ export const PAPERS: Paper[] = [
   },
   {
     id: 'toeic-listening-drill',
+    materialSlug: 'toeic-lr',
     title: 'Listening Drill Pack — Parts 1 to 4',
     category: 'Drill Pack',
     skillsLabel: 'Listening',
@@ -349,6 +512,32 @@ export const PAPERS: Paper[] = [
     totalQuestions: 60,
     difficulty: 'Intermediate',
     enrolled: 692,
+    status: 'not-started',
+    creditsRequired: 1
+  },
+  {
+    id: 'toeic-sw-drill-01',
+    materialSlug: 'toeic-sw',
+    title: 'TOEIC Speaking & Writing — Response Drill 01',
+    category: 'Drill Pack',
+    skillsLabel: 'Speaking & Writing',
+    durationMinutes: 30,
+    totalQuestions: 20,
+    difficulty: 'Intermediate',
+    enrolled: 412,
+    status: 'not-started',
+    creditsRequired: 1
+  },
+  {
+    id: 'toeic-sw-drill-02',
+    materialSlug: 'toeic-sw',
+    title: 'TOEIC Speaking & Writing — Response Drill 02',
+    category: 'Drill Pack',
+    skillsLabel: 'Speaking & Writing',
+    durationMinutes: 30,
+    totalQuestions: 20,
+    difficulty: 'Beginner',
+    enrolled: 388,
     status: 'not-started',
     creditsRequired: 1
   }
@@ -369,5 +558,9 @@ export function getPaperOrFallback(id: string): Paper {
   return getPaper(id) ?? FIRST_PAPER
 }
 
-/** Demo-only: the take interface renders this question set for every paper. */
-export const DEMO_NOTE = 'Demo build: every paper renders the same 18-question mock set.'
+export function papersForMaterial(slug: string): Paper[] {
+  return PAPERS.filter(p => p.materialSlug === slug)
+}
+
+/** Demo-only: the take interface renders the material's mock question set for every paper. */
+export const DEMO_NOTE = 'Demo build: every paper renders its material’s mock question set.'

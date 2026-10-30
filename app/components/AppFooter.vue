@@ -10,9 +10,8 @@
           </div>
         </div>
         <nav class="flex items-center gap-5 text-sm">
-          <NuxtLink to="/papers" class="hover:text-slate-200 transition-colors">Papers</NuxtLink>
-          <NuxtLink to="/performance" class="hover:text-slate-200 transition-colors">Performance</NuxtLink>
-          <NuxtLink to="/leaderboard" class="hover:text-slate-200 transition-colors">Leaderboard</NuxtLink>
+          <NuxtLink to="/materials" class="hover:text-slate-200 transition-colors">Materials</NuxtLink>
+          <NuxtLink to="/profile" class="hover:text-slate-200 transition-colors">Profile</NuxtLink>
         </nav>
       </div>
       <div class="mt-6 pt-5 border-t border-slate-800 flex flex-col md:flex-row justify-between gap-2 text-xs">

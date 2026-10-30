@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { postLoginPath } from '~/utils/navigation'
+
 definePageMeta({ layout: false })
 
 const router = useRouter()
@@ -10,7 +12,7 @@ const showPassword = ref(false)
 const error = ref('')
 
 onMounted(() => {
-  if (getAuth()) router.replace('/')
+  if (getAuth()) router.replace(postLoginPath())
 })
 
 function signIn(): void {
@@ -21,7 +23,7 @@ function signIn(): void {
   }
   // Mock auth: any credentials are accepted in this demo build.
   setAuth({ username: username.value.trim(), remember: remember.value })
-  router.push('/')
+  router.push(postLoginPath())
 }
 </script>
 
