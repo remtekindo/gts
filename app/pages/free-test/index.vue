@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { FREE_TEST_QUESTIONS, FREE_TEST_SECTIONS } from '~/data/mock'
-import { saveFreeAnswers, type AnswerMap } from '~/utils/storage'
+import { saveFreeAnswers, saveFreeTimings, type AnswerMap } from '~/utils/storage'
 
 definePageMeta({ layout: false })
 
@@ -11,6 +11,22 @@ const started = ref(false)
 const idx = ref(0)
 const answers = ref<AnswerMap>({})
 const confirmSubmit = ref(false)
+
+/** Seconds spent per question number — feeds the adaptive engine. */
+const timeSpent = ref<Record<number, number>>({})
+let enterStamp = Date.now()
+
+function flushTime(forIdx: number): void {
+  const q = questions[forIdx]
+  if (!q) return
+  const elapsed = Math.max(0, Math.round((Date.now() - enterStamp) / 1000))
+  timeSpent.value[q.number] = (timeSpent.value[q.number] ?? 0) + elapsed
+  enterStamp = Date.now()
+}
+
+watch(idx, (_n, old) => { flushTime(old) })
+// The clock starts when the user starts the test, not while reading the intro.
+watch(started, v => { if (v) enterStamp = Date.now() })
 
 const questions = FREE_TEST_QUESTIONS
 const current = computed(() => questions[idx.value] ?? questions[0]!)
@@ -46,7 +62,9 @@ function prev(): void {
 
 function doSubmit(): void {
   confirmSubmit.value = false
+  flushTime(idx.value)
   saveFreeAnswers(answers.value)
+  saveFreeTimings(timeSpent.value)
   router.push('/auth?next=/free-test/result')
 }
 

@@ -5,6 +5,22 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [0.11.0] - 2026-10-31
+
+### Added
+- Per-question timing: the test pages now record seconds spent on each
+  question (`timings` on TestResult, persisted per attempt). The clock
+  starts when the test starts (not while reading instructions) and banks
+  time as the user moves between questions. This feeds the adaptive
+  engine's accuracy + speed analysis.
+
+### Fixed
+- `/auth` auto-redirect refined: a signed-in non-admin visiting
+  `/auth?next=/admin` stays on the form (no redirect loop), while all
+  other `?next=` targets (e.g. `/free-test/result`) redirect through as
+  before.
+
+
 ## [0.10.0] - 2026-10-31
 
 ### Added

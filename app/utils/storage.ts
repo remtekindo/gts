@@ -18,6 +18,8 @@ export interface TestResult {
   answers: AnswerMap
   finishedAt: string
   username?: string
+  /** Seconds spent per question number — feeds the adaptive engine. */
+  timings?: Record<number, number>
 }
 
 function read<T>(key: string): T | null {
@@ -110,9 +112,18 @@ export function loadFreeAnswers(): AnswerMap | null {
   return read<AnswerMap>('gts_free_answers')
 }
 
+export function saveFreeTimings(timings: Record<number, number>): void {
+  write('gts_free_timings', timings)
+}
+
+export function loadFreeTimings(): Record<number, number> | null {
+  return read<Record<number, number>>('gts_free_timings')
+}
+
 export function clearFreeAnswers(): void {
   try {
     localStorage.removeItem('gts_free_answers')
+    localStorage.removeItem('gts_free_timings')
   } catch {
     /* storage unavailable */
   }

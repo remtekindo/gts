@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { FREE_TEST_QUESTIONS, FREE_TEST_SECTIONS } from '~/data/mock'
-import { loadFreeAnswers, clearFreeAnswers, saveResult, getResult, type AnswerMap } from '~/utils/storage'
+import { loadFreeAnswers, loadFreeTimings, clearFreeAnswers, saveResult, getResult, type AnswerMap } from '~/utils/storage'
 
 definePageMeta({ layout: false })
 
@@ -43,7 +43,8 @@ onMounted(() => {
     total: FREE_TEST_QUESTIONS.length,
     answers: pending,
     finishedAt: new Date().toISOString(),
-    username: getAuth()?.username ?? 'guest'
+    username: getAuth()?.username ?? 'guest',
+    timings: loadFreeTimings() ?? {}
   })
   clearFreeAnswers()
 })

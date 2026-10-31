@@ -36,12 +36,30 @@ const current = computed((): Question => questions.value[idx.value] ?? questions
 const answers = ref<AnswerMap>({})
 const submitted = ref(false)
 
+/** Seconds spent per question number — feeds the adaptive engine. */
+const timeSpent = ref<Record<number, number>>({})
+let enterStamp = Date.now()
+
+function flushTime(forIdx: number): void {
+  const q = questions.value[forIdx]
+  if (!q) return
+  const elapsed = Math.max(0, Math.round((Date.now() - enterStamp) / 1000))
+  timeSpent.value[q.number] = (timeSpent.value[q.number] ?? 0) + elapsed
+  enterStamp = Date.now()
+}
+
+// Moving to another question banks the time spent on the previous one.
+watch(idx, (_n, old) => { flushTime(old) })
+
 const showInstructions = ref(true)
 const openPart = ref<number | null>(1)
 const notesOpen = ref(false)
 const noteDraft = ref('')
 const confirmSubmit = ref(false)
 const confirmExit = ref(false)
+
+// Don't count the seconds spent reading the instructions against Q1.
+watch(showInstructions, v => { if (!v) enterStamp = Date.now() })
 
 const totalSeconds = computed(() => paper.value.durationMinutes * 60)
 const answeredCount = computed(() => Object.keys(answers.value).length)
@@ -84,6 +102,7 @@ function prev(): void {
 }
 
 function gradeAndSave(): void {
+  flushTime(idx.value)
   let correct = 0
   for (const q of questions.value) {
     if (answers.value[q.number] === q.correctLetter) correct += 1
@@ -98,7 +117,8 @@ function gradeAndSave(): void {
     total: questions.value.length,
     answers: answers.value,
     finishedAt: new Date().toISOString(),
-    username: getAuth()?.username ?? 'guest'
+    username: getAuth()?.username ?? 'guest',
+    timings: timeSpent.value
   })
   clearAnswers(paper.value.id, attempt.value)
 }
