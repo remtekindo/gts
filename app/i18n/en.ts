@@ -47,10 +47,10 @@ export default {
     ctaBtn: 'Start now — it’s free',
     planMonthly: 'Monthly', planQuarterly: 'Quarterly', planSemiannual: 'Semiannual',
     perMonth: '/month', per3: '/3 months', per6: '/6 months',
-    featM1: 'All papers in your materials', featM2: 'Instant predicted scores',
+    featM1: 'Choose 1 material', featM2: 'Full simulations + instant predicted scores',
     featM3: 'Per-part breakdowns', featM4: '7-day free trial',
-    featQ1: 'Everything in Monthly', featQ2: 'New papers every month', featQ3: 'Priority support',
-    featS1: 'Everything in Quarterly', featS2: 'Lowest price per month', featS3: 'Early access to new materials',
+    featQ1: 'Choose 2 materials', featQ2: 'Everything in Monthly', featQ3: 'New papers every month',
+    featS1: 'All materials', featS2: 'Everything in Quarterly', featS3: 'Lowest price per month',
     ctaTrial: 'Start free trial', ctaQuarterly: 'Choose Quarterly', ctaSemiannual: 'Choose Semiannual'
   },
   auth: {

@@ -47,10 +47,10 @@ export default {
     ctaBtn: 'Mulai sekarang — gratis',
     planMonthly: 'Bulanan', planQuarterly: 'Triwulanan', planSemiannual: 'Semesteran',
     perMonth: '/bulan', per3: '/3 bulan', per6: '/6 bulan',
-    featM1: 'Semua soal di materimu', featM2: 'Prediksi skor instan',
+    featM1: 'Pilih 1 materi', featM2: 'Simulasi penuh + prediksi skor instan',
     featM3: 'Bedah per bagian', featM4: 'Uji coba gratis 7 hari',
-    featQ1: 'Semua di Bulanan', featQ2: 'Soal baru setiap bulan', featQ3: 'Dukungan prioritas',
-    featS1: 'Semua di Triwulanan', featS2: 'Harga per bulan termurah', featS3: 'Akses awal materi baru',
+    featQ1: 'Pilih 2 materi', featQ2: 'Semua di Bulanan', featQ3: 'Soal baru setiap bulan',
+    featS1: 'Semua materi', featS2: 'Semua di Triwulanan', featS3: 'Harga per bulan termurah',
     ctaTrial: 'Mulai uji coba gratis', ctaQuarterly: 'Pilih Triwulanan', ctaSemiannual: 'Pilih Semesteran'
   },
   auth: {

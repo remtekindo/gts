@@ -5,6 +5,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [0.9.1] - 2026-10-31
+
+### Fixed
+- Landing pricing now reflects the agreed package scheme: Monthly =
+  choose 1 material, Quarterly = choose 2 materials, Semiannual = all
+  materials (the material differentiation was missing from the plan
+  features).
+
+
 ## [0.9.0] - 2026-10-31
 
 ### Fixed
