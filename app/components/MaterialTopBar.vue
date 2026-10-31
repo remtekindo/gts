@@ -142,5 +142,23 @@ onUnmounted(() => {
         </div>
       </div>
     </div>
+    <!-- Mobile tab bar: the desktop nav is hidden on small screens -->
+    <nav class="md:hidden border-t border-slate-200 dark:border-slate-700 overflow-x-auto no-scrollbar" aria-label="Material">
+      <div class="flex items-center gap-1 px-3">
+        <NuxtLink
+          v-for="item in nav"
+          :key="item.to"
+          :to="item.to"
+          class="relative whitespace-nowrap px-3 py-2.5 text-sm font-medium"
+          :class="isActive(item.to) ? 'text-blue-600' : 'text-slate-500 dark:text-slate-400'"
+        >
+          {{ item.label }}
+          <span
+            v-if="isActive(item.to)"
+            class="absolute bottom-0 left-3 right-3 h-0.5 rounded-full bg-blue-600"
+          />
+        </NuxtLink>
+      </div>
+    </nav>
   </header>
 </template>

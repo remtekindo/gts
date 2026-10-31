@@ -78,7 +78,7 @@ const skills = computed(() => {
               (balance: <strong class="text-slate-700 dark:text-slate-200">12</strong>).
             </p>
           </div>
-          <div class="flex items-center gap-3">
+          <div class="flex flex-wrap items-center gap-3">
             <div class="flex items-center gap-1.5" role="group" :aria-label="t('overview.attempt')">
               <button
                 v-for="n in 3"
@@ -92,7 +92,7 @@ const skills = computed(() => {
             </div>
             <NuxtLink
               :to="`${base}/papers/${paper.id}/take?attempt=${attempt}`"
-              class="text-sm font-semibold px-6 py-3 rounded-xl bg-blue-600 text-white hover:bg-blue-700 transition-colors"
+              class="w-full sm:w-auto text-center text-sm font-semibold px-6 py-3 rounded-xl bg-blue-600 text-white hover:bg-blue-700 transition-colors"
             >
               {{ t('overview.startTest') }}
             </NuxtLink>

@@ -75,14 +75,14 @@ const steps = computed(() => [
           <NuxtLink
             v-if="signedIn"
             :to="dashboardTo"
-            class="text-sm font-semibold px-5 py-2.5 rounded-xl bg-blue-600 text-white hover:bg-blue-700 transition-colors"
+            class="text-sm font-semibold px-5 py-2.5 rounded-xl bg-blue-600 text-white hover:bg-blue-700 transition-colors whitespace-nowrap"
           >
             {{ t('nav.openDashboard') }}
           </NuxtLink>
           <NuxtLink
             v-else
             to="/auth"
-            class="text-sm font-semibold px-5 py-2.5 rounded-xl bg-blue-600 text-white hover:bg-blue-700 transition-colors"
+            class="text-sm font-semibold px-5 py-2.5 rounded-xl bg-blue-600 text-white hover:bg-blue-700 transition-colors whitespace-nowrap"
           >
             {{ t('nav.signIn') }}
           </NuxtLink>

@@ -5,6 +5,22 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-10-31
+
+### Added
+- Mobile tab bar under the material header (Dashboard / Papers /
+  Performance / Leaderboard) — the desktop nav was hidden on small
+  screens, leaving mobile users with no in-material navigation.
+
+### Fixed
+- Mobile audit pass (375px viewport, 11 pages, zero horizontal
+  overflow): test header title no longer collides with action buttons
+  (hidden on xs), the GTS logo badge is visible again (was white-on-
+  white), overview Start Test button stacks full-width on mobile,
+  header Sign in / Open dashboard buttons no longer wrap, StatTile
+  values no longer wrap.
+
+
 ## [0.6.2] - 2026-10-31
 
 ### Fixed

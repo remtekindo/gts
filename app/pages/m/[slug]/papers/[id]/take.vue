@@ -130,8 +130,8 @@ function saveNotes(): void {
     <!-- Dark navy header -->
     <header class="bg-slate-900 text-white sticky top-0 z-40">
       <div class="max-w-6xl mx-auto px-4 h-16 flex items-center">
-        <span class="w-8 h-8 rounded-lg bg-white dark:bg-slate-900/10 font-extrabold flex items-center justify-center text-[10px] tracking-tight shrink-0">GTS</span>
-        <h1 class="absolute left-1/2 -translate-x-1/2 text-sm md:text-base font-semibold truncate max-w-[50%]">
+        <span class="w-8 h-8 rounded-lg bg-white text-slate-900 font-extrabold flex items-center justify-center text-[10px] tracking-tight shrink-0">GTS</span>
+        <h1 class="hidden sm:block absolute left-1/2 -translate-x-1/2 text-sm md:text-base font-semibold truncate max-w-[50%]">
           {{ paper.title }}
         </h1>
         <div class="ml-auto flex items-center gap-2 shrink-0">

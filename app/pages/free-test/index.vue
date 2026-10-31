@@ -69,7 +69,7 @@ function onExpire(): void {
           <ThemeToggle />
           <NuxtLink
             to="/auth"
-            class="text-sm font-semibold px-4 py-2 rounded-xl border border-slate-300 dark:border-slate-600 hover:border-blue-400 hover:text-blue-600 transition-colors"
+            class="text-sm font-semibold px-4 py-2 rounded-xl border border-slate-300 dark:border-slate-600 hover:border-blue-400 hover:text-blue-600 transition-colors whitespace-nowrap"
           >
             {{ t('nav.signIn') }}
           </NuxtLink>
