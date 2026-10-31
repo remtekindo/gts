@@ -47,7 +47,9 @@ function submit(): void {
       return
     }
     // Mock auth: any credentials are accepted in this demo build.
-    setAuth({ username: username.value.trim(), remember: remember.value })
+    // Username "admin" signs in with the admin role (for the /admin panel).
+    const uname = username.value.trim()
+    setAuth({ username: uname, remember: remember.value, role: uname.toLowerCase() === 'admin' ? 'admin' : 'user' })
     router.push(nextPath())
     return
   }
@@ -69,7 +71,7 @@ function submit(): void {
     return
   }
   // Mock register: any valid input creates the demo account.
-  setAuth({ username: name.value.trim(), remember: true })
+  setAuth({ username: name.value.trim(), remember: true, role: 'user' })
   router.push(nextPath())
 }
 </script>
@@ -199,6 +201,8 @@ function submit(): void {
           </div>
 
           <p v-if="error" class="text-sm text-red-600 dark:text-red-300 bg-red-50 dark:bg-red-950/60 rounded-xl px-3.5 py-2.5">{{ error }}</p>
+
+          <p v-if="mode === 'login'" class="text-xs text-center text-slate-400 dark:text-slate-500">{{ t('auth.adminHint') }}</p>
 
           <button
             type="submit"

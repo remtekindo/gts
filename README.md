@@ -106,3 +106,11 @@ app/
 ## Trademark
 
 TOEIC® is a registered trademark of Educational Testing Service (ETS). This product is not endorsed or approved by ETS. The same applies to TOEFL®/IELTS™ and their respective owners when those papers ship.
+
+## Admin panel (minimal)
+
+`/admin` — ops panel for question QC, reports, users and results.
+Demo gate: sign in as `admin` (any password). Non-admins are redirected
+to `/auth?next=/admin`. Difficulty tags set here persist in localStorage
+(`gts_admin_difficulty`) and are the foundation for the adaptive engine.
+

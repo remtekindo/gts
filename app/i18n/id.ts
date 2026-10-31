@@ -54,7 +54,7 @@ export default {
     ctaTrial: 'Mulai uji coba gratis', ctaQuarterly: 'Pilih Triwulanan', ctaSemiannual: 'Pilih Semesteran'
   },
   auth: {
-    brandLine1: 'Berlatih dengan simulasi tes yang realistis, dapatkan prediksi skor instan,',
+    adminHint: 'Demo: masuk sebagai "admin" untuk membuka panel admin.',    brandLine1: 'Berlatih dengan simulasi tes yang realistis, dapatkan prediksi skor instan,',
     brandLine2: 'dan pantau persis posisimu — tanpa teori, langsung tesnya.',
     brandF1: 'Simulasi Listening & Reading penuh',
     brandF2: 'Prediksi skor instan dengan level CEFR',
@@ -321,5 +321,87 @@ export default {
     correctAnswer: 'Jawaban benar',
     yourAnswer: 'Jawabanmu',
     historyName: 'Tes Gratis — Bahasa Inggris Umum'
+  },
+  "admin": {
+    "title": "GTS Admin",
+    "subtitle": "Panel ops minimal",
+    "backToApp": "Kembali ke aplikasi",
+    "signOut": "Keluar",
+    "nav": {
+      "dashboard": "Dasbor",
+      "questions": "Soal",
+      "reports": "Laporan",
+      "users": "Pengguna",
+      "results": "Hasil"
+    },
+    "dashboard": {
+      "heading": "Ringkasan",
+      "sub": "Angka kunci sekilas.",
+      "statQuestions": "Soal di bank",
+      "statReports": "Laporan pending",
+      "statReportsSub": "perlu review QC",
+      "statAttempts": "Upaya tes",
+      "statAttemptsSub": "browser ini",
+      "statUsers": "User demo",
+      "statUsersSub": "sampai backend real",
+      "recentReports": "Laporan terbaru",
+      "viewAll": "Lihat semua",
+      "noReports": "Tidak ada laporan pending. Antrian QC bersih."
+    },
+    "questions": {
+      "heading": "Bank soal",
+      "sub": "Review soal dan tandai level kesulitan untuk adaptive engine.",
+      "search": "Cari stem atau ID…",
+      "bank_all": "Semua",
+      "bank_lr": "TOEIC LR",
+      "bank_free": "Tes Gratis",
+      "colId": "ID",
+      "colBank": "Bank",
+      "colStem": "Stem",
+      "colDifficulty": "Level",
+      "view": "Lihat",
+      "unrated": "Belum dinilai",
+      "detailTitle": "Detail soal",
+      "correctAnswer": "Jawaban benar",
+      "setDifficulty": "Level kesulitan:",
+      "save": "Simpan",
+      "saved": "Tersimpan ✓"
+    },
+    "reports": {
+      "heading": "Laporan soal",
+      "sub": "Antrian QC: masalah soal yang dilaporkan user.",
+      "status_all": "Semua",
+      "status_pending": "Pending",
+      "status_resolved": "Selesai",
+      "status_dismissed": "Ditolak",
+      "reporter": "Pelapor",
+      "resolve": "Tandai selesai",
+      "dismiss": "Tolak",
+      "viewQuestion": "Lihat soal",
+      "empty": "Tidak ada laporan dengan status ini."
+    },
+    "users": {
+      "heading": "Pengguna",
+      "sub": "Akun terdaftar.",
+      "demoNote": "(Data demo sampai backend real ada.)",
+      "colUser": "User",
+      "colPlan": "Paket",
+      "colStatus": "Status",
+      "colJoined": "Bergabung",
+      "colAttempts": "Upaya",
+      "st_active": "Aktif",
+      "st_trial": "Trial",
+      "st_expired": "Kadaluarsa"
+    },
+    "results": {
+      "heading": "Hasil tes",
+      "sub": "Upaya yang tercatat di perangkat ini.",
+      "colPaper": "Paper",
+      "colScore": "Skor",
+      "colCorrect": "Benar",
+      "colDate": "Selesai",
+      "empty": "Belum ada upaya tercatat di browser ini.",
+      "browserNote": "Demo: hasil disimpan per browser. Backend real akan menyatukannya."
+    }
   }
 }

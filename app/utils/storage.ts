@@ -3,6 +3,7 @@
 export interface AuthState {
   username: string
   remember: boolean
+  role: 'admin' | 'user'
 }
 
 export type AnswerMap = Record<number, string>

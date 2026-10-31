@@ -54,6 +54,7 @@ export default {
     ctaTrial: 'Start free trial', ctaQuarterly: 'Choose Quarterly', ctaSemiannual: 'Choose Semiannual'
   },
   auth: {
+    adminHint: 'Demo: sign in as "admin" to open the admin panel.',
     brandLine1: 'Practice with realistic test simulations, get an instant predicted score,',
     brandLine2: 'and track exactly where you stand — no theory, just the test.',
     brandF1: 'Full Listening & Reading simulations',
@@ -321,5 +322,87 @@ export default {
     correctAnswer: 'Correct answer',
     yourAnswer: 'Your answer',
     historyName: 'Free Test — General English'
+  },
+  "admin": {
+    "title": "GTS Admin",
+    "subtitle": "Minimal ops panel",
+    "backToApp": "Back to app",
+    "signOut": "Sign out",
+    "nav": {
+      "dashboard": "Dashboard",
+      "questions": "Questions",
+      "reports": "Reports",
+      "users": "Users",
+      "results": "Results"
+    },
+    "dashboard": {
+      "heading": "Overview",
+      "sub": "Key numbers at a glance.",
+      "statQuestions": "Questions in bank",
+      "statReports": "Pending reports",
+      "statReportsSub": "needs QC review",
+      "statAttempts": "Test attempts",
+      "statAttemptsSub": "this browser",
+      "statUsers": "Demo users",
+      "statUsersSub": "until real backend",
+      "recentReports": "Recent reports",
+      "viewAll": "View all",
+      "noReports": "No pending reports. The QC queue is clear."
+    },
+    "questions": {
+      "heading": "Question bank",
+      "sub": "Review questions and tag difficulty for the adaptive engine.",
+      "search": "Search stem or ID…",
+      "bank_all": "All",
+      "bank_lr": "TOEIC LR",
+      "bank_free": "Free Test",
+      "colId": "ID",
+      "colBank": "Bank",
+      "colStem": "Stem",
+      "colDifficulty": "Level",
+      "view": "View",
+      "unrated": "Unrated",
+      "detailTitle": "Question detail",
+      "correctAnswer": "Correct answer",
+      "setDifficulty": "Difficulty level:",
+      "save": "Save",
+      "saved": "Saved ✓"
+    },
+    "reports": {
+      "heading": "Question reports",
+      "sub": "QC queue: user-reported question issues.",
+      "status_all": "All",
+      "status_pending": "Pending",
+      "status_resolved": "Resolved",
+      "status_dismissed": "Dismissed",
+      "reporter": "Reporter",
+      "resolve": "Mark resolved",
+      "dismiss": "Dismiss",
+      "viewQuestion": "View question",
+      "empty": "No reports with this status."
+    },
+    "users": {
+      "heading": "Users",
+      "sub": "Registered accounts.",
+      "demoNote": "(Demo data until the real backend exists.)",
+      "colUser": "User",
+      "colPlan": "Plan",
+      "colStatus": "Status",
+      "colJoined": "Joined",
+      "colAttempts": "Attempts",
+      "st_active": "Active",
+      "st_trial": "Trial",
+      "st_expired": "Expired"
+    },
+    "results": {
+      "heading": "Test results",
+      "sub": "Attempts recorded on this device.",
+      "colPaper": "Paper",
+      "colScore": "Score",
+      "colCorrect": "Correct",
+      "colDate": "Finished",
+      "empty": "No attempts recorded yet on this browser.",
+      "browserNote": "Demo: results are stored per browser. The real backend will centralize them."
+    }
   }
 }

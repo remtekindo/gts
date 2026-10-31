@@ -5,6 +5,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-10-31
+
+### Added
+- Minimal admin panel at `/admin` (mock role gate: sign in as `admin`).
+  Dashboard (question count, pending QC reports, attempts, demo users),
+  question bank browser with difficulty tagging (1–5, persisted — the
+  foundation for the adaptive engine), report QC queue (resolve/dismiss),
+  demo user list, and per-browser test result overview. Sidebar on
+  desktop, scrollable tab bar on mobile; dark mode throughout.
+
+
 ## [0.7.0] - 2026-10-31
 
 ### Added
