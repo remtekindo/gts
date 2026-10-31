@@ -12,3 +12,9 @@ node_modules
 
 # OS
 .DS_Store
+
+# Generated batches (reviewed copies live in app/data/)
+scripts/generate-questions/out/
+
+# Secrets
+.env

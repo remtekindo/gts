@@ -5,6 +5,22 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [0.10.0] - 2026-10-31
+
+### Added
+- Question-generation pipeline (`scripts/generate-questions/`): CLI that
+  generates original TOEIC-style questions via Meta's Model API
+  (OpenAI-compatible, `https://api.meta.ai/v1`, model
+  `muse-spark-1.3-contributor` by default) using structured JSON output,
+  validates each batch (4 options A–D, unique distractors, one correct
+  letter, distribution check), dedupes against the committed bank, and
+  appends real token costs to `out/cost-log.csv` to validate the
+  unit-economics model with data. `--dry-run` tests the plumbing without
+  spending; README documents setup, QC workflow (human review required
+  before merging), and cost notes. This is the hackathon entry's "real use
+  of Meta's models".
+
+
 ## [0.9.1] - 2026-10-31
 
 ### Fixed

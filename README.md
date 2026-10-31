@@ -93,6 +93,11 @@ app/
     storage.ts             # Typed localStorage helpers (auth, answers, results, notes)
     scoring.ts             # TOEIC-style predicted score + CEFR mapping
     navigation.ts          # postLoginPath(): 1 owned material -> enter it, else hub
+scripts/
+  generate-questions/      # Question-generation pipeline (Meta Model API, Muse Spark):
+                           # generate.mjs (CLI) + README.md. Validates batches against the
+                           # Question schema, dedupes vs the bank, logs real token costs
+                           # to out/cost-log.csv. Needs MODEL_API_KEY (dev.meta.ai/api-keys).
 ```
 
 ## Conventions
