@@ -2,13 +2,12 @@
 import { getAuth, clearAuth } from '~/utils/storage'
 import { getReports } from '~/utils/admin'
 
-definePageMeta({ layout: false })
-
 const route = useRoute()
 const router = useRouter()
 const { t } = useLocale()
 
 const authed = ref(false)
+const deniedUser = ref<string | null>(null)
 const pendingCount = ref(0)
 
 const nav = computed(() => [
@@ -30,17 +29,44 @@ function signOut(): void {
 
 onMounted(() => {
   const auth = getAuth()
-  if (!auth || auth.role !== 'admin') {
+  if (!auth) {
     router.replace('/auth?next=/admin')
+    return
+  }
+  if (auth.role !== 'admin') {
+    // Logged in as a regular user: show "access denied" instead of
+    // redirecting (redirecting would loop with /auth's auto-redirect).
+    deniedUser.value = auth.username
     return
   }
   authed.value = true
   pendingCount.value = getReports().filter(r => r.status === 'pending').length
 })
+
+function switchAccount(): void {
+  clearAuth()
+  router.replace('/auth?next=/admin')
+}
 </script>
 
 <template>
-  <div v-if="authed" class="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-200 md:flex">
+  <div v-if="deniedUser" class="min-h-screen bg-slate-50 dark:bg-slate-950 flex items-center justify-center px-4">
+    <div class="w-full max-w-sm bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 p-6 text-center">
+      <p class="text-3xl">🔒</p>
+      <h1 class="mt-2 font-extrabold text-lg">{{ t('admin.deniedTitle') }}</h1>
+      <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">{{ t('admin.deniedSub', { user: deniedUser }) }}</p>
+      <button
+        class="mt-4 w-full rounded-xl bg-blue-600 text-white font-semibold py-2.5 text-sm hover:bg-blue-700 transition-colors"
+        @click="switchAccount"
+      >
+        {{ t('admin.deniedSwitch') }}
+      </button>
+      <NuxtLink to="/materials" class="mt-2 block text-sm font-semibold text-slate-500 dark:text-slate-400 py-2">
+        {{ t('admin.backToApp') }}
+      </NuxtLink>
+    </div>
+  </div>
+  <div v-else-if="authed" class="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-200 md:flex">
     <!-- Desktop sidebar -->
     <aside class="hidden md:flex w-60 shrink-0 flex-col bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 min-h-screen sticky top-0 h-screen">
       <div class="px-5 h-16 flex items-center gap-2.5 border-b border-slate-200 dark:border-slate-800">

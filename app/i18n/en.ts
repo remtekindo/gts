@@ -326,6 +326,9 @@ export default {
   "admin": {
     "title": "GTS Admin",
     "subtitle": "Minimal ops panel",
+    "deniedTitle": "Access denied",
+    "deniedSub": "Signed in as {user}. The admin panel needs an admin account.",
+    "deniedSwitch": "Switch to admin account",
     "backToApp": "Back to app",
     "signOut": "Sign out",
     "nav": {

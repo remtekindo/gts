@@ -26,7 +26,10 @@ const showPassword = ref(false)
 const error = ref('')
 
 onMounted(() => {
-  if (getAuth()) router.replace(nextPath())
+  // Already signed in: continue onward — but NOT when a ?next= target is
+  // present, so the user can switch accounts instead of bouncing
+  // between /auth and the target (e.g. non-admin hitting /admin).
+  if (getAuth() && !route.query.next) router.replace(nextPath())
 })
 
 function switchMode(next: 'login' | 'register'): void {

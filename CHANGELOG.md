@@ -5,6 +5,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [0.8.1] - 2026-10-31
+
+### Fixed
+- Login loop between `/admin` and `/auth`: a signed-in non-admin user
+  bounced forever (`/admin` -> `/auth?next=/admin` -> `/admin` …).
+  `/admin` now shows an "Access denied" screen with a switch-account
+  action instead of redirecting, and `/auth` no longer auto-redirects
+  when a `?next=` target is present.
+
+
 ## [0.8.0] - 2026-10-31
 
 ### Added

@@ -325,6 +325,9 @@ export default {
   "admin": {
     "title": "GTS Admin",
     "subtitle": "Panel ops minimal",
+    "deniedTitle": "Akses ditolak",
+    "deniedSub": "Masuk sebagai {user}. Panel admin butuh akun admin.",
+    "deniedSwitch": "Ganti ke akun admin",
     "backToApp": "Kembali ke aplikasi",
     "signOut": "Keluar",
     "nav": {
