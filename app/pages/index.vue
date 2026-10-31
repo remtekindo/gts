@@ -207,7 +207,7 @@ const steps = computed(() => [
         <p class="mt-3 text-blue-200">{{ t('landing.ctaSub') }}</p>
         <NuxtLink
           :to="signedIn ? dashboardTo : '/free-test'"
-          class="mt-6 inline-block text-sm font-semibold px-7 py-3.5 rounded-xl bg-white dark:bg-slate-900 text-blue-700 hover:bg-blue-50 transition-colors"
+          class="mt-6 inline-block text-sm font-semibold px-7 py-3.5 rounded-xl bg-white text-blue-700 hover:bg-blue-50 transition-colors"
         >
           {{ signedIn ? t('nav.openDashboard') : t('landing.ctaBtn') }}
         </NuxtLink>

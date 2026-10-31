@@ -84,7 +84,7 @@ function submit(): void {
     <!-- Brand panel -->
     <div class="hidden lg:flex w-1/2 bg-gradient-to-br from-blue-700 via-blue-800 to-indigo-950 text-white flex-col justify-between p-12">
       <div class="flex items-center gap-3">
-        <span class="w-11 h-11 rounded-xl bg-white dark:bg-slate-900/15 font-extrabold flex items-center justify-center text-sm tracking-tight">GTS</span>
+        <span class="w-11 h-11 rounded-xl bg-slate-900/15 font-extrabold flex items-center justify-center text-sm tracking-tight">GTS</span>
         <span class="font-semibold leading-tight">Global Testing<br />System</span>
       </div>
       <div>
@@ -94,15 +94,15 @@ function submit(): void {
         </p>
         <ul class="mt-8 space-y-3 text-sm text-blue-100">
           <li class="flex items-center gap-3">
-            <span class="w-6 h-6 rounded-full bg-white dark:bg-slate-900/15 flex items-center justify-center text-xs">✓</span>
+            <span class="w-6 h-6 rounded-full bg-slate-900/15 flex items-center justify-center text-xs">✓</span>
             {{ t('auth.brandF1') }}
           </li>
           <li class="flex items-center gap-3">
-            <span class="w-6 h-6 rounded-full bg-white dark:bg-slate-900/15 flex items-center justify-center text-xs">✓</span>
+            <span class="w-6 h-6 rounded-full bg-slate-900/15 flex items-center justify-center text-xs">✓</span>
             {{ t('auth.brandF2') }}
           </li>
           <li class="flex items-center gap-3">
-            <span class="w-6 h-6 rounded-full bg-white dark:bg-slate-900/15 flex items-center justify-center text-xs">✓</span>
+            <span class="w-6 h-6 rounded-full bg-slate-900/15 flex items-center justify-center text-xs">✓</span>
             {{ t('auth.brandF3') }}
           </li>
         </ul>
@@ -130,7 +130,7 @@ function submit(): void {
               type="text"
               autocomplete="username"
               placeholder="you@example.com"
-              class="w-full rounded-xl border border-slate-300 dark:border-slate-600 px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              class="w-full rounded-xl border border-slate-300 dark:border-slate-600 px-3.5 py-2.5 text-sm text-slate-900 dark:text-white bg-white dark:bg-slate-800 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
           <div v-if="mode === 'register'">
@@ -141,7 +141,7 @@ function submit(): void {
               type="text"
               autocomplete="name"
               placeholder="Your name"
-              class="w-full rounded-xl border border-slate-300 dark:border-slate-600 px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              class="w-full rounded-xl border border-slate-300 dark:border-slate-600 px-3.5 py-2.5 text-sm text-slate-900 dark:text-white bg-white dark:bg-slate-800 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
           <div v-if="mode === 'register'">
@@ -152,7 +152,7 @@ function submit(): void {
               type="email"
               autocomplete="email"
               placeholder="you@example.com"
-              class="w-full rounded-xl border border-slate-300 dark:border-slate-600 px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              class="w-full rounded-xl border border-slate-300 dark:border-slate-600 px-3.5 py-2.5 text-sm text-slate-900 dark:text-white bg-white dark:bg-slate-800 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
           <div>
@@ -164,7 +164,7 @@ function submit(): void {
                 :type="showPassword ? 'text' : 'password'"
                 autocomplete="current-password"
                 placeholder="••••••••"
-                class="w-full rounded-xl border border-slate-300 dark:border-slate-600 px-3.5 py-2.5 pr-11 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                class="w-full rounded-xl border border-slate-300 dark:border-slate-600 px-3.5 py-2.5 pr-11 text-sm text-slate-900 dark:text-white bg-white dark:bg-slate-800 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
               <button
                 type="button"
@@ -191,7 +191,7 @@ function submit(): void {
               type="password"
               autocomplete="new-password"
               placeholder="••••••••"
-              class="w-full rounded-xl border border-slate-300 dark:border-slate-600 px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              class="w-full rounded-xl border border-slate-300 dark:border-slate-600 px-3.5 py-2.5 text-sm text-slate-900 dark:text-white bg-white dark:bg-slate-800 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
 

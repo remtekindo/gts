@@ -55,7 +55,7 @@ function formatDate(iso: string): string {
     <ul v-else class="mt-4 space-y-3">
       <li v-for="r in filtered" :key="r.id" class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 p-4 md:p-5">
         <div class="flex flex-wrap items-center gap-2">
-          <span class="font-mono text-xs text-slate-400">{{ r.questionId }}</span>
+          <NuxtLink :to="{ path: '/admin/questions', query: { q: r.questionId } }" class="font-mono text-xs text-blue-600 hover:underline">{{ r.questionId }}</NuxtLink>
           <span class="text-xs font-bold px-2 py-0.5 rounded-full" :class="statusClass(r.status)">{{ t(`admin.reports.status_${r.status}`) }}</span>
           <span class="ml-auto text-xs text-slate-400 dark:text-slate-500">{{ formatDate(r.createdAt) }}</span>
         </div>

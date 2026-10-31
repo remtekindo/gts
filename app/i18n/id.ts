@@ -331,7 +331,7 @@ export default {
     "backToApp": "Kembali ke aplikasi",
     "signOut": "Keluar",
     "nav": {
-      "dashboard": "Dasbor",
+      "dashboard": "Overview",
       "questions": "Soal",
       "reports": "Laporan",
       "users": "Pengguna",
@@ -358,6 +358,10 @@ export default {
       "bank_all": "Semua",
       "bank_lr": "TOEIC LR",
       "bank_free": "Tes Gratis",
+      "bankMeta": "{total} soal · {rated} dinilai",
+      "openBank": "Buka bank",
+      "allBanks": "Semua bank",
+      "colSection": "Seksi",
       "colId": "ID",
       "colBank": "Bank",
       "colStem": "Stem",
@@ -392,6 +396,13 @@ export default {
       "colStatus": "Status",
       "colJoined": "Bergabung",
       "colAttempts": "Upaya",
+      "colEnds": "Berlangganan berakhir",
+      "colPhone": "Telepon",
+      "detail": "Detail",
+      "save": "Simpan",
+      "activate": "Aktifkan",
+      "deactivate": "Nonaktifkan",
+      "whatsapp": "Hubungi via WhatsApp",
       "st_active": "Aktif",
       "st_trial": "Trial",
       "st_expired": "Kadaluarsa"
@@ -399,12 +410,16 @@ export default {
     "results": {
       "heading": "Hasil tes",
       "sub": "Upaya yang tercatat di perangkat ini.",
+      "colUser": "User",
       "colPaper": "Paper",
       "colScore": "Skor",
       "colCorrect": "Benar",
       "colDate": "Selesai",
       "empty": "Belum ada upaya tercatat di browser ini.",
-      "browserNote": "Demo: hasil disimpan per browser. Backend real akan menyatukannya."
+      "browserNote": "Demo: hasil disimpan per browser. Backend real akan menyatukannya.",
+      "certificate": "Sertifikat",
+      "close": "Tutup",
+      "printPdf": "Cetak / Simpan PDF"
     }
   }
 }

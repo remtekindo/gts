@@ -5,6 +5,28 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [0.9.0] - 2026-10-31
+
+### Fixed
+- Landing: form inputs now render white text on dark backgrounds in dark
+  mode; brand-panel logo and checkmarks use the same colors in light and
+  dark mode (were invisible in light mode); CTA button keeps the same
+  white/blue styling in both modes.
+
+### Changed
+- Admin: "Dashboard" menu renamed to "Overview".
+- Admin: question bank is now organized per material — open a material
+  (TOEIC LR / Free Test) to see its questions.
+- Admin: question reports link the question ID to the bank entry.
+- Admin: user detail modal with plan/status/joined/attempts, editable
+  subscription end date, active/inactive toggle, and a "Contact via
+  WhatsApp" button (mock numbers until the real backend).
+- Admin: test results show the username per attempt; each attempt has a
+  Certificate button that renders a printable certificate (Print / Save
+  PDF via the browser).
+- Test results now record the username at save time (was missing).
+
+
 ## [0.8.1] - 2026-10-31
 
 ### Fixed

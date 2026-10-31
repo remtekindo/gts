@@ -332,7 +332,7 @@ export default {
     "backToApp": "Back to app",
     "signOut": "Sign out",
     "nav": {
-      "dashboard": "Dashboard",
+      "dashboard": "Overview",
       "questions": "Questions",
       "reports": "Reports",
       "users": "Users",
@@ -359,6 +359,10 @@ export default {
       "bank_all": "All",
       "bank_lr": "TOEIC LR",
       "bank_free": "Free Test",
+      "bankMeta": "{total} questions · {rated} rated",
+      "openBank": "Open bank",
+      "allBanks": "All banks",
+      "colSection": "Section",
       "colId": "ID",
       "colBank": "Bank",
       "colStem": "Stem",
@@ -393,6 +397,13 @@ export default {
       "colStatus": "Status",
       "colJoined": "Joined",
       "colAttempts": "Attempts",
+      "colEnds": "Subscription ends",
+      "colPhone": "Phone",
+      "detail": "Detail",
+      "save": "Save",
+      "activate": "Activate",
+      "deactivate": "Deactivate",
+      "whatsapp": "Contact via WhatsApp",
       "st_active": "Active",
       "st_trial": "Trial",
       "st_expired": "Expired"
@@ -400,12 +411,16 @@ export default {
     "results": {
       "heading": "Test results",
       "sub": "Attempts recorded on this device.",
+      "colUser": "User",
       "colPaper": "Paper",
       "colScore": "Score",
       "colCorrect": "Correct",
       "colDate": "Finished",
       "empty": "No attempts recorded yet on this browser.",
-      "browserNote": "Demo: results are stored per browser. The real backend will centralize them."
+      "browserNote": "Demo: results are stored per browser. The real backend will centralize them.",
+      "certificate": "Certificate",
+      "close": "Close",
+      "printPdf": "Print / Save PDF"
     }
   }
 }

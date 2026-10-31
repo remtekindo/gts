@@ -17,6 +17,7 @@ export interface TestResult {
   total: number
   answers: AnswerMap
   finishedAt: string
+  username?: string
 }
 
 function read<T>(key: string): T | null {

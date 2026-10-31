@@ -26,6 +26,13 @@ export interface AdminUser {
   status: 'active' | 'trial' | 'expired'
   joined: string
   attempts: number
+  phone: string
+  subscriptionEnds: string
+}
+
+export interface UserOverride {
+  status?: AdminUser['status']
+  subscriptionEnds?: string
 }
 
 function read<T>(key: string): T | null {
@@ -97,12 +104,32 @@ export function setReportStatus(id: string, status: AdminReport['status']): void
 // ---- Demo users (until the real backend exists) ----
 
 export const MOCK_ADMIN_USERS: AdminUser[] = [
-  { username: 'budi', plan: 'Bulanan', status: 'active', joined: '2026-10-28', attempts: 12 },
-  { username: 'sari', plan: 'Triwulanan', status: 'active', joined: '2026-10-25', attempts: 31 },
-  { username: 'agus', plan: 'Free', status: 'trial', joined: '2026-10-30', attempts: 3 },
-  { username: 'dewi', plan: 'Semesteran', status: 'active', joined: '2026-10-20', attempts: 47 },
-  { username: 'rudi', plan: 'Bulanan', status: 'expired', joined: '2026-09-15', attempts: 8 },
+  { username: 'budi', plan: 'Bulanan', status: 'active', joined: '2026-10-28', attempts: 12, phone: '6281234567890', subscriptionEnds: '2026-11-28' },
+  { username: 'sari', plan: 'Triwulanan', status: 'active', joined: '2026-10-25', attempts: 31, phone: '6281234567891', subscriptionEnds: '2027-01-25' },
+  { username: 'agus', plan: 'Free', status: 'trial', joined: '2026-10-30', attempts: 3, phone: '6281234567892', subscriptionEnds: '2026-11-06' },
+  { username: 'dewi', plan: 'Semesteran', status: 'active', joined: '2026-10-20', attempts: 47, phone: '6281234567893', subscriptionEnds: '2027-04-20' },
+  { username: 'rudi', plan: 'Bulanan', status: 'expired', joined: '2026-09-15', attempts: 8, phone: '6281234567894', subscriptionEnds: '2026-10-15' },
 ]
+
+const USERS_KEY = 'gts_admin_user_overrides'
+
+export function getUserOverrides(): Record<string, UserOverride> {
+  return read<Record<string, UserOverride>>(USERS_KEY) ?? {}
+}
+
+export function setUserOverride(username: string, override: UserOverride): void {
+  const all = getUserOverrides()
+  all[username] = { ...(all[username] ?? {}), ...override }
+  write(USERS_KEY, all)
+}
+
+export function getEffectiveUsers(): AdminUser[] {
+  const overrides = getUserOverrides()
+  return MOCK_ADMIN_USERS.map(u => {
+    const o = overrides[u.username]
+    return o ? { ...u, ...o } : u
+  })
+}
 
 // ---- Attempts recorded in this browser ----
 
@@ -112,6 +139,7 @@ export interface AttemptSummary {
   correct: number
   total: number
   finishedAt: string
+  username?: string
 }
 
 export function getLocalAttempts(): AttemptSummary[] {
@@ -122,8 +150,8 @@ export function getLocalAttempts(): AttemptSummary[] {
       if (key && key.startsWith('gts_result_')) {
         const raw = localStorage.getItem(key)
         if (!raw) continue
-        const r = JSON.parse(raw) as { paperId: string; score: number; correct: number; total: number; finishedAt: string }
-        out.push({ paperId: r.paperId, score: r.score, correct: r.correct, total: r.total, finishedAt: r.finishedAt })
+        const r = JSON.parse(raw) as { paperId: string; score: number; correct: number; total: number; finishedAt: string; username?: string }
+        out.push({ paperId: r.paperId, score: r.score, correct: r.correct, total: r.total, finishedAt: r.finishedAt, username: r.username })
       }
     }
   } catch {

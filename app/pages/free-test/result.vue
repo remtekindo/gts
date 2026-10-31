@@ -42,7 +42,8 @@ onMounted(() => {
     correct: totalCorrect.value,
     total: FREE_TEST_QUESTIONS.length,
     answers: pending,
-    finishedAt: new Date().toISOString()
+    finishedAt: new Date().toISOString(),
+    username: getAuth()?.username ?? 'guest'
   })
   clearFreeAnswers()
 })

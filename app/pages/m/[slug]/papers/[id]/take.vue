@@ -97,7 +97,8 @@ function gradeAndSave(): void {
     correct,
     total: questions.value.length,
     answers: answers.value,
-    finishedAt: new Date().toISOString()
+    finishedAt: new Date().toISOString(),
+    username: getAuth()?.username ?? 'guest'
   })
   clearAnswers(paper.value.id, attempt.value)
 }
