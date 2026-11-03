@@ -5,6 +5,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Fixed
+- Draft QC answer keys are now shuffled: the in-panel draft generator
+  randomizes option positions per question (Fisher-Yates) instead of
+  leaving the correct answer on A every time.
+
 ### Added
 - Phase 1 masterplan build — AI faces the admin, never the customer live:
   - **Admin question generation** (`/admin/questions` → Generate AI tab):

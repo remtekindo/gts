@@ -227,15 +227,16 @@ export function removeDraft(draftId: string): void {
 
 /** Small built-in template pool so the generate → QC → approve workflow
  *  can be exercised in-panel before the backend calls the real API. */
-const DRAFT_TEMPLATES: { part: number; stem: string; options: [string, string, string, string]; correct: string; why: string }[] = [
-  { part: 5, stem: 'The marketing team will _______ the new campaign results at Friday\u2019s meeting.', options: ['present', 'presentation', 'presented', 'presents'], correct: 'A', why: 'DRAFT template — needs human review.' },
-  { part: 5, stem: '_______ the delay, all shipments arrived before the deadline.', options: ['Despite', 'Although', 'Because', 'However'], correct: 'A', why: 'DRAFT template — needs human review.' },
-  { part: 5, stem: 'Employees are requested to _______ their expense reports by the end of the month.', options: ['submit', 'submission', 'submitted', 'submits'], correct: 'A', why: 'DRAFT template — needs human review.' },
-  { part: 5, stem: 'The new policy applies to _______ departments across the company.', options: ['all', 'every', 'each', 'any'], correct: 'A', why: 'DRAFT template — needs human review.' },
-  { part: 5, stem: 'Mr. Tanaka, _______ experience in logistics is extensive, will lead the project.', options: ['whose', 'who', 'whom', 'which'], correct: 'A', why: 'DRAFT template — needs human review.' },
-  { part: 5, stem: 'The conference room has been _______ for the client presentation.', options: ['reserved', 'reserve', 'reserving', 'reservation'], correct: 'A', why: 'DRAFT template — needs human review.' },
-  { part: 6, stem: 'Please review the attached invoice and let us know if anything looks _______.', options: ['incorrect', 'incorrectly', 'correct', 'correction'], correct: 'A', why: 'DRAFT template — needs human review.' },
-  { part: 7, stem: 'According to the memo, what should employees do before leaving the office?', options: ['Lock all windows', 'Turn off the lights', 'Submit a report', 'Call security'], correct: 'A', why: 'DRAFT template — needs human review.' },
+// Convention: options[0] is the correct answer; the generator shuffles positions.
+const DRAFT_TEMPLATES: { part: number; stem: string; options: [string, string, string, string]; why: string }[] = [
+  { part: 5, stem: 'The marketing team will _______ the new campaign results at Friday\u2019s meeting.', options: ['present', 'presentation', 'presented', 'presents'], why: 'DRAFT template — needs human review.' },
+  { part: 5, stem: '_______ the delay, all shipments arrived before the deadline.', options: ['Despite', 'Although', 'Because', 'However'], why: 'DRAFT template — needs human review.' },
+  { part: 5, stem: 'Employees are requested to _______ their expense reports by the end of the month.', options: ['submit', 'submission', 'submitted', 'submits'], why: 'DRAFT template — needs human review.' },
+  { part: 5, stem: 'The new policy applies to _______ departments across the company.', options: ['all', 'every', 'each', 'any'], why: 'DRAFT template — needs human review.' },
+  { part: 5, stem: 'Mr. Tanaka, _______ experience in logistics is extensive, will lead the project.', options: ['whose', 'who', 'whom', 'which'], why: 'DRAFT template — needs human review.' },
+  { part: 5, stem: 'The conference room has been _______ for the client presentation.', options: ['reserved', 'reserve', 'reserving', 'reservation'], why: 'DRAFT template — needs human review.' },
+  { part: 6, stem: 'Please review the attached invoice and let us know if anything looks _______.', options: ['incorrect', 'incorrectly', 'correct', 'correction'], why: 'DRAFT template — needs human review.' },
+  { part: 7, stem: 'According to the memo, what should employees do before leaving the office?', options: ['Lock all windows', 'Turn off the lights', 'Submit a report', 'Call security'], why: 'DRAFT template — needs human review.' },
 ]
 
 export function mockGenerateDraftItems(
@@ -248,18 +249,29 @@ export function mockGenerateDraftItems(
   const draftId = `draft-${Date.now().toString(36)}`
   const pool = DRAFT_TEMPLATES.filter(t => t.part === part)
   const src = pool.length > 0 ? pool : DRAFT_TEMPLATES
+  const letters = ['A', 'B', 'C', 'D']
   const items: DraftItem[] = []
   for (let i = 0; i < count; i++) {
     const tpl = src[i % src.length] as (typeof src)[number]
     const suffix = topic ? ` [${topic}]` : ''
+    // The template's correct option is options[0]; shuffle so the key is random.
+    const correctText = tpl.options[0]
+    const shuffled = [...tpl.options]
+    for (let j = shuffled.length - 1; j > 0; j--) {
+      const k = Math.floor(Math.random() * (j + 1))
+      const tmp = shuffled[j] as string
+      shuffled[j] = shuffled[k] as string
+      shuffled[k] = tmp
+    }
+    const correctLetter = letters[shuffled.indexOf(correctText)] as string
     items.push({
       materialSlug,
       number: 0,
       part: tpl.part,
       skill: 'reading',
       stem: tpl.stem + suffix,
-      options: tpl.options.map((text, oi) => ({ letter: 'ABCD'[oi] as string, text })),
-      correctLetter: tpl.correct,
+      options: shuffled.map((text, oi) => ({ letter: letters[oi] as string, text })),
+      correctLetter,
       explanation: tpl.why,
       draftId: `${draftId}-${i}`,
       draftStatus: 'pending',
