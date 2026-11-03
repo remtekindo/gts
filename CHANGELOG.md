@@ -6,6 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Fixed
+- Draft generator template pool expanded to 10 unique templates per part
+  (5/6/7), so generated drafts no longer repeat the same question.
+  Parts 6-7 templates now include a short passage as context.
+
+### Fixed
 - Draft QC answer keys are now shuffled: the in-panel draft generator
   randomizes option positions per question (Fisher-Yates) instead of
   leaving the correct answer on A every time.

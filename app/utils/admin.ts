@@ -228,15 +228,43 @@ export function removeDraft(draftId: string): void {
 /** Small built-in template pool so the generate → QC → approve workflow
  *  can be exercised in-panel before the backend calls the real API. */
 // Convention: options[0] is the correct answer; the generator shuffles positions.
-const DRAFT_TEMPLATES: { part: number; stem: string; options: [string, string, string, string]; why: string }[] = [
+// Parts 6-7 carry a short passage in `context`, shown above the stem.
+// This is a workflow stub so the generate → QC → bank flow can be tried
+// in-panel; real unique questions come from the API via scripts/.
+const DRAFT_TEMPLATES: { part: number; stem: string; context?: string; options: [string, string, string, string]; why: string }[] = [
+  // ---- Part 5 ----
   { part: 5, stem: 'The marketing team will _______ the new campaign results at Friday\u2019s meeting.', options: ['present', 'presentation', 'presented', 'presents'], why: 'DRAFT template — needs human review.' },
   { part: 5, stem: '_______ the delay, all shipments arrived before the deadline.', options: ['Despite', 'Although', 'Because', 'However'], why: 'DRAFT template — needs human review.' },
   { part: 5, stem: 'Employees are requested to _______ their expense reports by the end of the month.', options: ['submit', 'submission', 'submitted', 'submits'], why: 'DRAFT template — needs human review.' },
   { part: 5, stem: 'The new policy applies to _______ departments across the company.', options: ['all', 'every', 'each', 'any'], why: 'DRAFT template — needs human review.' },
   { part: 5, stem: 'Mr. Tanaka, _______ experience in logistics is extensive, will lead the project.', options: ['whose', 'who', 'whom', 'which'], why: 'DRAFT template — needs human review.' },
   { part: 5, stem: 'The conference room has been _______ for the client presentation.', options: ['reserved', 'reserve', 'reserving', 'reservation'], why: 'DRAFT template — needs human review.' },
-  { part: 6, stem: 'Please review the attached invoice and let us know if anything looks _______.', options: ['incorrect', 'incorrectly', 'correct', 'correction'], why: 'DRAFT template — needs human review.' },
-  { part: 7, stem: 'According to the memo, what should employees do before leaving the office?', options: ['Lock all windows', 'Turn off the lights', 'Submit a report', 'Call security'], why: 'DRAFT template — needs human review.' },
+  { part: 5, stem: 'The quarterly sales report will be _______ to all regional managers tomorrow.', options: ['distributed', 'distribute', 'distributing', 'distribution'], why: 'DRAFT template — needs human review.' },
+  { part: 5, stem: '_______ the new software, the accounting team processes invoices twice as fast.', options: ['Thanks to', 'Despite', 'Because', 'Although'], why: 'DRAFT template — needs human review.' },
+  { part: 5, stem: 'Candidates _______ to bring their identification cards to the interview.', options: ['are reminded', 'remind', 'reminded', 'reminding'], why: 'DRAFT template — needs human review.' },
+  { part: 5, stem: 'The CEO\u2019s speech _______ the company\u2019s commitment to sustainability.', options: ['emphasized', 'emphasis', 'emphasize', 'emphatic'], why: 'DRAFT template — needs human review.' },
+  // ---- Part 6 ----
+  { part: 6, context: 'To: Accounting Team\nSubject: Monthly invoice review', stem: 'Please review the attached invoice and let us know if anything looks _______.', options: ['incorrect', 'incorrectly', 'correct', 'correction'], why: 'DRAFT template — needs human review.' },
+  { part: 6, context: 'Internal announcement: We are pleased to share some staffing news.', stem: 'Ms. Rivera has been _______ to regional director, effective June 1.', options: ['promoted', 'promote', 'promotion', 'promoting'], why: 'DRAFT template — needs human review.' },
+  { part: 6, context: 'From: HR Department\nPlease complete the onboarding paperwork.', stem: 'All employees must _______ their security badges when entering the building.', options: ['wear', 'wearing', 'wore', 'worn'], why: 'DRAFT template — needs human review.' },
+  { part: 6, context: 'IT notice: Scheduled maintenance this weekend.', stem: 'The IT department will _______ the system upgrade on Saturday night.', options: ['perform', 'performance', 'performed', 'performing'], why: 'DRAFT template — needs human review.' },
+  { part: 6, context: 'Thank you for attending our product launch event.', stem: 'Thank you for your _______ in our new product line.', options: ['interest', 'interesting', 'interested', 'interests'], why: 'DRAFT template — needs human review.' },
+  { part: 6, context: 'Meeting update for all team members.', stem: 'The meeting has been _______ to next Thursday due to the holiday.', options: ['postponed', 'postpone', 'postponing', 'postponement'], why: 'DRAFT template — needs human review.' },
+  { part: 6, context: 'From: Finance\nAttached is this quarter\u2019s budget.', stem: 'Please find _______ the quarterly budget summary for your review.', options: ['attached', 'attach', 'attachment', 'attaching'], why: 'DRAFT template — needs human review.' },
+  { part: 6, context: 'Guest information: Getting to the airport.', stem: 'The hotel offers a complimentary shuttle _______ to the airport.', options: ['service', 'serve', 'serving', 'serviced'], why: 'DRAFT template — needs human review.' },
+  { part: 6, context: 'Role description: Finance team duties.', stem: 'The finance team is responsible _______ preparing the annual budget.', options: ['for', 'to', 'of', 'with'], why: 'DRAFT template — needs human review.' },
+  { part: 6, context: 'Store policy update, effective immediately.', stem: 'Customers can return items _______ 30 days of purchase.', options: ['within', 'inside', 'during', 'for'], why: 'DRAFT template — needs human review.' },
+  // ---- Part 7 ----
+  { part: 7, context: 'Memo: Please lock all windows and turn off the lights before leaving the office.', stem: 'According to the memo, what should employees do before leaving the office?', options: ['Lock windows and turn off lights', 'Submit a report', 'Call security', 'Water the plants'], why: 'DRAFT template — needs human review.' },
+  { part: 7, context: 'Library notice: Closed Monday for maintenance. Books due Monday may be returned Tuesday without penalty.', stem: 'What can library users do on Tuesday?', options: ['Return books without penalty', 'Borrow new books', 'Use the reading room', 'Pay overdue fines'], why: 'DRAFT template — needs human review.' },
+  { part: 7, context: 'Airline email: Your flight GA-204 on Friday is rescheduled to 8:40 a.m. Please arrive at least 2 hours early.', stem: 'What should the passenger do?', options: ['Arrive by 6:40 a.m.', 'Arrive at 8:40 a.m.', 'Cancel the flight', 'Change terminals'], why: 'DRAFT template — needs human review.' },
+  { part: 7, context: 'Grand opening sale: 20% off all items this weekend only.', stem: 'When is the discount available?', options: ['This weekend', 'Next month', 'Every weekend', 'On weekdays'], why: 'DRAFT template — needs human review.' },
+  { part: 7, context: 'Parking notice: The staff lot closes for repairs March 3-5. Please use the north lot.', stem: 'Where should staff park on March 4?', options: ['The north lot', 'The staff lot', 'On the street', 'In the garage'], why: 'DRAFT template — needs human review.' },
+  { part: 7, context: 'Workshop "Effective Emails" — Room 301, 2 p.m. Thursday. Registration required by Wednesday.', stem: 'Where will the workshop be held?', options: ['Room 301', 'Room 103', 'Online', 'The lobby'], why: 'DRAFT template — needs human review.' },
+  { part: 7, context: 'Thank you for your application. Interviews are next week; we will contact shortlisted candidates by Friday.', stem: 'Who will be contacted by Friday?', options: ['Shortlisted candidates', 'All applicants', 'New employees', 'References'], why: 'DRAFT template — needs human review.' },
+  { part: 7, context: 'Conference notice: Attendees must wear their badges at all times.', stem: 'What is required of attendees?', options: ['Wear their badges', 'Register again', 'Stay in the lobby', 'Show ID at lunch'], why: 'DRAFT template — needs human review.' },
+  { part: 7, context: 'Cafeteria announcement: Lunch will be served until 1:30 p.m. starting Monday.', stem: 'Until what time is lunch served?', options: ['1:30 p.m.', '12:30 p.m.', '2:30 p.m.', 'All day'], why: 'DRAFT template — needs human review.' },
+  { part: 7, context: 'Company newsletter: Our new Sydney office opens April 1 with 15 staff members.', stem: 'How many staff will the Sydney office have?', options: ['15', '50', '10', '5'], why: 'DRAFT template — needs human review.' },
 ]
 
 export function mockGenerateDraftItems(
