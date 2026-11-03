@@ -159,3 +159,205 @@ export function getLocalAttempts(): AttemptSummary[] {
   }
   return out.sort((a, b) => (b.finishedAt > a.finishedAt ? 1 : -1))
 }
+
+/* ------------------------------------------------------------------ */
+/* AI question drafts: admin generates via panel, QCs, then approves   */
+/* into the bank. Until the real backend exists, in-panel generation   */
+/* is a workflow stub — the real LLM path is scripts/generate-        */
+/* questions/. Drafts and approvals persist in localStorage.           */
+/* ------------------------------------------------------------------ */
+
+import type { Question } from '~/data/mock'
+import { QUESTIONS } from '~/data/mock'
+
+export type DraftItemStatus = 'pending' | 'approved' | 'rejected'
+
+export interface DraftItem extends Question {
+  draftId: string
+  draftStatus: DraftItemStatus
+}
+
+export interface QuestionDraft {
+  id: string
+  materialSlug: string
+  part: number
+  targetDifficulty: DifficultyLevel
+  topic: string
+  createdAt: string
+  status: 'review' | 'merged'
+  items: DraftItem[]
+}
+
+const DRAFTS_KEY = 'gts_admin_drafts'
+
+export function getDrafts(): QuestionDraft[] {
+  return read<QuestionDraft[]>(DRAFTS_KEY) ?? []
+}
+
+function writeDrafts(drafts: QuestionDraft[]): void {
+  write(DRAFTS_KEY, drafts)
+}
+
+export function saveDraft(draft: QuestionDraft): void {
+  const drafts = getDrafts().filter(d => d.id !== draft.id)
+  drafts.unshift(draft)
+  writeDrafts(drafts)
+}
+
+export function setDraftItemStatus(draftId: string, index: number, status: DraftItemStatus): void {
+  const drafts = getDrafts().map(d => {
+    if (d.id !== draftId) return d
+    const items = d.items.map((it, i) => (i === index ? { ...it, draftStatus: status } : it))
+    return { ...d, items }
+  })
+  writeDrafts(drafts)
+}
+
+export function setAllDraftItems(draftId: string, status: DraftItemStatus): void {
+  const drafts = getDrafts().map(d => {
+    if (d.id !== draftId) return d
+    return { ...d, items: d.items.map(it => ({ ...it, draftStatus: status })) }
+  })
+  writeDrafts(drafts)
+}
+
+export function removeDraft(draftId: string): void {
+  writeDrafts(getDrafts().filter(d => d.id !== draftId))
+}
+
+/** Small built-in template pool so the generate → QC → approve workflow
+ *  can be exercised in-panel before the backend calls the real API. */
+const DRAFT_TEMPLATES: { part: number; stem: string; options: [string, string, string, string]; correct: string; why: string }[] = [
+  { part: 5, stem: 'The marketing team will _______ the new campaign results at Friday\u2019s meeting.', options: ['present', 'presentation', 'presented', 'presents'], correct: 'A', why: 'DRAFT template — needs human review.' },
+  { part: 5, stem: '_______ the delay, all shipments arrived before the deadline.', options: ['Despite', 'Although', 'Because', 'However'], correct: 'A', why: 'DRAFT template — needs human review.' },
+  { part: 5, stem: 'Employees are requested to _______ their expense reports by the end of the month.', options: ['submit', 'submission', 'submitted', 'submits'], correct: 'A', why: 'DRAFT template — needs human review.' },
+  { part: 5, stem: 'The new policy applies to _______ departments across the company.', options: ['all', 'every', 'each', 'any'], correct: 'A', why: 'DRAFT template — needs human review.' },
+  { part: 5, stem: 'Mr. Tanaka, _______ experience in logistics is extensive, will lead the project.', options: ['whose', 'who', 'whom', 'which'], correct: 'A', why: 'DRAFT template — needs human review.' },
+  { part: 5, stem: 'The conference room has been _______ for the client presentation.', options: ['reserved', 'reserve', 'reserving', 'reservation'], correct: 'A', why: 'DRAFT template — needs human review.' },
+  { part: 6, stem: 'Please review the attached invoice and let us know if anything looks _______.', options: ['incorrect', 'incorrectly', 'correct', 'correction'], correct: 'A', why: 'DRAFT template — needs human review.' },
+  { part: 7, stem: 'According to the memo, what should employees do before leaving the office?', options: ['Lock all windows', 'Turn off the lights', 'Submit a report', 'Call security'], correct: 'A', why: 'DRAFT template — needs human review.' },
+]
+
+export function mockGenerateDraftItems(
+  materialSlug: string,
+  part: number,
+  count: number,
+  difficulty: DifficultyLevel,
+  topic: string
+): { draftId: string; items: DraftItem[] } {
+  const draftId = `draft-${Date.now().toString(36)}`
+  const pool = DRAFT_TEMPLATES.filter(t => t.part === part)
+  const src = pool.length > 0 ? pool : DRAFT_TEMPLATES
+  const items: DraftItem[] = []
+  for (let i = 0; i < count; i++) {
+    const tpl = src[i % src.length] as (typeof src)[number]
+    const suffix = topic ? ` [${topic}]` : ''
+    items.push({
+      materialSlug,
+      number: 0,
+      part: tpl.part,
+      skill: 'reading',
+      stem: tpl.stem + suffix,
+      options: tpl.options.map((text, oi) => ({ letter: 'ABCD'[oi] as string, text })),
+      correctLetter: tpl.correct,
+      explanation: tpl.why,
+      draftId: `${draftId}-${i}`,
+      draftStatus: 'pending',
+    })
+  }
+  return { draftId, items }
+}
+
+/* ------------------------------------------------------------------ */
+/* Bank additions: approved drafts enter the live bank with continuing */
+/* numbers. Served to the app together with the static bank.           */
+/* ------------------------------------------------------------------ */
+
+export interface BankAddition extends Question {
+  source: 'ai-draft' | 'batch'
+}
+
+const BANK_KEY = 'gts_admin_bank_additions'
+
+export function getBankAdditions(): BankAddition[] {
+  return read<BankAddition[]>(BANK_KEY) ?? []
+}
+
+export function liveQuestionsForMaterial(slug: string): Question[] {
+  const base = QUESTIONS.filter(q => q.materialSlug === slug)
+  const added = getBankAdditions().filter(q => q.materialSlug === slug)
+  return [...base, ...added]
+}
+
+export function nextQuestionNumber(slug: string): number {
+  const nums = liveQuestionsForMaterial(slug).map(q => q.number)
+  return (nums.length > 0 ? Math.max(...nums) : 0) + 1
+}
+
+/** Move approved draft items into the bank with continuing numbers. */
+export function approveDraftIntoBank(draftId: string): number {
+  const drafts = getDrafts()
+  const draft = drafts.find(d => d.id === draftId)
+  if (!draft) return 0
+  const approved = draft.items.filter(it => it.draftStatus === 'approved')
+  if (approved.length === 0) return 0
+  let n = nextQuestionNumber(draft.materialSlug)
+  const additions: BankAddition[] = approved.map(it => {
+    const { draftId: _d, draftStatus: _s, ...q } = it
+    return { ...q, number: n++, source: 'ai-draft' }
+  })
+  const stored = getBankAdditions()
+  write(BANK_KEY, [...stored, ...additions])
+  // tag difficulty for the adaptive engine
+  const diffs = getDifficultyOverrides()
+  additions.forEach(a => {
+    diffs[`lr-${a.number}`] = draft.targetDifficulty
+  })
+  try {
+    localStorage.setItem(DIFF_KEY, JSON.stringify(diffs))
+  } catch {
+    /* noop */
+  }
+  writeDrafts(drafts.map(d => (d.id === draftId ? { ...d, status: 'merged' as const } : d)))
+  return additions.length
+}
+
+/* ------------------------------------------------------------------ */
+/* Packages: which materials each subscription tier unlocks.            */
+/* ------------------------------------------------------------------ */
+
+export interface PackageDef {
+  id: string
+  priceLabel: string
+  materialLimit: number | 'all'
+}
+
+export const PACKAGES: PackageDef[] = [
+  { id: 'bulanan', priceLabel: 'Rp75rb', materialLimit: 1 },
+  { id: 'triwulanan', priceLabel: 'Rp199rb', materialLimit: 2 },
+  { id: 'semesteran', priceLabel: 'Rp349rb', materialLimit: 'all' },
+]
+
+const PKG_KEY = 'gts_admin_package_materials'
+
+/** Manual material assignment per package (Semesteran always = all). */
+export function getPackageMaterials(): Record<string, string[]> {
+  return read<Record<string, string[]>>(PKG_KEY) ?? {}
+}
+
+export function setPackageMaterial(pkgId: string, slug: string, included: boolean): void {
+  const all = getPackageMaterials()
+  const cur = new Set(all[pkgId] ?? [])
+  if (included) cur.add(slug)
+  else cur.delete(slug)
+  all[pkgId] = [...cur]
+  write(PKG_KEY, all)
+}
+
+/** Effective materials for a package: manual picks, or all owned for Semesteran. */
+export function packageMaterials(pkgId: string, ownedSlugs: string[]): string[] {
+  if (pkgId === 'semesteran') return ownedSlugs
+  const manual = getPackageMaterials()[pkgId]
+  if (manual && manual.length > 0) return manual.filter(s => ownedSlugs.includes(s))
+  return ownedSlugs.slice(0, pkgId === 'bulanan' ? 1 : 2)
+}

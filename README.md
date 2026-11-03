@@ -114,8 +114,26 @@ TOEIC® is a registered trademark of Educational Testing Service (ETS). This pro
 
 ## Admin panel (minimal)
 
-`/admin` — ops panel for question QC, reports, users and results.
-Demo gate: sign in as `admin` (any password). Non-admins are redirected
-to `/auth?next=/admin`. Difficulty tags set here persist in localStorage
-(`gts_admin_difficulty`) and are the foundation for the adaptive engine.
+`/admin` — ops panel for question QC, reports, users, results, and
+subscription packages. Demo gate: sign in as `admin` (any password).
+Non-admins are redirected to `/auth?next=/admin`. Difficulty tags set
+here persist in localStorage (`gts_admin_difficulty`).
+- **Questions → Generate AI**: the admin generates question drafts
+  (part/count/difficulty/topic), curates them in the Draft QC tab
+  (approve/reject per question), and merges approved items into the bank
+  with continuing numbers. In-panel generation is a workflow stub;
+  the real LLM path is `scripts/generate-questions/`.
+- **Packages**: Bulanan (1 material), Triwulanan (2), Semesteran (all);
+  per-package material matrix, live question counts, subscriber counts.
+  Flow: AI generates → admin curates → bank → package → customer.
+  The AI never faces the customer live in phase 1.
+- **Users**: detail modal shows the per-user ability map (per-part
+  accuracy/level) used by the playlist engine.
+`/m/:slug/playlist` — the customer's personal practice playlist:
+behind-the-scenes ability analysis (accuracy per part from results +
+practice, level 1–5, weakness-weighted share) builds a Spotify-style
+question set; `/m/:slug/practice` is the drill runner whose results
+feed the next playlist. Logic lives in `app/utils/adaptive.ts`
+(plain algorithms — the LLM only *creates* questions, never serves
+them live).
 

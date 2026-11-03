@@ -140,6 +140,18 @@ const continuePaper = computed(() => papers.value[0])
         </NuxtLink>
       </div>
 
+      <!-- Personal playlist (adaptive) -->
+      <div class="rounded-2xl border border-violet-200 bg-violet-50 dark:border-violet-800 dark:bg-violet-950 p-5">
+        <h2 class="font-bold text-slate-800 dark:text-slate-200">{{ t('dashboard.playlistTitle') }}</h2>
+        <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">{{ t('dashboard.playlistSub') }}</p>
+        <NuxtLink
+          :to="`${base}/playlist`"
+          class="mt-3 inline-block text-sm font-semibold px-4 py-2.5 rounded-xl bg-violet-600 text-white hover:bg-violet-700 transition-colors"
+        >
+          {{ t('dashboard.playlistCta') }}
+        </NuxtLink>
+      </div>
+
       <!-- Available papers -->
       <div>
         <div class="flex items-center justify-between mb-3">

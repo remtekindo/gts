@@ -5,6 +5,32 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added
+- Phase 1 masterplan build — AI faces the admin, never the customer live:
+  - **Admin question generation** (`/admin/questions` → Generate AI tab):
+    form (part, count, target difficulty, topic) creates draft batches;
+    Draft QC tab for per-question approve/reject, approve-all, and
+    one-click merge of approved items into the bank with continuing
+    numbers (difficulty auto-tagged for the adaptive engine).
+    In-panel generation is a workflow stub until the backend calls the
+    real API — the real LLM path stays `scripts/generate-questions/`.
+  - **Subscription packages** (`/admin/packages`): Bulanan Rp75rb (1
+    material), Triwulanan Rp199rb (2), Semesteran Rp349rb (all), with a
+    per-package material matrix, live question counts, and active
+    subscriber counts. Approved questions flow bank → package → customer.
+  - **Personal practice playlists** (`/m/:slug/playlist`): behind-the-
+    scenes ability analysis per part (accuracy from test results +
+    practice attempts, level 1–5, weakness weighting) builds a Spotify-
+    style question playlist; compact drill runner at `/m/:slug/practice`
+    feeds results back so the next playlist adapts. Dashboard card added.
+  - Admin user detail modal now shows the per-user ability map (the same
+    analysis the playlist engine sees).
+- `app/utils/adaptive.ts`: `analyzeAbility`, `buildPlaylist`,
+  `recordPracticeAttempt`, playlist persistence (`gts_playlist_*`).
+- `app/utils/admin.ts`: draft CRUD (`gts_admin_drafts`), bank additions
+  (`gts_admin_bank_additions`, served via `liveQuestionsForMaterial`),
+  package material mapping (`gts_admin_package_materials`).
+
 ## [0.12.0] - 2026-11-03
 
 ### Added

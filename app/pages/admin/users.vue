@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { getEffectiveUsers, setUserOverride, type AdminUser } from '~/utils/admin'
+import { analyzeAbility, type PartAbility } from '~/utils/adaptive'
 
 definePageMeta({ layout: 'admin' })
 
@@ -8,6 +9,7 @@ const { t } = useLocale()
 const users = ref<AdminUser[]>(getEffectiveUsers())
 const selected = ref<AdminUser | null>(null)
 const editEnds = ref('')
+const abilities = ref<PartAbility[]>([])
 
 function refresh(): void {
   users.value = getEffectiveUsers()
@@ -19,6 +21,7 @@ function refresh(): void {
 function openDetail(u: AdminUser): void {
   selected.value = u
   editEnds.value = u.subscriptionEnds
+  abilities.value = analyzeAbility('toeic-lr', u.username)
 }
 
 function toggleStatus(): void {
@@ -99,6 +102,30 @@ function statusClass(s: string): string {
           </div>
           <div class="flex justify-between"><dt class="text-slate-500 dark:text-slate-400">{{ t('admin.users.colPhone') }}</dt><dd class="font-mono text-xs">+{{ selected.phone }}</dd></div>
         </dl>
+
+        <!-- Ability analysis: what the behind-the-scenes AI sees -->
+        <div class="mt-4 rounded-xl bg-slate-50 dark:bg-slate-800/60 p-3.5">
+          <p class="text-xs font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400">{{ t('admin.users.abilityTitle') }}</p>
+          <p v-if="abilities.every(a => a.answered === 0)" class="mt-1.5 text-xs text-slate-500 dark:text-slate-400">{{ t('admin.users.abilityEmpty') }}</p>
+          <ul v-else class="mt-2 space-y-2">
+            <li v-for="a in abilities" :key="a.part">
+              <div class="flex items-center justify-between text-xs">
+                <span class="font-semibold">Part {{ a.part }} <span class="font-normal text-slate-400">· {{ a.answered }}</span></span>
+                <span class="font-bold" :class="a.accuracy !== null && a.accuracy < 0.5 ? 'text-red-500' : 'text-slate-500 dark:text-slate-400'">
+                  {{ a.accuracy === null ? '—' : Math.round(a.accuracy * 100) + '%' }} · L{{ a.level }}
+                </span>
+              </div>
+              <div class="mt-1 h-1.5 rounded-full bg-slate-200 dark:bg-slate-700 overflow-hidden">
+                <div
+                  class="h-full rounded-full"
+                  :class="a.accuracy !== null && a.accuracy >= 0.8 ? 'bg-green-500' : a.accuracy !== null && a.accuracy < 0.5 ? 'bg-red-400' : 'bg-blue-500'"
+                  :style="{ width: (a.accuracy === null ? 0 : Math.round(a.accuracy * 100)) + '%' }"
+                />
+              </div>
+            </li>
+          </ul>
+        </div>
+
         <div class="mt-5 flex flex-col sm:flex-row gap-2">
           <button
             class="flex-1 text-sm font-semibold px-4 py-2.5 rounded-xl border transition-colors"
