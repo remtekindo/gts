@@ -5,6 +5,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [0.12.0] - 2026-11-03
+
+### Added
+- `merge-batch.mjs`: one-command merge of a human-reviewed batch into the
+  bank — re-validates shape, drops duplicates already in the bank,
+  renumbers continuing the bank, and appends to `GENERATED_QUESTIONS` in
+  the new `app/data/generated.ts` (wired into `QUESTIONS` automatically,
+  so the admin bank and app pick them up with no further changes).
+
+
 ## [0.11.0] - 2026-10-31
 
 ### Added

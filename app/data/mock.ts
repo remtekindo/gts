@@ -1,3 +1,5 @@
+import { GENERATED_QUESTIONS } from './generated'
+
 /**
  * MOCK DATA — all questions, passages, and copy below are ORIGINAL sample
  * content written for the GTS demo. They are simplified (18 items) and do
@@ -438,7 +440,8 @@ const SW_SEEDS: QuestionSeed[] = [
 
 export const QUESTIONS: Question[] = [
   ...LR_SEEDS.map(q => ({ ...q, materialSlug: 'toeic-lr' })),
-  ...SW_SEEDS.map(q => ({ ...q, materialSlug: 'toeic-sw' }))
+  ...SW_SEEDS.map(q => ({ ...q, materialSlug: 'toeic-sw' })),
+  ...GENERATED_QUESTIONS
 ]
 
 export function questionsForMaterial(slug: string): Question[] {

@@ -58,8 +58,21 @@ limited to 100 requests/min — pause between calls when batching).
 2. **Human review:** read a random sample (5–10) of every batch. The model
    occasionally writes a "correct" answer that is debatable — fix or drop
    those items before merging.
-3. Merge the reviewed batch into the bank (manual step, keeps a human in
-   the loop by design).
+3. Merge the reviewed batch into the bank (one command, run from repo root):
+   ```sh
+   node scripts/generate-questions/merge-batch.mjs --batch scripts/generate-questions/out/batch-toeic-lr-p5-20261103.json
+   ```
+   The script re-validates, drops duplicates already in the bank, renumbers
+   continuing the bank, and appends to `GENERATED_QUESTIONS` in
+   `app/data/generated.ts` (wired into the app automatically).
+
+## Scaling up
+
+Loop: generate → human review → merge. Keep `--count` at 10–20 per call
+for reviewable batches; when running several calls back-to-back, add
+`--rpm-delay-ms 1000` (Contributor tier: 100 requests/min). Track spend in
+`out/cost-log.csv` — stop and review unit economics if Rp/question drifts
+above the P&L estimate.
 
 ## Cost notes
 
