@@ -9,6 +9,8 @@ export interface AdminQuestionView {
   stem: string
   options: { letter: string; text: string }[]
   correctLetter: string
+  /** localStorage override key (`toeic-lr-N` / `free-N`), when editable. */
+  ovKey?: string
 }
 
 export interface AdminReport {
@@ -324,9 +326,7 @@ export function getBankAdditions(): BankAddition[] {
 }
 
 export function liveQuestionsForMaterial(slug: string): Question[] {
-  const base = QUESTIONS.filter(q => q.materialSlug === slug)
-  const added = getBankAdditions().filter(q => q.materialSlug === slug)
-  return [...base, ...added]
+  return liveAllQuestions().filter(q => q.materialSlug === slug)
 }
 
 export function nextQuestionNumber(slug: string): number {
@@ -400,4 +400,74 @@ export function packageMaterials(pkgId: string, ownedSlugs: string[]): string[] 
   const manual = getPackageMaterials()[pkgId]
   if (manual && manual.length > 0) return manual.filter(s => ownedSlugs.includes(s))
   return ownedSlugs.slice(0, pkgId === 'bulanan' ? 1 : 2)
+}
+
+/* ------------------------------------------------------------------ */
+/* Question overrides: admin edits to bank questions (stem, options,   */
+/* correct key). Keyed by `${materialSlug}-${number}` (or `free-N` for */
+/* the free bank), persisted in localStorage, applied everywhere the   */
+/* live bank is served. Difficulty stays in setDifficulty.              */
+/* ------------------------------------------------------------------ */
+
+import { FREE_TEST_QUESTIONS, type FreeQuestion } from '~/data/mock'
+
+export interface QuestionOverride {
+  stem?: string
+  options?: { letter: string; text: string }[]
+  correctLetter?: string
+}
+
+const QOVERRIDE_KEY = 'gts_admin_question_overrides'
+
+export function getQuestionOverrides(): Record<string, QuestionOverride> {
+  return read<Record<string, QuestionOverride>>(QOVERRIDE_KEY) ?? {}
+}
+
+export function setQuestionOverride(id: string, override: QuestionOverride): void {
+  const all = getQuestionOverrides()
+  all[id] = { ...(all[id] ?? {}), ...override }
+  write(QOVERRIDE_KEY, all)
+}
+
+export function clearQuestionOverride(id: string): void {
+  const all = getQuestionOverrides()
+  delete all[id]
+  write(QOVERRIDE_KEY, all)
+}
+
+/** Override key for a bank question as shown in the admin bank view. */
+export function overrideKeyFor(materialSlug: string, number: number): string {
+  return `${materialSlug}-${number}`
+}
+
+function applyOverride(q: Question, key: string): Question {
+  const o = getQuestionOverrides()[key]
+  if (!o) return q
+  return {
+    ...q,
+    stem: o.stem ?? q.stem,
+    options: o.options ?? q.options,
+    correctLetter: o.correctLetter ?? q.correctLetter,
+  }
+}
+
+/** Full live bank: static + approved AI drafts + admin edits. */
+export function liveAllQuestions(): Question[] {
+  return [...QUESTIONS, ...getBankAdditions()].map(q =>
+    applyOverride(q, overrideKeyFor(q.materialSlug, q.number))
+  )
+}
+
+export function liveFreeQuestions(): FreeQuestion[] {
+  const overrides = getQuestionOverrides()
+  return FREE_TEST_QUESTIONS.map(q => {
+    const o = overrides[`free-${q.number}`]
+    if (!o) return q
+    return {
+      ...q,
+      stem: o.stem ?? q.stem,
+      options: o.options ?? q.options,
+      correctLetter: o.correctLetter ?? q.correctLetter,
+    }
+  })
 }

@@ -5,15 +5,29 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
-### Fixed
-- Draft generator template pool expanded to 10 unique templates per part
-  (5/6/7), so generated drafts no longer repeat the same question.
-  Parts 6-7 templates now include a short passage as context.
+### Added
+- **AI assistant in the admin panel**: floating chat button (bottom-right)
+  on every admin page. The admin types a prompt ("audit bank soal",
+  "cek duplikat", "distribusi kunci jawaban") and the assistant runs a
+  real local analysis — duplicates, answer-key distribution, unrated
+  questions, missing explanations — then saves the result as a report in
+  the new **Audit tab** (`/admin/audits`). Demo mode: algorithmic
+  analysis; the same chat box will call the real Meta API once the
+  backend exists.
+- **Question editing**: the bank question detail modal now has an Edit
+  mode — stem, all four options, correct-answer picker, and difficulty
+  level. Edits persist in localStorage (`gts_admin_question_overrides`)
+  and apply everywhere the live bank is served (admin bank, packages,
+  playlists, practice).
 
 ### Fixed
-- Draft QC answer keys are now shuffled: the in-panel draft generator
-  randomizes option positions per question (Fisher-Yates) instead of
-  leaving the correct answer on A every time.
+- Overview "Questions in bank" now uses the live count (static bank +
+  approved AI drafts), matching the Packages page totals.
+- Draft template pool expanded to 10 unique templates per part (5/6/7);
+  generated drafts no longer repeat the same question. Parts 6-7 carry
+  a short passage as context.
+- Draft answer keys are shuffled per question (Fisher-Yates) instead of
+  always A.
 
 ### Added
 - Phase 1 masterplan build — AI faces the admin, never the customer live:

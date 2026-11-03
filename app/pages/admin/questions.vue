@@ -3,7 +3,7 @@ import { FREE_TEST_QUESTIONS } from '~/data/mock'
 import {
   getDifficultyOverrides, setDifficulty, getDrafts, saveDraft, setDraftItemStatus,
   setAllDraftItems, approveDraftIntoBank, mockGenerateDraftItems, liveQuestionsForMaterial,
-  getBankAdditions,
+  liveFreeQuestions, getBankAdditions, overrideKeyFor, setQuestionOverride,
   type AdminQuestionView, type DifficultyLevel, type QuestionDraft, type DraftItemStatus,
 } from '~/utils/admin'
 
@@ -22,6 +22,7 @@ const selectedLevel = ref<DifficultyLevel | null>(null)
 const drafts = ref<QuestionDraft[]>([])
 const openDraftId = ref<string | null>(null)
 const mergeFlash = ref('')
+const bankVersion = ref(0) // bump to re-read localStorage-backed bank state
 
 // Generate form
 const genPart = ref(5)
@@ -35,7 +36,10 @@ function refreshDrafts(): void {
 
 onMounted(refreshDrafts)
 
-const bankAdditions = computed(() => getBankAdditions())
+const bankAdditions = computed(() => {
+  void bankVersion.value
+  return getBankAdditions()
+})
 
 const banks = computed(() => {
   const lr = liveQuestionsForMaterial('toeic-lr').length
@@ -54,10 +58,12 @@ const activeBank = computed(() => {
 })
 
 const allQuestions = computed<AdminQuestionView[]>(() => {
+  void bankVersion.value // re-run after edits/merges
   const addedIds = new Set(bankAdditions.value.map(a => `lr-${a.number}`))
   return [
     ...liveQuestionsForMaterial('toeic-lr').map(q => ({
       id: `lr-${q.number}`,
+      ovKey: overrideKeyFor('toeic-lr', q.number),
       bank: 'TOEIC LR',
       section: `Part ${q.part}`,
       stem: q.stem,
@@ -65,8 +71,9 @@ const allQuestions = computed<AdminQuestionView[]>(() => {
       correctLetter: q.correctLetter,
       ai: addedIds.has(`lr-${q.number}`),
     })),
-    ...FREE_TEST_QUESTIONS.map(q => ({
+    ...liveFreeQuestions().map(q => ({
       id: `free-${q.number}`,
+      ovKey: `free-${q.number}`,
       bank: 'Free Test',
       section: q.section.charAt(0).toUpperCase() + q.section.slice(1),
       stem: q.stem,
@@ -112,6 +119,50 @@ function openDetail(q: AdminQuestionView): void {
   selected.value = q
   selectedLevel.value = difficultyOf(q.id)
   savedFlash.value = false
+  editing.value = false
+}
+
+// ---- Edit a bank question (stem / options / key / difficulty) ----
+
+const editing = ref(false)
+const editStem = ref('')
+const editOptions = ref<string[]>(['', '', '', ''])
+const editCorrect = ref('A')
+const editSaved = ref(false)
+
+function startEdit(): void {
+  if (!selected.value) return
+  editing.value = true
+  editSaved.value = false
+  editStem.value = selected.value.stem
+  editOptions.value = selected.value.options.map(o => o.text)
+  while (editOptions.value.length < 4) editOptions.value.push('')
+  editCorrect.value = selected.value.correctLetter
+  selectedLevel.value = difficultyOf(selected.value.id)
+}
+
+function saveEdit(): void {
+  if (!selected.value || !selected.value.ovKey) return
+  const letters = ['A', 'B', 'C', 'D']
+  setQuestionOverride(selected.value.ovKey, {
+    stem: editStem.value.trim(),
+    options: editOptions.value.slice(0, 4).map((text, i) => ({ letter: letters[i] as string, text: text.trim() })),
+    correctLetter: editCorrect.value,
+  })
+  if (selectedLevel.value !== null) {
+    setDifficulty(selected.value.id, selectedLevel.value)
+    difficulties.value = getDifficultyOverrides()
+  }
+  bankVersion.value++
+  editing.value = false
+  editSaved.value = true
+  // refresh the open detail with the edited values
+  const updated = allQuestions.value.find(q => q.id === selected.value?.id)
+  if (updated) {
+    selected.value = updated
+    selectedLevel.value = difficultyOf(updated.id)
+  }
+  setTimeout(() => { editSaved.value = false }, 2000)
 }
 
 // ---- Generate (AI faces the admin) ----
@@ -155,6 +206,7 @@ function approveAll(draftId: string): void {
 function mergeDraft(draftId: string): void {
   const n = approveDraftIntoBank(draftId)
   difficulties.value = getDifficultyOverrides()
+  bankVersion.value++
   refreshDrafts()
   mergeFlash.value = t('admin.generate.merged', { n })
   setTimeout(() => { mergeFlash.value = '' }, 3000)
@@ -344,10 +396,62 @@ onMounted(() => {
         <div class="flex items-start justify-between gap-3">
           <div>
             <p class="font-mono text-xs text-slate-400">{{ selected.id }} · {{ selected.bank }} · {{ selected.section }}</p>
-            <h2 class="mt-1 font-bold">{{ t('admin.questions.detailTitle') }}</h2>
+            <h2 class="mt-1 font-bold">{{ editing ? t('admin.questions.editTitle') : t('admin.questions.detailTitle') }}</h2>
           </div>
-          <button class="text-slate-400 hover:text-slate-600 px-2 py-1" @click="selected = null" aria-label="Close">✕</button>
+          <div class="flex items-center gap-1">
+            <button
+              v-if="!editing && selected.ovKey"
+              class="text-xs font-semibold text-blue-600 px-2 py-1"
+              @click="startEdit"
+            >{{ t('admin.questions.edit') }}</button>
+            <button class="text-slate-400 hover:text-slate-600 px-2 py-1" @click="selected = null" aria-label="Close">✕</button>
+          </div>
         </div>
+
+        <!-- EDIT MODE -->
+        <template v-if="editing">
+          <label class="mt-3 block">
+            <span class="text-xs font-semibold text-slate-500 dark:text-slate-400">{{ t('admin.questions.fStem') }}</span>
+            <textarea v-model="editStem" rows="3" class="mt-1 w-full text-sm px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 outline-none focus:border-blue-500" />
+          </label>
+          <div class="mt-3 space-y-2">
+            <p class="text-xs font-semibold text-slate-500 dark:text-slate-400">{{ t('admin.questions.fOptions') }}</p>
+            <div v-for="i in [0, 1, 2, 3]" :key="i" class="flex items-center gap-2">
+              <button
+                class="w-8 h-8 shrink-0 rounded-full text-xs font-bold border transition-colors"
+                :class="editCorrect === 'ABCD'[i] ? 'bg-green-600 border-green-600 text-white' : 'border-slate-300 dark:border-slate-600 text-slate-400'"
+                :title="t('admin.questions.fCorrect')"
+                @click="editCorrect = 'ABCD'[i] as string"
+              >{{ 'ABCD'[i] }}</button>
+              <input
+                v-model="editOptions[i]"
+                type="text"
+                class="flex-1 text-sm px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 outline-none focus:border-blue-500"
+              />
+            </div>
+            <p class="text-[11px] text-slate-400 dark:text-slate-500">{{ t('admin.questions.fCorrectHint') }}</p>
+          </div>
+          <div class="mt-4 flex flex-wrap items-center gap-2">
+            <span class="text-sm font-semibold">{{ t('admin.questions.setDifficulty') }}</span>
+            <div class="flex gap-1">
+              <button
+                v-for="n in [1, 2, 3, 4, 5]"
+                :key="n"
+                class="w-9 h-9 rounded-full text-sm font-bold border transition-colors"
+                :class="selectedLevel === n ? 'bg-blue-600 border-blue-600 text-white' : 'border-slate-300 dark:border-slate-600 text-slate-500 dark:text-slate-400'"
+                @click="selectedLevel = n as DifficultyLevel"
+              >{{ n }}</button>
+            </div>
+          </div>
+          <div class="mt-4 flex gap-2">
+            <button class="text-sm font-semibold px-5 py-2.5 rounded-xl bg-blue-600 text-white" @click="saveEdit">{{ t('admin.questions.saveChanges') }}</button>
+            <button class="text-sm font-semibold px-4 py-2.5 rounded-xl border border-slate-300 dark:border-slate-600" @click="editing = false">{{ t('admin.questions.cancelEdit') }}</button>
+          </div>
+        </template>
+
+        <!-- VIEW MODE -->
+        <template v-else>
+        <p v-if="editSaved" class="mt-3 text-xs font-semibold text-green-600">{{ t('admin.questions.editSaved') }}</p>
         <p class="mt-3 text-sm">{{ selected.stem }}</p>
         <ul class="mt-3 space-y-1.5">
           <li
@@ -378,6 +482,7 @@ onMounted(() => {
           >{{ t('admin.questions.save') }}</button>
           <span v-if="savedFlash" class="text-xs font-semibold text-green-600">{{ t('admin.questions.saved') }}</span>
         </div>
+        </template>
       </div>
     </div>
   </div>

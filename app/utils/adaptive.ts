@@ -9,7 +9,7 @@
  * Plain algorithms (free). The LLM is only used to *create* questions.
  */
 import { QUESTIONS, getPaper, type Question } from '~/data/mock'
-import { getBankAdditions, getDifficultyOverrides } from './admin'
+import { getBankAdditions, getDifficultyOverrides, liveAllQuestions } from './admin'
 
 export interface PartAbility {
   part: number
@@ -36,7 +36,7 @@ function isClient(): boolean {
 }
 
 function liveBank(): Question[] {
-  return [...QUESTIONS, ...getBankAdditions()]
+  return liveAllQuestions()
 }
 
 function questionByNumber(materialSlug: string, number: number): Question | undefined {

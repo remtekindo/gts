@@ -129,6 +129,14 @@ here persist in localStorage (`gts_admin_difficulty`).
   The AI never faces the customer live in phase 1.
 - **Users**: detail modal shows the per-user ability map (per-part
   accuracy/level) used by the playlist engine.
+- **AI assistant** (floating ✨ button): prompt the assistant
+  ("audit bank soal", "cek duplikat", "distribusi kunci jawaban") —
+  it runs real local analyses over the live bank and saves reports to
+  the **Audit** tab. Demo mode is algorithmic; the real Meta API plugs
+  in via backend later.
+- **Question bank**: View opens a detail modal that can also **edit**
+  stem, options, correct answer, and difficulty (persisted, applied to
+  the live bank everywhere). Overview counts now match Packages.
 `/m/:slug/playlist` — the customer's personal practice playlist:
 behind-the-scenes ability analysis (accuracy per part from results +
 practice, level 1–5, weakness-weighted share) builds a Spotify-style

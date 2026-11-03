@@ -1,15 +1,23 @@
 <script setup lang="ts">
 import { QUESTIONS, FREE_TEST_QUESTIONS } from '~/data/mock'
-import { getReports, getLocalAttempts, MOCK_ADMIN_USERS } from '~/utils/admin'
+import { getReports, getLocalAttempts, MOCK_ADMIN_USERS, liveQuestionsForMaterial } from '~/utils/admin'
 
 definePageMeta({ layout: 'admin' })
 
 const { t } = useLocale()
 
-const questionCount = QUESTIONS.length + FREE_TEST_QUESTIONS.length
+// Live count (bank + approved AI drafts) so Overview matches Packages.
+const questionCount = ref(QUESTIONS.length + FREE_TEST_QUESTIONS.length)
 const pendingReports = computed(() => getReports().filter(r => r.status === 'pending'))
 const attempts = computed(() => getLocalAttempts())
 const recentReports = computed(() => pendingReports.value.slice(0, 3))
+
+onMounted(() => {
+  questionCount.value =
+    liveQuestionsForMaterial('toeic-lr').length +
+    liveQuestionsForMaterial('toeic-sw').length +
+    FREE_TEST_QUESTIONS.length
+})
 </script>
 
 <template>

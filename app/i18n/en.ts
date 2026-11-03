@@ -367,6 +367,7 @@ export default {
       "dashboard": "Overview",
       "questions": "Questions",
       "packages": "Packages",
+      "audits": "Audit",
       "reports": "Reports",
       "users": "Users",
       "results": "Results"
@@ -406,7 +407,30 @@ export default {
       "correctAnswer": "Correct answer",
       "setDifficulty": "Difficulty level:",
       "save": "Save",
-      "saved": "Saved ✓"
+      "saved": "Saved ✓",
+      "edit": "Edit",
+      "editTitle": "Edit question",
+      "fStem": "Question stem",
+      "fOptions": "Answer options",
+      "fCorrect": "Mark as correct answer",
+      "fCorrectHint": "Click a letter A/B/C/D to pick the correct answer.",
+      "saveChanges": "Save changes",
+      "cancelEdit": "Cancel",
+      "editSaved": "Changes saved ✓",
+    },
+    "aichat": {
+      "open": "Open AI assistant",
+      "title": "AI Assistant",
+      "sub": "Demo mode: local analysis",
+      "greet": "Hi! I can audit the question bank. Try: “audit question bank”, “check duplicates”, or “answer key distribution”.",
+      "placeholder": "Type a command, e.g. audit question bank…",
+      "send": "Send",
+      "viewAudit": "View in Audit tab"
+    },
+    "audits": {
+      "heading": "AI Audits",
+      "sub": "AI assistant analysis results over the question bank.",
+      "empty": "No audits yet. Open the AI assistant (the ✨ button at bottom right) and type e.g. “audit question bank”."
     },
     "generate": {
       "tab_bank": "Question bank",

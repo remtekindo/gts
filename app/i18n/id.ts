@@ -366,6 +366,7 @@ export default {
       "dashboard": "Overview",
       "questions": "Soal",
       "packages": "Paket",
+      "audits": "Audit",
       "reports": "Laporan",
       "users": "Pengguna",
       "results": "Hasil"
@@ -405,7 +406,30 @@ export default {
       "correctAnswer": "Jawaban benar",
       "setDifficulty": "Level kesulitan:",
       "save": "Simpan",
-      "saved": "Tersimpan ✓"
+      "saved": "Tersimpan ✓",
+      "edit": "Edit",
+      "editTitle": "Edit soal",
+      "fStem": "Stem soal",
+      "fOptions": "Opsi jawaban",
+      "fCorrect": "Tandai sebagai jawaban benar",
+      "fCorrectHint": "Klik huruf A/B/C/D untuk memilih jawaban yang benar.",
+      "saveChanges": "Simpan perubahan",
+      "cancelEdit": "Batal",
+      "editSaved": "Perubahan tersimpan ✓",
+    },
+    "aichat": {
+      "open": "Buka asisten AI",
+      "title": "Asisten AI",
+      "sub": "Mode demo: analisa lokal",
+      "greet": "Halo! Saya bisa membantu mengaudit bank soal. Coba: “audit bank soal”, “cek duplikat”, atau “distribusi kunci jawaban”.",
+      "placeholder": "Ketik perintah, mis. audit bank soal…",
+      "send": "Kirim",
+      "viewAudit": "Lihat di tab Audit"
+    },
+    "audits": {
+      "heading": "Audit AI",
+      "sub": "Hasil analisa asisten AI atas bank soal.",
+      "empty": "Belum ada audit. Buka asisten AI (tombol ✨ di kanan bawah) dan ketik mis. “audit bank soal”."
     },
     "generate": {
       "tab_bank": "Bank soal",
