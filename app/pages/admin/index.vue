@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { QUESTIONS, FREE_TEST_QUESTIONS } from '~/data/mock'
-import { getReports, getLocalAttempts, MOCK_ADMIN_USERS, liveQuestionsForMaterial } from '~/utils/admin'
+import { getReports, MOCK_ADMIN_USERS, liveQuestionsForMaterial, getMonthly, testTakersThisMonth } from '~/utils/admin'
 
 definePageMeta({ layout: 'admin' })
 
@@ -9,14 +9,24 @@ const { t } = useLocale()
 // Live count (bank + approved AI drafts) so Overview matches Packages.
 const questionCount = ref(QUESTIONS.length + FREE_TEST_QUESTIONS.length)
 const pendingReports = computed(() => getReports().filter(r => r.status === 'pending'))
-const attempts = computed(() => getLocalAttempts())
 const recentReports = computed(() => pendingReports.value.slice(0, 3))
+const monthly = ref(getMonthly())
+const testersMonth = ref(0)
+
+const maxVisits = computed(() => Math.max(...monthly.value.map(m => m.visits), 1))
+
+function monthLabel(m: string): string {
+  const [y, mo] = m.split('-')
+  const names = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des']
+  return `${names[Number(mo) - 1]} ${String(y).slice(2)}`
+}
 
 onMounted(() => {
   questionCount.value =
     liveQuestionsForMaterial('toeic-lr').length +
     liveQuestionsForMaterial('toeic-sw').length +
     FREE_TEST_QUESTIONS.length
+  testersMonth.value = testTakersThisMonth()
 })
 </script>
 
@@ -27,9 +37,25 @@ onMounted(() => {
 
     <div class="mt-6 grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
       <StatTile :label="t('admin.dashboard.statQuestions')" :value="String(questionCount)" />
+      <StatTile :label="t('admin.dashboard.statTesters')" :value="String(testersMonth)" :sub="t('admin.dashboard.statTestersSub')" />
       <StatTile :label="t('admin.dashboard.statReports')" :value="String(pendingReports.length)" :sub="t('admin.dashboard.statReportsSub')" />
-      <StatTile :label="t('admin.dashboard.statAttempts')" :value="String(attempts.length)" :sub="t('admin.dashboard.statAttemptsSub')" />
       <StatTile :label="t('admin.dashboard.statUsers')" :value="String(MOCK_ADMIN_USERS.length)" :sub="t('admin.dashboard.statUsersSub')" />
+    </div>
+
+    <!-- Monthly visits chart -->
+    <div class="mt-6 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 p-5">
+      <h2 class="font-bold">{{ t('admin.dashboard.visitsTitle') }}</h2>
+      <div class="mt-4 flex items-end gap-2 md:gap-3 h-40">
+        <div v-for="m in monthly" :key="m.month" class="flex-1 flex flex-col items-center justify-end h-full">
+          <span class="text-[10px] font-bold text-slate-500 dark:text-slate-400 tabular-nums">{{ m.visits >= 1000 ? (m.visits / 1000).toFixed(1) + 'k' : m.visits }}</span>
+          <div
+            class="mt-1 w-full max-w-10 rounded-t-lg bg-blue-500/80 hover:bg-blue-500 transition-all"
+            :style="{ height: Math.max(4, (m.visits / maxVisits) * 100) + '%' }"
+            :title="`${monthLabel(m.month)}: ${m.visits}`"
+          />
+          <span class="mt-1 text-[10px] text-slate-400 dark:text-slate-500">{{ monthLabel(m.month) }}</span>
+        </div>
+      </div>
     </div>
 
     <div class="mt-6 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 p-5">

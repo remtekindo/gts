@@ -111,6 +111,19 @@ export const MOCK_ADMIN_USERS: AdminUser[] = [
   { username: 'agus', plan: 'Free', status: 'trial', joined: '2026-10-30', attempts: 3, phone: '6281234567892', subscriptionEnds: '2026-11-06' },
   { username: 'dewi', plan: 'Semesteran', status: 'active', joined: '2026-10-20', attempts: 47, phone: '6281234567893', subscriptionEnds: '2027-04-20' },
   { username: 'rudi', plan: 'Bulanan', status: 'expired', joined: '2026-09-15', attempts: 8, phone: '6281234567894', subscriptionEnds: '2026-10-15' },
+  { username: 'maya', plan: 'Bulanan', status: 'active', joined: '2026-10-22', attempts: 19, phone: '6281234567895', subscriptionEnds: '2026-11-22' },
+  { username: 'joko', plan: 'Triwulanan', status: 'active', joined: '2026-10-18', attempts: 26, phone: '6281234567896', subscriptionEnds: '2027-01-18' },
+  { username: 'rina', plan: 'Free', status: 'trial', joined: '2026-11-01', attempts: 2, phone: '6281234567897', subscriptionEnds: '2026-11-08' },
+  { username: 'doni', plan: 'Semesteran', status: 'active', joined: '2026-10-12', attempts: 52, phone: '6281234567898', subscriptionEnds: '2027-04-12' },
+  { username: 'lina', plan: 'Bulanan', status: 'expired', joined: '2026-08-30', attempts: 14, phone: '6281234567899', subscriptionEnds: '2026-09-30' },
+  { username: 'fajar', plan: 'Triwulanan', status: 'active', joined: '2026-10-27', attempts: 9, phone: '6281234567800', subscriptionEnds: '2027-01-27' },
+  { username: 'nina', plan: 'Free', status: 'trial', joined: '2026-11-02', attempts: 1, phone: '6281234567801', subscriptionEnds: '2026-11-09' },
+  { username: 'eko', plan: 'Bulanan', status: 'active', joined: '2026-10-24', attempts: 22, phone: '6281234567802', subscriptionEnds: '2026-11-24' },
+  { username: 'wulan', plan: 'Semesteran', status: 'active', joined: '2026-10-15', attempts: 38, phone: '6281234567803', subscriptionEnds: '2027-04-15' },
+  { username: 'bima', plan: 'Bulanan', status: 'expired', joined: '2026-09-05', attempts: 6, phone: '6281234567804', subscriptionEnds: '2026-10-05' },
+  { username: 'tari', plan: 'Triwulanan', status: 'active', joined: '2026-10-29', attempts: 11, phone: '6281234567805', subscriptionEnds: '2027-01-29' },
+  { username: 'yoga', plan: 'Free', status: 'trial', joined: '2026-11-03', attempts: 4, phone: '6281234567806', subscriptionEnds: '2026-11-10' },
+  { username: 'putri', plan: 'Bulanan', status: 'active', joined: '2026-10-31', attempts: 7, phone: '6281234567807', subscriptionEnds: '2026-11-30' },
 ]
 
 const USERS_KEY = 'gts_admin_user_overrides'
@@ -470,4 +483,364 @@ export function liveFreeQuestions(): FreeQuestion[] {
       correctLetter: o.correctLetter ?? q.correctLetter,
     }
   })
+}
+
+/* ------------------------------------------------------------------ */
+/* Volumes: a bank holds tens-to-hundreds of questions, grouped into   */
+/* named volumes per subject (e.g. "TOEIC 1", "TOEIC 2"). AI-generated */
+/* drafts land as draft volumes; admin approves -> active volume.      */
+/* ------------------------------------------------------------------ */
+
+export type VolumeStatus = 'active' | 'draft'
+export type VolumeCategory = 'english' | 'stem'
+
+export interface VolumeQuestionRef {
+  /** materialSlug for bank questions, 'free' for the free bank. */
+  scope: string
+  number: number
+}
+
+export interface Volume {
+  id: string
+  name: string
+  materialSlug: string
+  category: VolumeCategory
+  status: VolumeStatus
+  createdAt: string
+  questions: VolumeQuestionRef[]
+}
+
+const VOLUMES_KEY = 'gts_admin_volumes'
+
+export const MATERIAL_CATEGORIES: Record<string, VolumeCategory> = {
+  'toeic-lr': 'english',
+  'toeic-sw': 'english',
+  'toefl-ibt': 'english',
+  'ielts-academic': 'english',
+}
+
+export function volumeCategoryFor(materialSlug: string): VolumeCategory {
+  return MATERIAL_CATEGORIES[materialSlug] ?? 'english'
+}
+
+function qkey(scope: string, number: number): string {
+  return `${scope}-${number}`
+}
+
+export function getVolumes(): Volume[] {
+  const stored = read<Volume[]>(VOLUMES_KEY)
+  if (stored) return stored
+  // Seed from the existing bank: one active volume per material with data.
+  const seed: Volume[] = []
+  const now = new Date().toISOString()
+  const lr = liveAllQuestions().filter(q => q.materialSlug === 'toeic-lr')
+  if (lr.length > 0) {
+    seed.push({
+      id: 'vol-toeic-1', name: 'TOEIC 1', materialSlug: 'toeic-lr',
+      category: 'english', status: 'active', createdAt: now,
+      questions: lr.map(q => ({ scope: 'toeic-lr', number: q.number })),
+    })
+  }
+  const sw = liveAllQuestions().filter(q => q.materialSlug === 'toeic-sw')
+  if (sw.length > 0) {
+    seed.push({
+      id: 'vol-toeic-sw-1', name: 'TOEIC SW 1', materialSlug: 'toeic-sw',
+      category: 'english', status: 'active', createdAt: now,
+      questions: sw.map(q => ({ scope: 'toeic-sw', number: q.number })),
+    })
+  }
+  const free = liveFreeQuestions()
+  if (free.length > 0) {
+    seed.push({
+      id: 'vol-free-1', name: 'Free Test 1', materialSlug: 'toeic-lr',
+      category: 'english', status: 'active', createdAt: now,
+      questions: free.map(q => ({ scope: 'free', number: q.number })),
+    })
+  }
+  write(VOLUMES_KEY, seed)
+  return seed
+}
+
+function writeVolumes(volumes: Volume[]): void {
+  write(VOLUMES_KEY, volumes)
+}
+
+export function saveVolume(volume: Volume): void {
+  const all = getVolumes().filter(v => v.id !== volume.id)
+  all.unshift(volume)
+  writeVolumes(all)
+}
+
+export function getVolume(id: string): Volume | undefined {
+  return getVolumes().find(v => v.id === id)
+}
+
+export function deleteVolume(id: string): void {
+  writeVolumes(getVolumes().filter(v => v.id !== id))
+}
+
+/** Next "TOEIC N" style name for a material. */
+export function nextVolumeName(materialSlug: string): string {
+  const base = materialSlug === 'toeic-lr' ? 'TOEIC' : materialSlug === 'toeic-sw' ? 'TOEIC SW' : materialSlug
+  const existing = getVolumes().filter(v => v.materialSlug === materialSlug)
+  let n = existing.length + 1
+  const names = new Set(existing.map(v => v.name))
+  while (names.has(`${base} ${n}`)) n++
+  return `${base} ${n}`
+}
+
+/** Create a draft volume from AI-generated items (not yet in the bank). */
+export function createDraftVolume(
+  name: string,
+  materialSlug: string,
+  part: number,
+  items: DraftItem[],
+): Volume {
+  const id = `vol-draft-${Date.now().toString(36)}`
+  // Draft items are not in the bank yet; track them by negative pseudo-numbers.
+  const volume: Volume = {
+    id,
+    name,
+    materialSlug,
+    category: volumeCategoryFor(materialSlug),
+    status: 'draft',
+    createdAt: new Date().toISOString(),
+    questions: items.map((it, i) => ({ scope: `draft:${id}`, number: -(i + 1) })),
+  }
+  // Stash the draft items themselves so the detail page can render them.
+  write(`gts_admin_draft_items_${id}`, items)
+  saveVolume(volume)
+  return volume
+}
+
+export function getDraftVolumeItems(volumeId: string): DraftItem[] {
+  return read<DraftItem[]>(`gts_admin_draft_items_${volumeId}`) ?? []
+}
+
+export function setDraftVolumeItems(volumeId: string, items: DraftItem[]): void {
+  write(`gts_admin_draft_items_${volumeId}`, items)
+}
+
+/**
+ * Activate a draft volume: approved items enter the bank with continuing
+ * numbers and the volume becomes active holding the real references.
+ */
+export function activateVolume(volumeId: string): number {
+  const volume = getVolume(volumeId)
+  if (!volume || volume.status !== 'draft') return 0
+  const items = getDraftVolumeItems(volumeId).filter(it => it.draftStatus === 'approved')
+  if (items.length === 0) return 0
+  let n = nextQuestionNumber(volume.materialSlug)
+  const additions: BankAddition[] = items.map(it => {
+    const { draftId: _d, draftStatus: _s, ...q } = it
+    return { ...q, number: n++, source: 'ai-draft' as const }
+  })
+  const stored = getBankAdditions()
+  write(BANK_KEY, [...stored, ...additions])
+  const diffs = getDifficultyOverrides()
+  // target difficulty was stored on the draft items' volume; default L3
+  additions.forEach(a => {
+    diffs[`lr-${a.number}`] = diffs[`lr-${a.number}`] ?? 3
+  })
+  try {
+    localStorage.setItem(DIFF_KEY, JSON.stringify(diffs))
+  } catch {
+    /* noop */
+  }
+  volume.status = 'active'
+  volume.questions = additions.map(a => ({ scope: a.materialSlug, number: a.number }))
+  saveVolume(volume)
+  try {
+    localStorage.removeItem(`gts_admin_draft_items_${volumeId}`)
+  } catch {
+    /* noop */
+  }
+  return additions.length
+}
+
+/** Resolve a volume's questions to full question objects (with overrides). */
+export function volumeQuestions(volume: Volume): Question[] {
+  if (volume.status === 'draft') {
+    const items = getDraftVolumeItems(volume.id)
+    return items.map(it => {
+      const { draftId: _d, draftStatus: _s, ...q } = it
+      return q as Question
+    })
+  }
+  const bank = liveAllQuestions()
+  const free = liveFreeQuestions()
+  const out: Question[] = []
+  for (const ref of volume.questions) {
+    if (ref.scope === 'free') {
+      const fq = free.find(q => q.number === ref.number)
+      if (fq) {
+        out.push({
+          materialSlug: 'toeic-lr',
+          number: fq.number,
+          part: 0,
+          skill: 'reading',
+          stem: fq.stem,
+          options: fq.options,
+          correctLetter: fq.correctLetter,
+          explanation: '',
+        })
+      }
+    } else {
+      const q = bank.find(q => q.materialSlug === ref.scope && q.number === ref.number)
+      if (q) out.push(q)
+    }
+  }
+  return out
+}
+
+/** Volume stats for the Databases cards. */
+export function volumeStats(): {
+  total: number
+  byCategory: Record<VolumeCategory, number>
+  byVolume: { id: string; name: string; count: number }[]
+} {
+  const volumes = getVolumes().filter(v => v.status === 'active')
+  const byCategory: Record<VolumeCategory, number> = { english: 0, stem: 0 }
+  const byVolume: { id: string; name: string; count: number }[] = []
+  let total = 0
+  for (const v of volumes) {
+    const count = volumeQuestions(v).length
+    total += count
+    byCategory[v.category] = (byCategory[v.category] ?? 0) + count
+    byVolume.push({ id: v.id, name: v.name, count })
+  }
+  return { total, byCategory, byVolume }
+}
+
+/* ------------------------------------------------------------------ */
+/* Monthly activity (demo series; local attempts feed the current mo.) */
+/* ------------------------------------------------------------------ */
+
+export interface MonthPoint {
+  month: string
+  visits: number
+  testTakers: number
+}
+
+const MONTHS_KEY = 'gts_admin_monthly'
+
+const SEED_MONTHS: MonthPoint[] = [
+  { month: '2026-06', visits: 820, testTakers: 96 },
+  { month: '2026-07', visits: 1140, testTakers: 138 },
+  { month: '2026-08', visits: 1610, testTakers: 201 },
+  { month: '2026-09', visits: 2230, testTakers: 284 },
+  { month: '2026-10', visits: 3120, testTakers: 402 },
+]
+
+export function getMonthly(): MonthPoint[] {
+  const stored = read<MonthPoint[]>(MONTHS_KEY)
+  if (stored) return stored
+  write(MONTHS_KEY, SEED_MONTHS)
+  return SEED_MONTHS
+}
+
+/** Test takers this month = seed baseline + local attempts this month. */
+export function testTakersThisMonth(): number {
+  const now = new Date()
+  const prefix = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
+  const seed = getMonthly().find(m => m.month === prefix)?.testTakers ?? 480
+  let local = 0
+  try {
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i)
+      if (key && key.startsWith('gts_result_')) {
+        const raw = localStorage.getItem(key)
+        if (raw && JSON.parse(raw).finishedAt?.startsWith(prefix)) local++
+      }
+    }
+  } catch {
+    /* noop */
+  }
+  return seed + local
+}
+
+/* ------------------------------------------------------------------ */
+/* Vouchers                                                             */
+/* ------------------------------------------------------------------ */
+
+export interface Voucher {
+  id: string
+  name: string
+  discount: number
+  maxUsers: number
+  usedUsers: number
+  dueDate: string
+}
+
+const VOUCHERS_KEY = 'gts_admin_vouchers'
+
+const SEED_VOUCHERS: Voucher[] = [
+  { id: 'v-1', name: 'LAUNCH20', discount: 20, maxUsers: 200, usedUsers: 47, dueDate: '2026-12-31' },
+  { id: 'v-2', name: 'STUDENT15', discount: 15, maxUsers: 500, usedUsers: 132, dueDate: '2027-03-31' },
+]
+
+export function getVouchers(): Voucher[] {
+  const stored = read<Voucher[]>(VOUCHERS_KEY)
+  if (stored) return stored
+  write(VOUCHERS_KEY, SEED_VOUCHERS)
+  return SEED_VOUCHERS
+}
+
+export function saveVoucher(v: Voucher): void {
+  const all = getVouchers().filter(x => x.id !== v.id)
+  all.unshift(v)
+  write(VOUCHERS_KEY, all)
+}
+
+export function deleteVoucher(id: string): void {
+  write(VOUCHERS_KEY, getVouchers().filter(x => x.id !== id))
+}
+
+/* ------------------------------------------------------------------ */
+/* Managed users (admin can add; demo users remain until backend)       */
+/* ------------------------------------------------------------------ */
+
+const ADDED_USERS_KEY = 'gts_admin_added_users'
+
+export function getAddedUsers(): AdminUser[] {
+  return read<AdminUser[]>(ADDED_USERS_KEY) ?? []
+}
+
+export function addManagedUser(u: AdminUser): void {
+  const all = getAddedUsers().filter(x => x.username !== u.username)
+  all.unshift(u)
+  write(ADDED_USERS_KEY, all)
+}
+
+export function allManagedUsers(): AdminUser[] {
+  const overrides = getUserOverrides()
+  const base = [...getAddedUsers(), ...MOCK_ADMIN_USERS].map(u => {
+    const o = overrides[u.username]
+    return o ? { ...u, ...o } : u
+  })
+  // de-dupe by username, added users win
+  const seen = new Set<string>()
+  return base.filter(u => {
+    if (seen.has(u.username)) return false
+    seen.add(u.username)
+    return true
+  })
+}
+
+/** Find the active volume containing a bank-view question id (`lr-19`, `free-7`). */
+export function findVolumeForQuestion(questionId: string): Volume | undefined {
+  let scope = ''
+  let number = 0
+  if (questionId.startsWith('lr-')) {
+    scope = 'toeic-lr'
+    number = Number(questionId.slice(3))
+  } else if (questionId.startsWith('free-')) {
+    scope = 'free'
+    number = Number(questionId.slice(5))
+  } else {
+    return undefined
+  }
+  return getVolumes().find(
+    v => v.status === 'active' && v.questions.some(q => q.scope === scope && q.number === number),
+  )
 }

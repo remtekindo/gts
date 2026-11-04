@@ -12,12 +12,11 @@ const pendingCount = ref(0)
 
 const nav = computed(() => [
   { label: t('admin.nav.dashboard'), to: '/admin' },
-  { label: t('admin.nav.questions'), to: '/admin/questions' },
+  { label: t('admin.nav.databases'), to: '/admin/databases' },
   { label: t('admin.nav.packages'), to: '/admin/packages' },
   { label: t('admin.nav.audits'), to: '/admin/audits' },
   { label: t('admin.nav.reports'), to: '/admin/reports' },
   { label: t('admin.nav.users'), to: '/admin/users' },
-  { label: t('admin.nav.results'), to: '/admin/results' },
 ])
 
 function isActive(to: string): boolean {

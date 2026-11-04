@@ -69,10 +69,8 @@ interface BankItem {
   explanation: string
 }
 
-function bankItems(): BankItem[] {
-  const diffs = getDifficultyOverrides()
-  void diffs
-  return [
+function bankItems(scopeIds?: Set<string>): BankItem[] {
+  const all: BankItem[] = [
     ...liveAllQuestions().map(q => ({
       id: `lr-${q.number}`,
       stem: q.stem.trim(),
@@ -86,6 +84,8 @@ function bankItems(): BankItem[] {
       explanation: '',
     })),
   ]
+  if (!scopeIds) return all
+  return all.filter(q => scopeIds.has(q.id))
 }
 
 const STR: Record<Lang, Record<string, string>> = {
@@ -163,8 +163,8 @@ function unrated(items: BankItem[]): BankItem[] {
   return items.filter(q => diffs[q.id] === undefined)
 }
 
-function runAudit(lang: Lang): AssistantAnswer {
-  const items = bankItems()
+function runAudit(lang: Lang, scopeIds?: Set<string>): AssistantAnswer {
+  const items = bankItems(scopeIds)
   const dups = duplicates(items)
   const dist = keyDist(items)
   const un = unrated(items)
@@ -202,8 +202,8 @@ function runAudit(lang: Lang): AssistantAnswer {
   return { reply: report.summary, reportId: report.id }
 }
 
-function runDuplicates(lang: Lang): AssistantAnswer {
-  const items = bankItems()
+function runDuplicates(lang: Lang, scopeIds?: Set<string>): AssistantAnswer {
+  const items = bankItems(scopeIds)
   const dups = duplicates(items)
   const details = dups.length === 0
     ? [t(lang, 'noDupes')]
@@ -216,8 +216,8 @@ function runDuplicates(lang: Lang): AssistantAnswer {
   return { reply: report.summary, reportId: report.id }
 }
 
-function runDistribution(lang: Lang): AssistantAnswer {
-  const items = bankItems()
+function runDistribution(lang: Lang, scopeIds?: Set<string>): AssistantAnswer {
+  const items = bankItems(scopeIds)
   const dist = keyDist(items)
   const line = t(lang, 'keyDist', { a: dist.A ?? 0, b: dist.B ?? 0, c: dist.C ?? 0, d: dist.D ?? 0 })
   const report: AuditReport = {
@@ -228,8 +228,8 @@ function runDistribution(lang: Lang): AssistantAnswer {
   return { reply: line, reportId: report.id }
 }
 
-function runUnrated(lang: Lang): AssistantAnswer {
-  const items = bankItems()
+function runUnrated(lang: Lang, scopeIds?: Set<string>): AssistantAnswer {
+  const items = bankItems(scopeIds)
   const un = unrated(items)
   const summary = un.length === 0 ? t(lang, 'unratedNone') : t(lang, 'unratedFound', { n: un.length })
   const report: AuditReport = {
@@ -241,8 +241,8 @@ function runUnrated(lang: Lang): AssistantAnswer {
   return { reply: summary, reportId: report.id }
 }
 
-function runStats(lang: Lang): AssistantAnswer {
-  const items = bankItems()
+function runStats(lang: Lang, scopeIds?: Set<string>): AssistantAnswer {
+  const items = bankItems(scopeIds)
   const dist = keyDist(items)
   const un = unrated(items)
   const summary = `${t(lang, 'totalLine', { n: items.length })} ${t(lang, 'keyDist', { a: dist.A ?? 0, b: dist.B ?? 0, c: dist.C ?? 0, d: dist.D ?? 0 })}`
@@ -256,15 +256,15 @@ function runStats(lang: Lang): AssistantAnswer {
 }
 
 /** Route a free-text admin prompt to the right analysis. */
-export function answerPrompt(raw: string, lang: Lang): AssistantAnswer {
+export function answerPrompt(raw: string, lang: Lang, scopeIds?: Set<string>): AssistantAnswer {
   if (typeof localStorage === 'undefined') return { reply: t(lang, 'unknown'), reportId: null }
   const s = raw.toLowerCase()
   const has = (...words: string[]) => words.some(w => s.includes(w))
-  if (has('audit')) return runAudit(lang)
-  if (has('duplikat', 'duplicate', 'kembar', 'sama')) return runDuplicates(lang)
-  if (has('distribusi', 'distribution', 'kunci', 'key', 'sebar')) return runDistribution(lang)
-  if (has('belum dinilai', 'unrated', 'tanpa level', 'level', 'rating', 'dinilai')) return runUnrated(lang)
-  if (has('ringkas', 'summary', 'statistik', 'stats', 'bank', 'total')) return runStats(lang)
+  if (has('audit')) return runAudit(lang, scopeIds)
+  if (has('duplikat', 'duplicate', 'kembar', 'sama')) return runDuplicates(lang, scopeIds)
+  if (has('distribusi', 'distribution', 'kunci', 'key', 'sebar')) return runDistribution(lang, scopeIds)
+  if (has('belum dinilai', 'unrated', 'tanpa level', 'level', 'rating', 'dinilai')) return runUnrated(lang, scopeIds)
+  if (has('ringkas', 'summary', 'statistik', 'stats', 'bank', 'total')) return runStats(lang, scopeIds)
   if (has('bantuan', 'help', 'bisa apa', 'halo', 'hai', 'hello', 'hi')) return { reply: t(lang, 'help'), reportId: null }
   return { reply: t(lang, 'unknown'), reportId: null }
 }

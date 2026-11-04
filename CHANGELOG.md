@@ -6,6 +6,40 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Added
+- **Databases (renamed from Questions)**: banks are organized into named
+  **volumes** (e.g. "TOEIC 1", "TOEIC 2") across subjects (English,
+  Math/STEM). Stat cards: total data, by category, by volume.
+- **Add volume**: "Generate by AI" modal creates a draft volume; the
+  **Draft volume** tab lists AI-made volumes pending admin approval
+  (per-question approve/reject, approve-all, then Activate -> questions
+  enter the bank with continuing numbers).
+- **Audit volume tab**: ChatGPT-like chat that re-checks AI-made
+  questions ("audit volume TOEIC 1", "cek duplikat", "distribusi kunci
+  jawaban"); analyses can be scoped to one volume.
+- Volume detail: question table with 15-per-page pagination and
+  View/Edit modal.
+- **Overview**: "Questions in bank" renamed to **Total questions**;
+  new **Test takers / month** card and **user visits per month** bar
+  chart.
+- **Packages**: per-package subscriber cards; tabs **Subscriptions**
+  (table: package type, total questions, choose materials, material
+  packages, subscribers) and **Vouchers** (voucher name, discount %,
+  max/used users, due date; add/delete vouchers).
+- **Users**: Add user button (register-style form), Active/Expired/Trial
+  cards, 15-per-page paginated table (18 demo users).
+- Reports page merged: **Test results** moved in as a tab (QC reports +
+  test results + certificate printing).
+
+### Fixed
+- Volume detail no longer shows stale draft state right after
+  activation (reactive version counter).
+- Overview count and package totals stay in sync with the live bank.
+
+### Removed
+- `/admin/questions` route renamed to `/admin/databases`; `/admin/results`
+  merged into `/admin/reports` (nav entry removed).
+
+### Added
 - **AI assistant in the admin panel**: floating chat button (bottom-right)
   on every admin page. The admin types a prompt ("audit bank soal",
   "cek duplikat", "distribusi kunci jawaban") and the assistant runs a
