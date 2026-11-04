@@ -133,7 +133,7 @@ function switchAccount(): void {
     </header>
 
     <main class="flex-1 min-w-0">
-      <div class="max-w-5xl mx-auto px-4 py-6">
+      <div class="max-w-[1600px] px-6 py-6">
         <slot />
       </div>
     </main>

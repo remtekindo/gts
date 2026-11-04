@@ -5,6 +5,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Changed
+- **Admin layout is now full-width** (max 1600px): the centered
+  `max-w-5xl` container was removed, so content starts right at the
+  sidebar edge and uses the full monitor width on large screens.
+
 ### Fixed
 - **Audits composer position**: shortcut cards keep normal spacing above
   the textarea, and the cards + composer block is now pinned to the
