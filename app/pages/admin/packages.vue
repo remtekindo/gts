@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ownedMaterials } from '~/data/mock'
 import {
-  PACKAGES, MOCK_ADMIN_USERS, getAddedUsers, getPackageMaterials, setPackageMaterial,
+  PACKAGES, MOCK_ADMIN_USERS, getAddedUsers, getPackageMaterials, setPackageMaterials,
   packageMaterials, liveQuestionsForMaterial,
   getVouchers, saveVoucher, deleteVoucher, type Voucher,
 } from '~/utils/admin'
@@ -41,6 +41,7 @@ function subscriberCount(pkgId: string): number {
 }
 
 function effective(pkgId: string): string[] {
+  void pkgMats.value // reactive dep: re-evaluate after toggle -> refresh()
   return packageMaterials(pkgId, owned.value.map(m => m.slug))
 }
 
@@ -50,7 +51,12 @@ function questionTotal(pkgId: string): number {
 
 function toggle(pkgId: string, slug: string): void {
   if (pkgId === 'semesteran') return
-  setPackageMaterial(pkgId, slug, !effective(pkgId).includes(slug))
+  // Seed from the current effective list so the first toggle does not
+  // wipe the defaults — badges update immediately, no refresh needed.
+  const cur = new Set(effective(pkgId))
+  if (cur.has(slug)) cur.delete(slug)
+  else cur.add(slug)
+  setPackageMaterials(pkgId, owned.value.map(m => m.slug).filter(s => cur.has(s)))
   refresh()
 }
 
@@ -181,7 +187,7 @@ onMounted(refresh)
 
     <!-- Add voucher modal -->
     <div v-if="showVoucher" class="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4" role="dialog" aria-modal="true">
-      <div class="absolute inset-0 bg-slate-900/70" @click="showVoucher = false" />
+      <div class="absolute inset-0 bg-slate-900/70" />
       <div class="relative bg-white dark:bg-slate-800 w-full sm:rounded-2xl sm:max-w-md p-5 md:p-6 rounded-t-2xl shadow-2xl border border-slate-200 dark:border-slate-600">
         <h2 class="font-bold text-lg">{{ t('admin.packages.addVoucher') }}</h2>
         <div class="mt-4 space-y-3">

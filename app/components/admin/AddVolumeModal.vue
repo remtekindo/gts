@@ -39,7 +39,7 @@ function doAddVolume(): void {
 
 <template>
   <div v-if="show" class="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4" role="dialog" aria-modal="true">
-    <div class="absolute inset-0 bg-slate-900/70" @click="emit('close')" />
+    <div class="absolute inset-0 bg-slate-900/70" />
     <div class="relative bg-white dark:bg-slate-800 w-full sm:rounded-2xl sm:max-w-lg max-h-[92vh] overflow-y-auto p-5 md:p-6 rounded-t-2xl shadow-2xl border border-slate-200 dark:border-slate-600">
       <div class="flex items-start justify-between gap-3">
         <h2 class="font-bold text-lg">{{ t('admin.databases.generateTitle') }}</h2>

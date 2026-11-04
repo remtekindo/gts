@@ -5,6 +5,21 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added
+- Audits page now has two tabs: **Chat** and **History**.
+- "View report" in the audit chat jumps to the History tab and expands
+  the report with full details.
+
+### Changed
+- All admin modals are now "stay": clicking the backdrop no longer
+  closes them (use the X button).
+- Picking a card on the Audits page (Audit volume / User analysis)
+  auto-fills the textarea and immediately runs the AI analysis.
+
+### Fixed
+- Choose-material badges in the Subscriptions table update instantly on
+  toggle (first toggle no longer wipes the defaults; no refresh needed).
+
 ### Changed
 - All admin modals: brighter panel (`dark:bg-slate-800` vs page
   `dark:bg-slate-950`) plus a thin visible border

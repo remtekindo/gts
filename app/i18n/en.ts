@@ -444,6 +444,8 @@ export default {
       "welcomeSub": "Pick a card above, or type directly e.g. \u201caudit volume TOEIC 1\u201d or \u201canalyze user budi\u201d.",
       "composerPh": "Type an audit command\u2026",
       "composerHint": "Enter to send \u00b7 Shift+Enter for new line",
+      "tab_chat": "Chat",
+      "tab_history": "History",
       "history": "Audit history",
       "viewReport": "View report",
       "pickVolume": "Pick a volume to audit",

@@ -6,6 +6,9 @@ definePageMeta({ layout: 'admin' })
 
 const { t, locale } = useLocale()
 
+type Tab = 'chat' | 'history'
+const tab = ref<Tab>('chat')
+
 interface ChatMsg { from: 'user' | 'ai'; text: string; reportId?: string | null }
 
 const messages = ref<ChatMsg[]>([])
@@ -16,20 +19,13 @@ const ta = ref<HTMLTextAreaElement | null>(null)
 const showVolumeModal = ref(false)
 const showUserModal = ref(false)
 const showAddVolume = ref(false)
-const historyRef = ref<{ refresh: () => void } | null>(null)
 
 const volumes = ref<Volume[]>([])
 const users = computed(() => allManagedUsers())
+const historyRef = ref<{ refresh: () => void; openReport: (id: string) => void } | null>(null)
 
 function lang(): 'id' | 'en' {
   return locale.value === 'id' ? 'id' : 'en'
-}
-
-function detectVolumeScope(text: string): Set<string> | undefined {
-  const low = text.toLowerCase()
-  const hit = volumes.value.find(v => v.status === 'active' && low.includes(v.name.toLowerCase()))
-  if (!hit) return undefined
-  return scopeForVolume(hit)
 }
 
 function scopeForVolume(v: Volume): Set<string> {
@@ -38,6 +34,13 @@ function scopeForVolume(v: Volume): Set<string> {
     ids.add(q.scope === 'free' ? `free-${q.number}` : `lr-${q.number}`)
   }
   return ids
+}
+
+function detectVolumeScope(text: string): Set<string> | undefined {
+  const low = text.toLowerCase()
+  const hit = volumes.value.find(v => v.status === 'active' && low.includes(v.name.toLowerCase()))
+  if (!hit) return undefined
+  return scopeForVolume(hit)
 }
 
 async function send(): Promise<void> {
@@ -67,18 +70,28 @@ function autoGrow(): void {
   el.style.height = Math.min(160, el.scrollHeight) + 'px'
 }
 
+/** Card pick -> auto text stays in the textarea AND is processed at once. */
 function pickVolume(v: Volume): void {
   showVolumeModal.value = false
   input.value = `audit volume ${v.name}`
   autoGrow()
-  nextTick(() => ta.value?.focus())
+  void send()
 }
 
 function pickUser(username: string): void {
   showUserModal.value = false
   input.value = `analisa user ${username}`
   autoGrow()
-  nextTick(() => ta.value?.focus())
+  void send()
+}
+
+function viewReport(reportId: string | null | undefined): void {
+  if (!reportId) return
+  tab.value = 'history'
+  nextTick(() => {
+    historyRef.value?.openReport(reportId)
+    document.getElementById('audit-history')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  })
 }
 
 function onVolumeCreated(): void {
@@ -96,96 +109,107 @@ onMounted(() => {
     <h1 class="text-xl md:text-2xl font-extrabold">{{ t('admin.audits.heading') }}</h1>
     <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">{{ t('admin.audits.sub') }}</p>
 
-    <!-- Category cards -->
-    <div class="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-3">
+    <div class="mt-4 flex gap-1 p-1 rounded-xl bg-slate-100 dark:bg-slate-800 w-fit">
       <button
-        class="text-left bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 p-4 hover:border-violet-400 dark:hover:border-violet-500 hover:shadow-lg transition-all"
-        @click="showVolumeModal = true"
-      >
-        <p class="text-2xl">🔍</p>
-        <p class="mt-2 font-bold text-sm">{{ t('admin.audits.cardAudit') }}</p>
-        <p class="mt-0.5 text-xs text-slate-500 dark:text-slate-400">{{ t('admin.audits.cardAuditSub') }}</p>
-      </button>
-      <button
-        class="text-left bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 p-4 hover:border-violet-400 dark:hover:border-violet-500 hover:shadow-lg transition-all"
-        @click="showAddVolume = true"
-      >
-        <p class="text-2xl">➕</p>
-        <p class="mt-2 font-bold text-sm">{{ t('admin.audits.cardAdd') }}</p>
-        <p class="mt-0.5 text-xs text-slate-500 dark:text-slate-400">{{ t('admin.audits.cardAddSub') }}</p>
-      </button>
-      <button
-        class="text-left bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 p-4 hover:border-violet-400 dark:hover:border-violet-500 hover:shadow-lg transition-all"
-        @click="showUserModal = true"
-      >
-        <p class="text-2xl">👤</p>
-        <p class="mt-2 font-bold text-sm">{{ t('admin.audits.cardUser') }}</p>
-        <p class="mt-0.5 text-xs text-slate-500 dark:text-slate-400">{{ t('admin.audits.cardUserSub') }}</p>
-      </button>
+        v-for="tb in (['chat', 'history'] as const)" :key="tb"
+        class="px-4 py-2 rounded-lg text-sm font-semibold transition-colors"
+        :class="tab === tb ? 'bg-white dark:bg-slate-900 shadow text-slate-900 dark:text-white' : 'text-slate-500 dark:text-slate-400'"
+        @click="tab = tb"
+      >{{ t(`admin.audits.tab_${tb}`) }}</button>
     </div>
 
-    <!-- Chat area -->
-    <div ref="chatBox" class="flex-1 overflow-y-auto py-6 space-y-6 min-h-[240px]">
-      <div v-if="messages.length === 0" class="h-full flex items-center justify-center text-center px-6">
-        <div>
-          <p class="text-4xl">✨</p>
-          <p class="mt-3 font-bold text-slate-700 dark:text-slate-200">{{ t('admin.audits.welcome') }}</p>
-          <p class="mt-1 text-sm text-slate-500 dark:text-slate-400 max-w-md">{{ t('admin.audits.welcomeSub') }}</p>
-        </div>
+    <template v-if="tab === 'chat'">
+      <!-- Category cards -->
+      <div class="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <button
+          class="text-left bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 p-4 hover:border-violet-400 dark:hover:border-violet-500 hover:shadow-lg transition-all"
+          @click="showVolumeModal = true"
+        >
+          <p class="text-2xl">🔍</p>
+          <p class="mt-2 font-bold text-sm">{{ t('admin.audits.cardAudit') }}</p>
+          <p class="mt-0.5 text-xs text-slate-500 dark:text-slate-400">{{ t('admin.audits.cardAuditSub') }}</p>
+        </button>
+        <button
+          class="text-left bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 p-4 hover:border-violet-400 dark:hover:border-violet-500 hover:shadow-lg transition-all"
+          @click="showAddVolume = true"
+        >
+          <p class="text-2xl">➕</p>
+          <p class="mt-2 font-bold text-sm">{{ t('admin.audits.cardAdd') }}</p>
+          <p class="mt-0.5 text-xs text-slate-500 dark:text-slate-400">{{ t('admin.audits.cardAddSub') }}</p>
+        </button>
+        <button
+          class="text-left bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 p-4 hover:border-violet-400 dark:hover:border-violet-500 hover:shadow-lg transition-all"
+          @click="showUserModal = true"
+        >
+          <p class="text-2xl">👤</p>
+          <p class="mt-2 font-bold text-sm">{{ t('admin.audits.cardUser') }}</p>
+          <p class="mt-0.5 text-xs text-slate-500 dark:text-slate-400">{{ t('admin.audits.cardUserSub') }}</p>
+        </button>
       </div>
-      <div v-for="(m, i) in messages" :key="i" class="max-w-3xl mx-auto w-full px-1">
-        <div v-if="m.from === 'user'" class="flex justify-end">
-          <div class="bg-slate-100 dark:bg-slate-800 rounded-2xl px-4 py-2.5 text-sm max-w-[85%]">
-            <p class="whitespace-pre-wrap">{{ m.text }}</p>
+
+      <!-- Chat area -->
+      <div ref="chatBox" class="flex-1 overflow-y-auto py-6 space-y-6 min-h-[240px]">
+        <div v-if="messages.length === 0" class="h-full flex items-center justify-center text-center px-6">
+          <div>
+            <p class="text-4xl">✨</p>
+            <p class="mt-3 font-bold text-slate-700 dark:text-slate-200">{{ t('admin.audits.welcome') }}</p>
+            <p class="mt-1 text-sm text-slate-500 dark:text-slate-400 max-w-md">{{ t('admin.audits.welcomeSub') }}</p>
           </div>
         </div>
-        <div v-else class="flex gap-3">
-          <div class="shrink-0 w-8 h-8 rounded-full bg-violet-600 text-white flex items-center justify-center text-sm">✨</div>
-          <div class="flex-1 text-sm leading-relaxed">
-            <p class="whitespace-pre-wrap text-slate-700 dark:text-slate-200">{{ m.text }}</p>
-            <NuxtLink
-              v-if="m.reportId"
-              to="/admin/audits#history"
-              class="mt-2 inline-block text-xs font-bold text-violet-700 dark:text-violet-300 underline"
-            >{{ t('admin.audits.viewReport') }} →</NuxtLink>
+        <div v-for="(m, i) in messages" :key="i" class="max-w-3xl mx-auto w-full px-1">
+          <div v-if="m.from === 'user'" class="flex justify-end">
+            <div class="bg-slate-100 dark:bg-slate-800 rounded-2xl px-4 py-2.5 text-sm max-w-[85%]">
+              <p class="whitespace-pre-wrap">{{ m.text }}</p>
+            </div>
+          </div>
+          <div v-else class="flex gap-3">
+            <div class="shrink-0 w-8 h-8 rounded-full bg-violet-600 text-white flex items-center justify-center text-sm">✨</div>
+            <div class="flex-1 text-sm leading-relaxed">
+              <p class="whitespace-pre-wrap text-slate-700 dark:text-slate-200">{{ m.text }}</p>
+              <button
+                v-if="m.reportId"
+                class="mt-2 text-xs font-bold text-violet-700 dark:text-violet-300 underline"
+                @click="viewReport(m.reportId)"
+              >{{ t('admin.audits.viewReport') }} →</button>
+            </div>
           </div>
         </div>
       </div>
-    </div>
 
-    <!-- Composer -->
-    <div class="sticky bottom-0 pt-2 pb-1 bg-slate-50 dark:bg-slate-950">
-      <div class="max-w-3xl mx-auto">
-        <div class="flex items-end gap-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-2xl p-2 shadow-sm focus-within:border-violet-500 focus-within:shadow-md transition-shadow">
-          <textarea
-            ref="ta"
-            v-model="input"
-            rows="1"
-            :placeholder="t('admin.audits.composerPh')"
-            class="flex-1 bg-transparent text-sm px-3 py-2 outline-none resize-none max-h-40"
-            @keydown="onKeydown"
-            @input="autoGrow"
-          />
-          <button
-            class="shrink-0 w-10 h-10 rounded-xl bg-violet-600 text-white disabled:opacity-40 flex items-center justify-center"
-            :disabled="!input.trim()"
-            :aria-label="t('admin.aichat.send')"
-            @click="send"
-          >↑</button>
+      <!-- Composer -->
+      <div class="sticky bottom-0 pt-2 pb-1 bg-slate-50 dark:bg-slate-950">
+        <div class="max-w-3xl mx-auto">
+          <div class="flex items-end gap-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-2xl p-2 shadow-sm focus-within:border-violet-500 focus-within:shadow-md transition-shadow">
+            <textarea
+              ref="ta"
+              v-model="input"
+              rows="1"
+              :placeholder="t('admin.audits.composerPh')"
+              class="flex-1 bg-transparent text-sm px-3 py-2 outline-none resize-none max-h-40"
+              @keydown="onKeydown"
+              @input="autoGrow"
+            />
+            <button
+              class="shrink-0 w-10 h-10 rounded-xl bg-violet-600 text-white disabled:opacity-40 flex items-center justify-center"
+              :disabled="!input.trim()"
+              :aria-label="t('admin.aichat.send')"
+              @click="send"
+            >↑</button>
+          </div>
+          <p class="mt-1.5 text-[11px] text-center text-slate-400 dark:text-slate-500">{{ t('admin.audits.composerHint') }}</p>
         </div>
-        <p class="mt-1.5 text-[11px] text-center text-slate-400 dark:text-slate-500">{{ t('admin.audits.composerHint') }}</p>
       </div>
-    </div>
+    </template>
 
-    <!-- History -->
-    <div id="history" class="mt-8 max-w-3xl mx-auto w-full">
-      <h2 class="font-bold text-sm">{{ t('admin.audits.history') }}</h2>
-      <AdminAuditHistory ref="historyRef" class="mt-3" />
-    </div>
+    <template v-else>
+      <div id="audit-history" class="mt-4 max-w-3xl w-full scroll-mt-4">
+        <AdminAuditHistory ref="historyRef" />
+      </div>
+    </template>
 
     <!-- Volume picker modal -->
     <div v-if="showVolumeModal" class="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4" role="dialog" aria-modal="true">
-      <div class="absolute inset-0 bg-slate-900/70" @click="showVolumeModal = false" />
+      <div class="absolute inset-0 bg-slate-900/70" />
       <div class="relative bg-white dark:bg-slate-800 w-full sm:rounded-2xl sm:max-w-md max-h-[80vh] overflow-y-auto p-5 rounded-t-2xl shadow-2xl border border-slate-200 dark:border-slate-600">
         <div class="flex items-start justify-between gap-3">
           <h2 class="font-bold">{{ t('admin.audits.pickVolume') }}</h2>
@@ -207,7 +231,7 @@ onMounted(() => {
 
     <!-- User picker modal -->
     <div v-if="showUserModal" class="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4" role="dialog" aria-modal="true">
-      <div class="absolute inset-0 bg-slate-900/70" @click="showUserModal = false" />
+      <div class="absolute inset-0 bg-slate-900/70" />
       <div class="relative bg-white dark:bg-slate-800 w-full sm:rounded-2xl sm:max-w-md max-h-[80vh] overflow-y-auto p-5 rounded-t-2xl shadow-2xl border border-slate-200 dark:border-slate-600">
         <div class="flex items-start justify-between gap-3">
           <h2 class="font-bold">{{ t('admin.audits.pickUser') }}</h2>

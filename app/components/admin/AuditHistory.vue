@@ -10,6 +10,11 @@ function refresh(): void {
   audits.value = getAudits()
 }
 
+function openReport(id: string): void {
+  openId.value = id
+  refresh()
+}
+
 function fmtDate(iso: string): string {
   try {
     return new Date(iso).toLocaleString()
@@ -19,7 +24,7 @@ function fmtDate(iso: string): string {
 }
 
 onMounted(refresh)
-defineExpose({ refresh })
+defineExpose({ refresh, openReport })
 </script>
 
 <template>

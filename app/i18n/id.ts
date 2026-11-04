@@ -443,6 +443,8 @@ export default {
       "welcomeSub": "Pilih salah satu kartu di atas, atau ketik langsung mis. \u201caudit volume TOEIC 1\u201d atau \u201canalisa user budi\u201d.",
       "composerPh": "Ketik perintah audit\u2026",
       "composerHint": "Enter untuk kirim \u00b7 Shift+Enter baris baru",
+      "tab_chat": "Chat",
+      "tab_history": "Riwayat",
       "history": "Riwayat audit",
       "viewReport": "Lihat laporan",
       "pickVolume": "Pilih volume untuk diaudit",

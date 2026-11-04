@@ -407,6 +407,13 @@ export function setPackageMaterial(pkgId: string, slug: string, included: boolea
   write(PKG_KEY, all)
 }
 
+/** Replace the whole manual material list for a package. */
+export function setPackageMaterials(pkgId: string, slugs: string[]): void {
+  const all = getPackageMaterials()
+  all[pkgId] = [...slugs]
+  write(PKG_KEY, all)
+}
+
 /** Effective materials for a package: manual picks, or all owned for Semesteran. */
 export function packageMaterials(pkgId: string, ownedSlugs: string[]): string[] {
   if (pkgId === 'semesteran') return ownedSlugs
