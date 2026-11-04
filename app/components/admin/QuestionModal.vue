@@ -73,7 +73,7 @@ function saveEdit(): void {
 <template>
   <div v-if="question" class="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4" role="dialog" aria-modal="true">
     <div class="absolute inset-0 bg-slate-900/70" @click="emit('close')" />
-    <div class="relative bg-white dark:bg-slate-900 w-full sm:rounded-2xl sm:max-w-2xl max-h-[92vh] overflow-y-auto p-5 md:p-6 rounded-t-2xl shadow-2xl">
+    <div class="relative bg-white dark:bg-slate-800 w-full sm:rounded-2xl sm:max-w-2xl max-h-[92vh] overflow-y-auto p-5 md:p-6 rounded-t-2xl shadow-2xl border border-slate-200 dark:border-slate-600">
       <div class="flex items-start justify-between gap-3">
         <div>
           <p class="font-mono text-xs text-slate-400">{{ question.id }} · {{ question.bank }} · {{ question.section }}</p>

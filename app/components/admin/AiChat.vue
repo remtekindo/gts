@@ -57,7 +57,7 @@ watch(messages, async () => {
     <!-- Chat drawer -->
     <div
       v-if="open"
-      class="fixed bottom-24 right-5 z-40 w-[calc(100vw-2.5rem)] max-w-sm bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-2xl flex flex-col overflow-hidden"
+      class="fixed bottom-24 right-5 z-40 w-[calc(100vw-2.5rem)] max-w-sm bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-600 shadow-2xl flex flex-col overflow-hidden"
       role="dialog"
       aria-modal="false"
     >

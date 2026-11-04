@@ -5,6 +5,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Changed
+- All admin modals: brighter panel (`dark:bg-slate-800` vs page
+  `dark:bg-slate-950`) plus a thin visible border
+  (`border-slate-200 dark:border-slate-600`) so the modal boundary is
+  always clear; certificate modal also gained `shadow-2xl`.
+
 ### Added
 - **Audits page redesigned like a fresh Muse chat**: category cards on top
   (Audit volume, Add volume, User analysis), chat thread in the middle,

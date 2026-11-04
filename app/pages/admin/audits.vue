@@ -186,7 +186,7 @@ onMounted(() => {
     <!-- Volume picker modal -->
     <div v-if="showVolumeModal" class="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4" role="dialog" aria-modal="true">
       <div class="absolute inset-0 bg-slate-900/70" @click="showVolumeModal = false" />
-      <div class="relative bg-white dark:bg-slate-900 w-full sm:rounded-2xl sm:max-w-md max-h-[80vh] overflow-y-auto p-5 rounded-t-2xl shadow-2xl">
+      <div class="relative bg-white dark:bg-slate-800 w-full sm:rounded-2xl sm:max-w-md max-h-[80vh] overflow-y-auto p-5 rounded-t-2xl shadow-2xl border border-slate-200 dark:border-slate-600">
         <div class="flex items-start justify-between gap-3">
           <h2 class="font-bold">{{ t('admin.audits.pickVolume') }}</h2>
           <button class="text-slate-400 hover:text-slate-600 px-2 py-1" @click="showVolumeModal = false" aria-label="Close">✕</button>
@@ -208,7 +208,7 @@ onMounted(() => {
     <!-- User picker modal -->
     <div v-if="showUserModal" class="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4" role="dialog" aria-modal="true">
       <div class="absolute inset-0 bg-slate-900/70" @click="showUserModal = false" />
-      <div class="relative bg-white dark:bg-slate-900 w-full sm:rounded-2xl sm:max-w-md max-h-[80vh] overflow-y-auto p-5 rounded-t-2xl shadow-2xl">
+      <div class="relative bg-white dark:bg-slate-800 w-full sm:rounded-2xl sm:max-w-md max-h-[80vh] overflow-y-auto p-5 rounded-t-2xl shadow-2xl border border-slate-200 dark:border-slate-600">
         <div class="flex items-start justify-between gap-3">
           <h2 class="font-bold">{{ t('admin.audits.pickUser') }}</h2>
           <button class="text-slate-400 hover:text-slate-600 px-2 py-1" @click="showUserModal = false" aria-label="Close">✕</button>

@@ -151,7 +151,7 @@ function formatDate(iso: string): string {
     <div v-if="cert" class="fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true">
       <div class="absolute inset-0 bg-slate-900/70 print:hidden" @click="cert = null" />
       <div class="relative w-full max-w-2xl">
-        <div id="gts-certificate" class="bg-white text-slate-900 rounded-2xl p-10 md:p-14 text-center border-8 border-double border-blue-800">
+        <div id="gts-certificate" class="bg-white text-slate-900 rounded-2xl p-10 md:p-14 text-center border-8 border-double border-blue-800 shadow-2xl">
           <p class="text-xs font-bold tracking-[0.3em] text-blue-800">GLOBAL TESTING SYSTEM</p>
           <h2 class="mt-4 text-3xl md:text-4xl font-extrabold">Certificate of Achievement</h2>
           <p class="mt-6 text-sm text-slate-500">This certifies that</p>
