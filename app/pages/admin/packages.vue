@@ -181,8 +181,8 @@ onMounted(refresh)
 
     <!-- Add voucher modal -->
     <div v-if="showVoucher" class="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4" role="dialog" aria-modal="true">
-      <div class="absolute inset-0 bg-slate-900/60" @click="showVoucher = false" />
-      <div class="relative bg-white dark:bg-slate-900 w-full sm:rounded-2xl sm:max-w-md p-5 md:p-6 rounded-t-2xl">
+      <div class="absolute inset-0 bg-slate-900/70" @click="showVoucher = false" />
+      <div class="relative bg-white dark:bg-slate-900 w-full sm:rounded-2xl sm:max-w-md p-5 md:p-6 rounded-t-2xl shadow-2xl">
         <h2 class="font-bold text-lg">{{ t('admin.packages.addVoucher') }}</h2>
         <div class="mt-4 space-y-3">
           <label class="block">

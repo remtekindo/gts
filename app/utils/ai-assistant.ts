@@ -11,11 +11,12 @@
  * the same chat box will forward prompts to the real Meta API; the audit
  * tab and report format stay the same.
  */
-import { liveAllQuestions, liveFreeQuestions, getDifficultyOverrides } from './admin'
+import { liveAllQuestions, liveFreeQuestions, getDifficultyOverrides, allManagedUsers } from './admin'
+import { analyzeAbility } from './adaptive'
 
 export interface AuditReport {
   id: string
-  type: 'audit' | 'duplicates' | 'distribution' | 'unrated' | 'stats'
+  type: 'audit' | 'duplicates' | 'distribution' | 'unrated' | 'stats' | 'user'
   title: string
   createdAt: string
   summary: string
@@ -107,6 +108,12 @@ const STR: Record<Lang, Record<string, string>> = {
     keyDist: 'Kunci A:{a} B:{b} C:{c} D:{d}',
     noExpl: '{n} soal tanpa penjelasan.',
     totalLine: 'Total {n} soal di bank (LR + Free Test).',
+    userTitle: 'Analisa user {name}',
+    userNone: 'Tidak ada data tes untuk user "{name}". Minta user mengerjakan tes dulu.',
+    userLine: 'Part {part}: {acc} · level {level} ({n} soal dijawab)',
+    userWeak: 'Kelemahan utama: Part {part} ({acc}). Rekomendasi: fokus latihan Part {part} di level {level}.',
+    userStrong: 'Kekuatan utama: Part {part} ({acc}).',
+    userNotFound: 'User "{name}" tidak ditemukan.',
   },
   en: {
     auditTitle: 'Question bank audit',
@@ -126,6 +133,12 @@ const STR: Record<Lang, Record<string, string>> = {
     keyDist: 'Keys A:{a} B:{b} C:{c} D:{d}',
     noExpl: '{n} questions without explanation.',
     totalLine: 'Total {n} questions in bank (LR + Free Test).',
+    userTitle: 'User analysis: {name}',
+    userNone: 'No test data for user "{name}". Ask them to take a test first.',
+    userLine: 'Part {part}: {acc} · level {level} ({n} answered)',
+    userWeak: 'Main weakness: Part {part} ({acc}). Recommendation: focus practice on Part {part} at level {level}.',
+    userStrong: 'Main strength: Part {part} ({acc}).',
+    userNotFound: 'User "{name}" not found.',
   },
 }
 
@@ -255,11 +268,40 @@ function runStats(lang: Lang, scopeIds?: Set<string>): AssistantAnswer {
   return { reply: summary, reportId: report.id }
 }
 
+function runUserAnalysis(lang: Lang, username: string): AssistantAnswer {
+  const user = allManagedUsers().find(u => u.username.toLowerCase() === username.toLowerCase())
+  if (!user) {
+    return { reply: t(lang, 'userNotFound', { name: username }), reportId: null }
+  }
+  const parts = analyzeAbility('toeic-lr', user.username)
+  const touched = parts.filter(p => p.answered > 0)
+  if (touched.length === 0) {
+    return { reply: t(lang, 'userNone', { name: user.username }), reportId: null }
+  }
+  const pct = (a: number | null) => (a === null ? '—' : `${Math.round(a * 100)}%`)
+  const details = touched.map(p =>
+    t(lang, 'userLine', { part: p.part, acc: pct(p.accuracy), level: p.level, n: p.answered }),
+  )
+  const weak = [...touched].sort((a, b) => (a.accuracy ?? 1) - (b.accuracy ?? 1))[0]!
+  const strong = [...touched].sort((a, b) => (b.accuracy ?? 0) - (a.accuracy ?? 0))[0]!
+  const summary = `${t(lang, 'userWeak', { part: weak.part, acc: pct(weak.accuracy), level: weak.level })} ${t(lang, 'userStrong', { part: strong.part, acc: pct(strong.accuracy) })}`
+  const report: AuditReport = {
+    id: uid(), type: 'user', title: t(lang, 'userTitle', { name: user.username }),
+    createdAt: new Date().toISOString(), summary, details: [summary, ...details],
+  }
+  saveAudit(report)
+  return { reply: summary, reportId: report.id }
+}
+
 /** Route a free-text admin prompt to the right analysis. */
 export function answerPrompt(raw: string, lang: Lang, scopeIds?: Set<string>): AssistantAnswer {
   if (typeof localStorage === 'undefined') return { reply: t(lang, 'unknown'), reportId: null }
   const s = raw.toLowerCase()
   const has = (...words: string[]) => words.some(w => s.includes(w))
+  const mUser = s.match(/(?:analisa|analisis|analyze|analysis)\s+(?:user\s+)?(\w+)/)
+  if (mUser && has('user', 'analisa', 'analisis', 'analyze', 'analysis')) {
+    return runUserAnalysis(lang, mUser[1] as string)
+  }
   if (has('audit')) return runAudit(lang, scopeIds)
   if (has('duplikat', 'duplicate', 'kembar', 'sama')) return runDuplicates(lang, scopeIds)
   if (has('distribusi', 'distribution', 'kunci', 'key', 'sebar')) return runDistribution(lang, scopeIds)

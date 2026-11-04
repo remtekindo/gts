@@ -432,8 +432,22 @@ export default {
     },
     "audits": {
       "heading": "AI Audits",
-      "sub": "AI assistant analysis results over the question bank.",
-      "empty": "No audits yet. Open the AI assistant (the ✨ button at bottom right) and type e.g. “audit question bank”."
+      "sub": "Re-check AI-made questions and analyze user ability.",
+      "empty": "No audit history yet.",
+      "cardAudit": "Audit volume",
+      "cardAuditSub": "Check duplicates, keys & quality of one volume",
+      "cardAdd": "Add volume",
+      "cardAddSub": "Generate a new draft volume via AI",
+      "cardUser": "User analysis",
+      "cardUserSub": "Strengths & weaknesses per user",
+      "welcome": "What should I audit today?",
+      "welcomeSub": "Pick a card above, or type directly e.g. \u201caudit volume TOEIC 1\u201d or \u201canalyze user budi\u201d.",
+      "composerPh": "Type an audit command\u2026",
+      "composerHint": "Enter to send \u00b7 Shift+Enter for new line",
+      "history": "Audit history",
+      "viewReport": "View report",
+      "pickVolume": "Pick a volume to audit",
+      "pickUser": "Pick a user to analyze"
     },
     "databases": {
       "heading": "Question databases",

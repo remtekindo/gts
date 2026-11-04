@@ -155,8 +155,8 @@ onMounted(refresh)
 
     <!-- Add user modal -->
     <div v-if="showAdd" class="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4" role="dialog" aria-modal="true">
-      <div class="absolute inset-0 bg-slate-900/60" @click="showAdd = false" />
-      <div class="relative bg-white dark:bg-slate-900 w-full sm:rounded-2xl sm:max-w-md max-h-[92vh] overflow-y-auto p-5 md:p-6 rounded-t-2xl">
+      <div class="absolute inset-0 bg-slate-900/70" @click="showAdd = false" />
+      <div class="relative bg-white dark:bg-slate-900 w-full sm:rounded-2xl sm:max-w-md max-h-[92vh] overflow-y-auto p-5 md:p-6 rounded-t-2xl shadow-2xl">
         <div class="flex items-start justify-between gap-3">
           <h2 class="font-bold text-lg">{{ t('admin.users.addUser') }}</h2>
           <button class="text-slate-400 hover:text-slate-600 px-2 py-1" @click="showAdd = false" aria-label="Close">✕</button>
@@ -198,8 +198,8 @@ onMounted(refresh)
 
     <!-- Detail modal -->
     <div v-if="selected" class="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4" role="dialog" aria-modal="true">
-      <div class="absolute inset-0 bg-slate-900/60" @click="selected = null" />
-      <div class="relative bg-white dark:bg-slate-900 w-full sm:rounded-2xl sm:max-w-md max-h-[92vh] overflow-y-auto p-5 md:p-6 rounded-t-2xl">
+      <div class="absolute inset-0 bg-slate-900/70" @click="selected = null" />
+      <div class="relative bg-white dark:bg-slate-900 w-full sm:rounded-2xl sm:max-w-md max-h-[92vh] overflow-y-auto p-5 md:p-6 rounded-t-2xl shadow-2xl">
         <div class="flex items-start justify-between gap-3">
           <h2 class="font-bold text-lg">{{ selected.username }}</h2>
           <button class="text-slate-400 hover:text-slate-600 px-2 py-1" @click="selected = null" aria-label="Close">✕</button>
@@ -221,7 +221,13 @@ onMounted(refresh)
         <div class="mt-4 rounded-xl bg-slate-50 dark:bg-slate-800/60 p-3.5">
           <p class="text-xs font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400">{{ t('admin.users.abilityTitle') }}</p>
           <p v-if="abilities.every(a => a.answered === 0)" class="mt-1.5 text-xs text-slate-500 dark:text-slate-400">{{ t('admin.users.abilityEmpty') }}</p>
-          <ul v-else class="mt-2 space-y-2">
+          <template v-else>
+            <AdminRadarChart
+              class="my-2"
+              :labels="abilities.map(a => `P${a.part}`)"
+              :values="abilities.map(a => a.accuracy ?? 0)"
+            />
+            <ul class="mt-2 space-y-2">
             <li v-for="a in abilities" :key="a.part">
               <div class="flex items-center justify-between text-xs">
                 <span class="font-semibold">Part {{ a.part }} <span class="font-normal text-slate-400">· {{ a.answered }}</span></span>
@@ -238,6 +244,7 @@ onMounted(refresh)
               </div>
             </li>
           </ul>
+          </template>
         </div>
 
         <div class="mt-5 flex flex-col sm:flex-row gap-2">

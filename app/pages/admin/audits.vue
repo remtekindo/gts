@@ -1,54 +1,232 @@
 <script setup lang="ts">
-import { getAudits, type AuditReport } from '~/utils/ai-assistant'
+import { getVolumes, allManagedUsers, type Volume } from '~/utils/admin'
+import { answerPrompt } from '~/utils/ai-assistant'
 
 definePageMeta({ layout: 'admin' })
 
-const { t } = useLocale()
+const { t, locale } = useLocale()
 
-const audits = ref<AuditReport[]>([])
-const openId = ref<string | null>(null)
+interface ChatMsg { from: 'user' | 'ai'; text: string; reportId?: string | null }
 
-onMounted(() => {
-  audits.value = getAudits()
-})
+const messages = ref<ChatMsg[]>([])
+const input = ref('')
+const chatBox = ref<HTMLElement | null>(null)
+const ta = ref<HTMLTextAreaElement | null>(null)
 
-function fmtDate(iso: string): string {
-  try {
-    return new Date(iso).toLocaleString()
-  } catch {
-    return iso
+const showVolumeModal = ref(false)
+const showUserModal = ref(false)
+const showAddVolume = ref(false)
+const historyRef = ref<{ refresh: () => void } | null>(null)
+
+const volumes = ref<Volume[]>([])
+const users = computed(() => allManagedUsers())
+
+function lang(): 'id' | 'en' {
+  return locale.value === 'id' ? 'id' : 'en'
+}
+
+function detectVolumeScope(text: string): Set<string> | undefined {
+  const low = text.toLowerCase()
+  const hit = volumes.value.find(v => v.status === 'active' && low.includes(v.name.toLowerCase()))
+  if (!hit) return undefined
+  return scopeForVolume(hit)
+}
+
+function scopeForVolume(v: Volume): Set<string> {
+  const ids = new Set<string>()
+  for (const q of v.questions) {
+    ids.add(q.scope === 'free' ? `free-${q.number}` : `lr-${q.number}`)
+  }
+  return ids
+}
+
+async function send(): Promise<void> {
+  const text = input.value.trim()
+  if (!text) return
+  messages.value.push({ from: 'user', text })
+  input.value = ''
+  autoGrow()
+  const ans = answerPrompt(text, lang(), detectVolumeScope(text))
+  messages.value.push({ from: 'ai', text: ans.reply, reportId: ans.reportId })
+  historyRef.value?.refresh()
+  await nextTick()
+  if (chatBox.value) chatBox.value.scrollTop = chatBox.value.scrollHeight
+}
+
+function onKeydown(e: KeyboardEvent): void {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault()
+    void send()
   }
 }
+
+function autoGrow(): void {
+  const el = ta.value
+  if (!el) return
+  el.style.height = 'auto'
+  el.style.height = Math.min(160, el.scrollHeight) + 'px'
+}
+
+function pickVolume(v: Volume): void {
+  showVolumeModal.value = false
+  input.value = `audit volume ${v.name}`
+  autoGrow()
+  nextTick(() => ta.value?.focus())
+}
+
+function pickUser(username: string): void {
+  showUserModal.value = false
+  input.value = `analisa user ${username}`
+  autoGrow()
+  nextTick(() => ta.value?.focus())
+}
+
+function onVolumeCreated(): void {
+  volumes.value = getVolumes()
+}
+
+onMounted(() => {
+  volumes.value = getVolumes()
+  autoGrow()
+})
 </script>
 
 <template>
-  <div>
+  <div class="flex flex-col" style="min-height: calc(100vh - 140px)">
     <h1 class="text-xl md:text-2xl font-extrabold">{{ t('admin.audits.heading') }}</h1>
     <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">{{ t('admin.audits.sub') }}</p>
 
-    <p v-if="audits.length === 0" class="mt-5 text-sm text-slate-500 dark:text-slate-400 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 p-5">
-      {{ t('admin.audits.empty') }}
-    </p>
-
-    <div v-else class="mt-5 space-y-3">
-      <div
-        v-for="a in audits"
-        :key="a.id"
-        class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden"
+    <!-- Category cards -->
+    <div class="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-3">
+      <button
+        class="text-left bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 p-4 hover:border-violet-400 dark:hover:border-violet-500 hover:shadow-lg transition-all"
+        @click="showVolumeModal = true"
       >
-        <button class="w-full text-left p-4 flex items-center justify-between gap-3" @click="openId = openId === a.id ? null : a.id">
-          <div>
-            <p class="font-bold text-sm">{{ a.title }}</p>
-            <p class="mt-0.5 text-xs text-slate-500 dark:text-slate-400">{{ fmtDate(a.createdAt) }} · {{ a.summary }}</p>
+        <p class="text-2xl">🔍</p>
+        <p class="mt-2 font-bold text-sm">{{ t('admin.audits.cardAudit') }}</p>
+        <p class="mt-0.5 text-xs text-slate-500 dark:text-slate-400">{{ t('admin.audits.cardAuditSub') }}</p>
+      </button>
+      <button
+        class="text-left bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 p-4 hover:border-violet-400 dark:hover:border-violet-500 hover:shadow-lg transition-all"
+        @click="showAddVolume = true"
+      >
+        <p class="text-2xl">➕</p>
+        <p class="mt-2 font-bold text-sm">{{ t('admin.audits.cardAdd') }}</p>
+        <p class="mt-0.5 text-xs text-slate-500 dark:text-slate-400">{{ t('admin.audits.cardAddSub') }}</p>
+      </button>
+      <button
+        class="text-left bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 p-4 hover:border-violet-400 dark:hover:border-violet-500 hover:shadow-lg transition-all"
+        @click="showUserModal = true"
+      >
+        <p class="text-2xl">👤</p>
+        <p class="mt-2 font-bold text-sm">{{ t('admin.audits.cardUser') }}</p>
+        <p class="mt-0.5 text-xs text-slate-500 dark:text-slate-400">{{ t('admin.audits.cardUserSub') }}</p>
+      </button>
+    </div>
+
+    <!-- Chat area -->
+    <div ref="chatBox" class="flex-1 overflow-y-auto py-6 space-y-6 min-h-[240px]">
+      <div v-if="messages.length === 0" class="h-full flex items-center justify-center text-center px-6">
+        <div>
+          <p class="text-4xl">✨</p>
+          <p class="mt-3 font-bold text-slate-700 dark:text-slate-200">{{ t('admin.audits.welcome') }}</p>
+          <p class="mt-1 text-sm text-slate-500 dark:text-slate-400 max-w-md">{{ t('admin.audits.welcomeSub') }}</p>
+        </div>
+      </div>
+      <div v-for="(m, i) in messages" :key="i" class="max-w-3xl mx-auto w-full px-1">
+        <div v-if="m.from === 'user'" class="flex justify-end">
+          <div class="bg-slate-100 dark:bg-slate-800 rounded-2xl px-4 py-2.5 text-sm max-w-[85%]">
+            <p class="whitespace-pre-wrap">{{ m.text }}</p>
           </div>
-          <span class="text-slate-400">{{ openId === a.id ? '▾' : '▸' }}</span>
-        </button>
-        <div v-if="openId === a.id" class="px-4 pb-4">
-          <ul class="text-sm space-y-1 text-slate-600 dark:text-slate-300 bg-slate-50 dark:bg-slate-800/60 rounded-xl p-3">
-            <li v-for="(d, i) in a.details" :key="i">{{ d }}</li>
-          </ul>
+        </div>
+        <div v-else class="flex gap-3">
+          <div class="shrink-0 w-8 h-8 rounded-full bg-violet-600 text-white flex items-center justify-center text-sm">✨</div>
+          <div class="flex-1 text-sm leading-relaxed">
+            <p class="whitespace-pre-wrap text-slate-700 dark:text-slate-200">{{ m.text }}</p>
+            <NuxtLink
+              v-if="m.reportId"
+              to="/admin/audits#history"
+              class="mt-2 inline-block text-xs font-bold text-violet-700 dark:text-violet-300 underline"
+            >{{ t('admin.audits.viewReport') }} →</NuxtLink>
+          </div>
         </div>
       </div>
     </div>
+
+    <!-- Composer -->
+    <div class="sticky bottom-0 pt-2 pb-1 bg-slate-50 dark:bg-slate-950">
+      <div class="max-w-3xl mx-auto">
+        <div class="flex items-end gap-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-2xl p-2 shadow-sm focus-within:border-violet-500 focus-within:shadow-md transition-shadow">
+          <textarea
+            ref="ta"
+            v-model="input"
+            rows="1"
+            :placeholder="t('admin.audits.composerPh')"
+            class="flex-1 bg-transparent text-sm px-3 py-2 outline-none resize-none max-h-40"
+            @keydown="onKeydown"
+            @input="autoGrow"
+          />
+          <button
+            class="shrink-0 w-10 h-10 rounded-xl bg-violet-600 text-white disabled:opacity-40 flex items-center justify-center"
+            :disabled="!input.trim()"
+            :aria-label="t('admin.aichat.send')"
+            @click="send"
+          >↑</button>
+        </div>
+        <p class="mt-1.5 text-[11px] text-center text-slate-400 dark:text-slate-500">{{ t('admin.audits.composerHint') }}</p>
+      </div>
+    </div>
+
+    <!-- History -->
+    <div id="history" class="mt-8 max-w-3xl mx-auto w-full">
+      <h2 class="font-bold text-sm">{{ t('admin.audits.history') }}</h2>
+      <AdminAuditHistory ref="historyRef" class="mt-3" />
+    </div>
+
+    <!-- Volume picker modal -->
+    <div v-if="showVolumeModal" class="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4" role="dialog" aria-modal="true">
+      <div class="absolute inset-0 bg-slate-900/70" @click="showVolumeModal = false" />
+      <div class="relative bg-white dark:bg-slate-900 w-full sm:rounded-2xl sm:max-w-md max-h-[80vh] overflow-y-auto p-5 rounded-t-2xl shadow-2xl">
+        <div class="flex items-start justify-between gap-3">
+          <h2 class="font-bold">{{ t('admin.audits.pickVolume') }}</h2>
+          <button class="text-slate-400 hover:text-slate-600 px-2 py-1" @click="showVolumeModal = false" aria-label="Close">✕</button>
+        </div>
+        <ul class="mt-3 space-y-2">
+          <li v-for="v in volumes.filter(x => x.status === 'active')" :key="v.id">
+            <button
+              class="w-full text-left px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 hover:border-violet-400 dark:hover:border-violet-500 hover:shadow transition-all"
+              @click="pickVolume(v)"
+            >
+              <p class="font-bold text-sm">{{ v.name }}</p>
+              <p class="text-xs text-slate-500 dark:text-slate-400">{{ v.questions.length }} {{ t('admin.databases.colQuestions') }}</p>
+            </button>
+          </li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- User picker modal -->
+    <div v-if="showUserModal" class="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4" role="dialog" aria-modal="true">
+      <div class="absolute inset-0 bg-slate-900/70" @click="showUserModal = false" />
+      <div class="relative bg-white dark:bg-slate-900 w-full sm:rounded-2xl sm:max-w-md max-h-[80vh] overflow-y-auto p-5 rounded-t-2xl shadow-2xl">
+        <div class="flex items-start justify-between gap-3">
+          <h2 class="font-bold">{{ t('admin.audits.pickUser') }}</h2>
+          <button class="text-slate-400 hover:text-slate-600 px-2 py-1" @click="showUserModal = false" aria-label="Close">✕</button>
+        </div>
+        <ul class="mt-3 space-y-2">
+          <li v-for="u in users" :key="u.username">
+            <button
+              class="w-full text-left px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 hover:border-violet-400 dark:hover:border-violet-500 hover:shadow transition-all flex items-center justify-between"
+              @click="pickUser(u.username)"
+            >
+              <span class="font-bold text-sm">{{ u.username }}</span>
+              <span class="text-xs text-slate-500 dark:text-slate-400">{{ u.plan }} · {{ u.attempts }} tes</span>
+            </button>
+          </li>
+        </ul>
+      </div>
+    </div>
+
+    <AdminAddVolumeModal :show="showAddVolume" @close="showAddVolume = false" @created="onVolumeCreated" />
   </div>
 </template>

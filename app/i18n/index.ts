@@ -14,5 +14,5 @@ export function translate(locale: Locale, key: string, params?: Record<string, s
   const raw = lookup(dicts[locale], key) ?? lookup(en, key)
   if (typeof raw !== 'string') return key
   if (!params) return raw
-  return Object.entries(params).reduce((s, [k, v]) => s.replace(`{${k}}`, String(v)), raw)
+  return Object.entries(params).reduce((s, [k, v]) => s.split(`{${k}}`).join(String(v)), raw)
 }

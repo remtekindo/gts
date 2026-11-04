@@ -6,6 +6,27 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Added
+- **Audits page redesigned like a fresh Muse chat**: category cards on top
+  (Audit volume, Add volume, User analysis), chat thread in the middle,
+  auto-growing textarea composer at the bottom (Enter sends,
+  Shift+Enter new line). Clicking "Audit volume" opens a volume picker
+  modal; picking one pre-fills e.g. "audit volume TOEIC 1". "User
+  analysis" opens a user picker and pre-fills "analisa user <name>",
+  running a real per-user ability analysis (weakest/strongest part +
+  recommendation) saved to audit history. "Add volume" opens the same
+  Generate-by-AI modal as Databases. Audit history below the composer.
+- **Spider (radar) diagram** on the user detail ability map: SVG radar
+  over Parts 1-7 with per-part accuracy labels, above the existing bars.
+
+### Changed
+- Audit volume tab removed from Databases (back to 2 tabs: Active /
+  Draft volume); auditing lives in the Audits menu.
+- All admin modals now use a stronger backdrop (`bg-slate-900/70`) and
+  `shadow-2xl` so the foreground is clearly separated.
+- `translate()` now replaces every `{param}` occurrence, not just the
+  first.
+
+### Added
 - **Databases (renamed from Questions)**: banks are organized into named
   **volumes** (e.g. "TOEIC 1", "TOEIC 2") across subjects (English,
   Math/STEM). Stat cards: total data, by category, by volume.

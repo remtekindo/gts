@@ -431,8 +431,22 @@ export default {
     },
     "audits": {
       "heading": "Audit AI",
-      "sub": "Hasil analisa asisten AI atas bank soal.",
-      "empty": "Belum ada audit. Buka asisten AI (tombol ✨ di kanan bawah) dan ketik mis. “audit bank soal”."
+      "sub": "Cek ulang soal buatan AI dan analisa kemampuan user.",
+      "empty": "Belum ada riwayat audit.",
+      "cardAudit": "Audit volume",
+      "cardAuditSub": "Cek duplikat, kunci jawaban & kualitas satu volume",
+      "cardAdd": "Tambah volume",
+      "cardAddSub": "Generate draft volume baru via AI",
+      "cardUser": "Analisa user",
+      "cardUserSub": "Kekuatan & kelemahan per user",
+      "welcome": "Mau audit apa hari ini?",
+      "welcomeSub": "Pilih salah satu kartu di atas, atau ketik langsung mis. \u201caudit volume TOEIC 1\u201d atau \u201canalisa user budi\u201d.",
+      "composerPh": "Ketik perintah audit\u2026",
+      "composerHint": "Enter untuk kirim \u00b7 Shift+Enter baris baru",
+      "history": "Riwayat audit",
+      "viewReport": "Lihat laporan",
+      "pickVolume": "Pilih volume untuk diaudit",
+      "pickUser": "Pilih user untuk dianalisa"
     },
     "databases": {
       "heading": "Database soal",
