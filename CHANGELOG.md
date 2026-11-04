@@ -5,6 +5,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Fixed
+- **Audits composer position**: shortcut cards keep normal spacing above
+  the textarea, and the cards + composer block is now pinned to the
+  bottom of the viewport (flex column + `mt-auto`) with no wide gap
+  below the textarea.
+
 ### Changed
 - **Audits page refinements**: shortcut cards + composer are now sticky at
   the bottom with no gap below; the history sidebar is fixed flush to the

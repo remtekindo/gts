@@ -159,7 +159,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <div>
+  <div class="flex flex-col min-h-[calc(100dvh-48px)] md:pr-72">
     <h1 class="text-xl md:text-2xl font-extrabold">{{ t('admin.audits.heading') }}</h1>
     <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">{{ t('admin.audits.sub') }}</p>
 
@@ -173,9 +173,9 @@ onMounted(() => {
       >{{ t(`admin.audits.tab_${tb}`) }}</button>
     </div>
 
-    <div class="mt-4 md:flex md:gap-6 md:items-start">
+    <div class="mt-4 flex-1 md:flex md:gap-6">
       <!-- Main chat column -->
-      <div class="flex-1 min-w-0 flex-col md:pr-72" :class="tab === 'chat' ? 'flex' : 'hidden md:flex'" style="min-height: calc(100vh - 220px)">
+      <div class="flex-1 min-w-0 flex-col mt-4" :class="tab === 'chat' ? 'flex' : 'hidden md:flex'">
         <div ref="chatBox" class="flex-1 overflow-y-auto py-4 space-y-6 min-h-[200px] max-h-[52vh]">
           <div v-if="messages.length === 0" class="h-full flex items-center justify-center text-center px-6 py-10">
             <div>
@@ -205,7 +205,7 @@ onMounted(() => {
         </div>
 
         <!-- Category cards + composer: fixed at bottom, no gap below -->
-        <div class="sticky bottom-0 bg-slate-50 dark:bg-slate-950 pt-2 pb-3 -mb-6">
+        <div class="mt-auto bg-slate-50 dark:bg-slate-950 pt-3 pb-1">
         <div class="grid grid-cols-3 gap-2 md:gap-3">
           <button
             class="text-left bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 p-3 hover:border-violet-400 dark:hover:border-violet-500 hover:shadow-lg transition-all"
@@ -234,7 +234,7 @@ onMounted(() => {
         </div>
 
         <!-- Composer -->
-        <div class="pb-1">
+        <div class="mt-3">
           <div class="max-w-3xl mx-auto">
             <div class="flex items-end gap-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-2xl p-2 shadow-sm focus-within:border-violet-500 focus-within:shadow-md transition-shadow">
               <textarea
