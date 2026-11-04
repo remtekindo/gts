@@ -6,6 +6,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Added
+- **Audits page, Muse-style layout**: desktop shows a right sidebar with
+  **conversation history** (persisted chat sessions in localStorage, with
+  New chat / open / delete) plus an **audit reports** section; the
+  Chat/History tabs now appear **only in mobile mode**.
+- Category cards (Audit volume / Add volume / User analysis) moved below
+  the chat thread, above the composer.
+- Report detail modal: "View report" in chat (or a report in the
+  sidebar) opens the full audit detail.
+
+### Added
 - Audits page now has two tabs: **Chat** and **History**.
 - "View report" in the audit chat jumps to the History tab and expands
   the report with full details.

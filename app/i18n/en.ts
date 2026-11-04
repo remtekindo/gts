@@ -449,7 +449,12 @@ export default {
       "history": "Audit history",
       "viewReport": "View report",
       "pickVolume": "Pick a volume to audit",
-      "pickUser": "Pick a user to analyze"
+      "pickUser": "Pick a user to analyze",
+      "newChat": "New chat",
+      "conversations": "Conversation history",
+      "noChats": "No conversations yet.",
+      "reportsTitle": "Audit reports",
+      "delChat": "Delete conversation",
     },
     "databases": {
       "heading": "Question databases",

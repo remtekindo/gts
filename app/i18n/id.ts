@@ -448,7 +448,12 @@ export default {
       "history": "Riwayat audit",
       "viewReport": "Lihat laporan",
       "pickVolume": "Pilih volume untuk diaudit",
-      "pickUser": "Pilih user untuk dianalisa"
+      "pickUser": "Pilih user untuk dianalisa",
+      "newChat": "Chat baru",
+      "conversations": "Riwayat percakapan",
+      "noChats": "Belum ada percakapan.",
+      "reportsTitle": "Laporan audit",
+      "delChat": "Hapus percakapan",
     },
     "databases": {
       "heading": "Database soal",

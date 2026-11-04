@@ -310,3 +310,58 @@ export function answerPrompt(raw: string, lang: Lang, scopeIds?: Set<string>): A
   if (has('bantuan', 'help', 'bisa apa', 'halo', 'hai', 'hello', 'hi')) return { reply: t(lang, 'help'), reportId: null }
   return { reply: t(lang, 'unknown'), reportId: null }
 }
+
+/* ------------------------------------------------------------------ */
+/* Chat sessions: conversation history for the Audits sidebar.         */
+/* ------------------------------------------------------------------ */
+
+export interface ChatMsg {
+  from: 'user' | 'ai'
+  text: string
+  reportId?: string | null
+}
+
+export interface ChatSession {
+  id: string
+  title: string
+  createdAt: string
+  updatedAt: string
+  messages: ChatMsg[]
+}
+
+const SESSIONS_KEY = 'gts_admin_chat_sessions'
+
+export function getChatSessions(): ChatSession[] {
+  try {
+    const raw = localStorage.getItem(SESSIONS_KEY)
+    return raw ? (JSON.parse(raw) as ChatSession[]) : []
+  } catch {
+    return []
+  }
+}
+
+export function saveChatSession(session: ChatSession): void {
+  try {
+    const all = getChatSessions().filter(s => s.id !== session.id)
+    all.unshift(session)
+    localStorage.setItem(SESSIONS_KEY, JSON.stringify(all.slice(0, 30)))
+  } catch {
+    /* noop */
+  }
+}
+
+export function deleteChatSession(id: string): void {
+  try {
+    localStorage.setItem(SESSIONS_KEY, JSON.stringify(getChatSessions().filter(s => s.id !== id)))
+  } catch {
+    /* noop */
+  }
+}
+
+export function getAuditById(id: string): AuditReport | undefined {
+  return getAudits().find(a => a.id === id)
+}
+
+export function newSessionId(): string {
+  return `chat-${Date.now().toString(36)}`
+}
