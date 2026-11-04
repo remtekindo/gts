@@ -5,6 +5,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Changed
+- **Audits page refinements**: shortcut cards + composer are now sticky at
+  the bottom with no gap below; the history sidebar is fixed flush to the
+  right edge of the viewport; the floating AI button and the "New chat"
+  button were removed (opening the page always starts a fresh chat;
+  previous sessions are resumed from the sidebar).
+
 ### Added
 - **Audits page, Muse-style layout**: desktop shows a right sidebar with
   **conversation history** (persisted chat sessions in localStorage, with

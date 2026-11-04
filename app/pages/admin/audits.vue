@@ -97,12 +97,6 @@ function autoGrow(): void {
   el.style.height = Math.min(160, el.scrollHeight) + 'px'
 }
 
-function newChat(): void {
-  messages.value = []
-  sessionId.value = null
-  tab.value = 'chat'
-}
-
 function openSession(s: ChatSession): void {
   messages.value = [...s.messages]
   sessionId.value = s.id
@@ -181,7 +175,7 @@ onMounted(() => {
 
     <div class="mt-4 md:flex md:gap-6 md:items-start">
       <!-- Main chat column -->
-      <div class="flex-1 min-w-0 flex-col" :class="tab === 'chat' ? 'flex' : 'hidden md:flex'" style="min-height: calc(100vh - 220px)">
+      <div class="flex-1 min-w-0 flex-col md:pr-72" :class="tab === 'chat' ? 'flex' : 'hidden md:flex'" style="min-height: calc(100vh - 220px)">
         <div ref="chatBox" class="flex-1 overflow-y-auto py-4 space-y-6 min-h-[200px] max-h-[52vh]">
           <div v-if="messages.length === 0" class="h-full flex items-center justify-center text-center px-6 py-10">
             <div>
@@ -210,8 +204,9 @@ onMounted(() => {
           </div>
         </div>
 
-        <!-- Category cards: below chat, above composer -->
-        <div class="grid grid-cols-3 gap-2 md:gap-3 py-3">
+        <!-- Category cards + composer: fixed at bottom, no gap below -->
+        <div class="sticky bottom-0 bg-slate-50 dark:bg-slate-950 pt-2 pb-3 -mb-6">
+        <div class="grid grid-cols-3 gap-2 md:gap-3">
           <button
             class="text-left bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 p-3 hover:border-violet-400 dark:hover:border-violet-500 hover:shadow-lg transition-all"
             @click="showVolumeModal = true"
@@ -261,14 +256,11 @@ onMounted(() => {
             <p class="mt-1.5 text-[11px] text-center text-slate-400 dark:text-slate-500">{{ t('admin.audits.composerHint') }}</p>
           </div>
         </div>
+        </div>
       </div>
 
-      <!-- Right sidebar: conversation history (desktop) -->
-      <aside class="hidden md:block w-72 shrink-0">
-        <button
-          class="w-full text-sm font-semibold px-4 py-2.5 rounded-xl bg-violet-600 text-white hover:bg-violet-700 transition-colors"
-          @click="newChat"
-        >+ {{ t('admin.audits.newChat') }}</button>
+      <!-- Right sidebar: fixed at right edge, no gap -->
+      <aside class="hidden md:block fixed top-0 right-0 h-screen w-72 z-30 bg-slate-50 dark:bg-slate-950 border-l border-slate-200 dark:border-slate-800 overflow-y-auto px-4 py-6">
         <p class="mt-5 text-xs font-bold uppercase tracking-wide text-slate-400 dark:text-slate-500">{{ t('admin.audits.conversations') }}</p>
         <ul class="mt-2 space-y-1.5 max-h-[38vh] overflow-y-auto">
           <li v-for="s in sessions" :key="s.id">
@@ -302,10 +294,6 @@ onMounted(() => {
 
       <!-- Mobile history tab -->
       <div class="md:hidden" :class="tab === 'history' ? 'block' : 'hidden'">
-        <button
-          class="w-full text-sm font-semibold px-4 py-2.5 rounded-xl bg-violet-600 text-white"
-          @click="newChat"
-        >+ {{ t('admin.audits.newChat') }}</button>
         <p class="mt-5 text-xs font-bold uppercase tracking-wide text-slate-400 dark:text-slate-500">{{ t('admin.audits.conversations') }}</p>
         <ul class="mt-2 space-y-1.5">
           <li v-for="s in sessions" :key="s.id">

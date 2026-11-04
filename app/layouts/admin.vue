@@ -137,6 +137,5 @@ function switchAccount(): void {
         <slot />
       </div>
     </main>
-    <AdminAiChat />
   </div>
 </template>
