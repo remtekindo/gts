@@ -131,3 +131,44 @@ export async function setUserGrants(sub: string, materials: string[], packages: 
     return { ok: false, code: errorCode(e) ?? undefined }
   }
 }
+
+/* ------------------------------------------------------------------ */
+/* Admin → Overview: AI usage (real Meta API calls from D1)            */
+/* ------------------------------------------------------------------ */
+
+export interface AiUsageModelRow {
+  model: string
+  calls: number
+  promptTokens: number
+  completionTokens: number
+  costUsd: number
+  costIdr: number
+}
+
+export interface AiUsageSummary {
+  period: string
+  totalCalls: number
+  totalPromptTokens: number
+  totalCompletionTokens: number
+  totalTokens: number
+  totalCostUsd: number
+  totalCostIdr: number
+  usdIdrRate: number
+  byModel: AiUsageModelRow[]
+  hourly: number[]
+  peakHour: number | null
+  rates: { inputUsdPerMtok: number, outputUsdPerMtok: number }
+  currency: string
+}
+
+export type AiUsagePeriod = 'today' | '7d' | '30d' | 'all'
+
+/** AI usage summary, or an error code ('unavailable' when D1 is not connected). */
+export async function fetchAiUsage(period: AiUsagePeriod): Promise<{ ok: true, summary: AiUsageSummary } | { ok: false, code: string }> {
+  try {
+    const res = await $fetch<AiUsageSummary>('/api/admin/ai-usage', { query: { period } })
+    return { ok: true, summary: res }
+  } catch (e) {
+    return { ok: false, code: errorCode(e) ?? 'unavailable' }
+  }
+}

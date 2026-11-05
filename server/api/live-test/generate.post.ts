@@ -182,6 +182,8 @@ async function callMeta(prompt: string, apiKey: string): Promise<{ questions: Ge
 
 import { getAdminSession, getAnonSid, getClientIp } from '../../utils/auth'
 import { checkRateLimit } from '../../utils/rate-limit'
+import { recordAiUsage } from '../../utils/ai-usage'
+import { getRequestDb } from '../../utils/user-store'
 
 export default defineEventHandler(async (event) => {
   const body = await readBody<{ part?: number, skill?: string, difficulty?: number, count?: number, excludeStems?: string[], apiKey?: string }>(event)
@@ -241,6 +243,13 @@ export default defineEventHandler(async (event) => {
     } catch (e) {
       throw createError({ statusCode: 502, statusMessage: `Meta API error: ${(e as Error).message}` })
     }
+    // Log the call (best-effort) so the Overview AI card counts it.
+    await recordAiUsage(getRequestDb(event), {
+      endpoint: 'live-test',
+      model: MODEL,
+      promptTokens: Number(res.usage?.prompt_tokens) || 0,
+      completionTokens: Number(res.usage?.completion_tokens) || 0
+    })
     const { valid, errors } = validateBatch(res.questions, new Set([...exclude, ...collected.map(q => normalize(q.stem))]))
     lastErrors = errors
     collected.push(...valid)

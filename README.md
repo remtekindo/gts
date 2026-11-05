@@ -118,7 +118,7 @@ login was built the same day and replaced before it ever deployed).
      are needed — this flow uses only the Client ID, no client secret.
   4. Set `NUXT_PUBLIC_GOOGLE_CLIENT_ID` as a Cloudflare Pages
      **variable** (not a secret) and in local `.env`, then redeploy.
-  5. Apply migration 0002 to the remote D1
+  5. Apply migrations 0002 and 0003 to the remote D1
      (`npx wrangler d1 migrations apply gts-db --remote`).
   6. Set `NITRO_ADMIN_EMAILS` (comma-separated, default
      `remtekindo@gmail.com`) and `NITRO_SESSION_SECRET` (generate with
@@ -134,6 +134,14 @@ login was built the same day and replaced before it ever deployed).
   grants (open the materials that package covers: Monthly 1, Quarterly
   2, Semester all). The question bank and test results are still in
   localStorage — only identity/privilege moved to D1.
+  **The admin row is never created by hand.** `google_sub` is issued
+  by Google at first sign-in and must not be invented: the first
+  Google sign-in upserts the row (matched by `google_sub`, with the
+  email kept in sync), and the bootstrap allowlist
+  (`NITRO_ADMIN_EMAILS`, default `remtekindo@gmail.com`) makes that
+  account an admin automatically — no manual insert, no seed row.
+  The remote database must therefore hold no dummy users at all:
+  only real Google sign-ins, starting with the admin's first login.
 - **Roles & access — decided server-side, never by the browser:** the
   session cookie carries only the verified identity; the role and
   material access are resolved per request from the D1 user row +
@@ -156,6 +164,34 @@ login was built the same day and replaced before it ever deployed).
   (localStorage bank), so this is the access verdict enforced by the
   server, not yet server-side content gating — that waits for the D1
   question-bank migration.
+- **Audit chat is a real LLM** (`POST /api/admin/audit-chat`): the
+  Audits page sends the admin's prompt plus real audit context
+  (bank totals, key distribution, duplicates, unrated items, user
+  per-part lines — all computed locally from the live bank) to the
+  server, which asks Meta (muse-spark-1.3-contributor) and returns a
+  structured answer that is saved as an audit report. Admin-only
+  (401 otherwise), rate-limited to 30 chats/hour per IP (429 +
+  `Retry-After`), key is server-side only (`NITRO_MODEL_API_KEY` —
+  no body key is accepted here). Without a key the endpoint answers
+  503 `no-key` and the page falls back to the local algorithmic
+  analysis, labeled "Analisis lokal" with the reason shown — it
+  never pretends a local answer came from the LLM. Meta errors
+  surface as 502.
+- **AI usage is logged, not estimated from thin air**
+  (`migrations/0003_ai_usage.sql`, `server/utils/ai-usage.ts`): every
+  Meta call (Live Test batches + audit chats) writes one row to the
+  `ai_usage` table — model, prompt/completion tokens (from Meta's
+  `usage` field), endpoint, UTC timestamp. The Overview card
+  "Aktivitas Penggunaan AI" reads it via `GET /api/admin/ai-usage`
+  (admin-only; 503 when D1 is not connected) with a period selector
+  (today / 7 days / 30 days, default / all time): per-model
+  breakdown, totals, estimated cost in Rupiah, and a 0–23 WIB hourly
+  histogram with the peak hour. Rates: Contributor $0.10 / 1M input
+  tokens, $0.20 / 1M output tokens, converted at a fixed
+  Rp16,500/USD — both shown in the UI and labeled "estimasi", never
+  presented as a bill. An empty table shows an honest empty state
+  (0 calls, 0 tokens, Rp0, "belum ada data"); no dummy rows are
+  ever seeded.
 - **Live Test endpoint is session-gated + rate-limited**
   (`POST /api/live-test/generate`): no session → 401; anonymous
   visitors get 12 batches/hour, signed-in admins 60/hour (per client
@@ -224,11 +260,39 @@ npx wrangler pages dev dist --d1=DB --port 8788
 curl http://localhost:8788/api/health/d1
 ```
 
-Note: locally wrangler keeps the CLI-managed D1 and the pages-dev D1 as two
-separate files; if tables are missing from the served instance, apply
-`migrations/0001_init.sql` to the active file under
-`.wrangler/state/v3/d1/miniflare-D1DatabaseObject/`. Remote has no such
-split — one database, one `migrations apply --remote`.
+There are two D1 databases, and they must not be confused:
+
+- **Remote** — `gts-db` (`df450308-8a55-45e5-a992-4547646055c7`, APAC),
+  the production database. Target it with `--remote` (needs a Cloudflare
+  login). It holds **no dummy data**: only real Google sign-ins, and
+  the admin row appears on the admin's first Google sign-in (see
+  [Auth](#auth) — never insert it by hand). To inspect it:
+  ```bash
+  npx wrangler d1 migrations list gts-db --remote
+  npx wrangler d1 execute gts-db --remote --command "SELECT COUNT(*) FROM users; SELECT COUNT(*) FROM ai_usage; SELECT COUNT(*) FROM questions;"
+  ```
+  If a dummy row ever appears, delete it by key (never wipe the tables
+  blindly), e.g. `DELETE FROM users WHERE google_sub IS NULL;`.
+- **Local** — SQLite files under
+  `.wrangler/state/v3/d1/miniflare-D1DatabaseObject/`, managed by
+  wrangler on this machine. Target it with `--local` (no login needed).
+  Locally wrangler keeps the CLI-managed D1 and the pages-dev D1 as two
+  separate files; both must carry the same migrations. On 5 Nov 2026
+  the local files were reconciled: the two empty files were deleted
+  and `npx wrangler d1 migrations apply gts-db --local` re-applied
+  0001–0003 cleanly (all tables empty, zero dummy rows). If the two
+  files drift again, delete the empty ones and re-apply — never hand-edit
+  a live file's schema without recording the migration. Test rows created
+  during local verification are deleted right after the test; the local
+  DB is scratch, the remote DB is not. Note: a fresh pages-dev file
+  starts with NO tables (wrangler does not apply migrations to it), so
+  login upserts and the ai-usage endpoint fail with "no such table"
+  until the migrations are applied to that file — apply the three
+  `migrations/*.sql` files to it with sqlite3 and record them in its
+  `d1_migrations` table (same names as wrangler records: `0001_init.sql`,
+  `0002_users_google.sql`, `0003_ai_usage.sql`).
+
+Remote has no such split — one database, one `migrations apply --remote`.
 
 ## Project structure
 
@@ -254,16 +318,22 @@ app/
     m/[slug]/performance.vue
     m/[slug]/leaderboard.vue
     profile.vue            # Global (not per material)
+    admin/                 # Admin panel pages: index (Overview), databases,
+                           # packages, audits, reports, users, settings
   utils/
     storage.ts             # Typed localStorage helpers (auth, answers, results, notes)
     scoring.ts             # TOEIC-style predicted score + CEFR mapping
     navigation.ts          # postLoginPath(): 1 accessible material -> enter it, else hub
     server-auth.ts         # fetchSessionState / loginWithGoogle / logoutServer / admin user APIs
+    admin.ts               # Admin-panel helpers: bank, volumes, reports, vouchers, bankViewId
+    ai-assistant.ts        # Audits chat: local analysis + LLM context builder
+    adaptive.ts            # Adaptive engine (plain algorithms, playlist builder)
 server/
   middleware/01-admin-guard.ts  # redirects /admin* without a valid admin session
   utils/auth.ts                 # HMAC session tokens, anon visitor ids, admin allowlist
   utils/google-auth.ts          # Google ID-token verification (JWKS, claims)
   utils/user-store.ts           # D1 users + grants, access resolution
+  utils/ai-usage.ts             # ai_usage log: record/summarize (WIB hours, IDR estimate)
   utils/catalog.ts              # server-side material/package catalog (grant targets)
   utils/rate-limit.ts           # in-memory fixed-window limiter
   utils/d1.ts                   # getDb(event) for the D1 binding
@@ -274,6 +344,8 @@ server/
   api/admin/users.get.ts        # real users + grants (admin-only)
   api/admin/users/role.post.ts  # promote/demote (admin-only)
   api/admin/users/grants.post.ts  # replace grants (admin-only)
+  api/admin/audit-chat.post.ts  # Audits chat via Meta LLM (admin-only, 30/hr)
+  api/admin/ai-usage.get.ts     # AI usage summary for the Overview card (admin-only)
   api/live-test/generate.post.ts  # session-gated, rate-limited Meta generation
   api/health/d1.get.ts          # public D1 probe (tables + question count)
 scripts/
@@ -302,26 +374,65 @@ subscription packages. Guarded server-side (see [Auth](#auth)): sign in
 with Google as an admin account. Without a valid admin session,
 `/admin` redirects to `/auth?next=/admin`. Difficulty tags set here
 persist in localStorage (`gts_admin_difficulty`).
-- **Questions → Generate AI**: the admin generates question drafts
-  (part/count/difficulty/topic), curates them in the Draft QC tab
-  (approve/reject per question), and merges approved items into the bank
-  with continuing numbers. In-panel generation is a workflow stub;
-  the real LLM path is `scripts/generate-questions/`.
+
+### Admin panel audit (5 Nov 2026)
+
+Every admin page was audited feature by feature. Rule applied:
+dummy/seed data was removed wherever a real source exists; where no
+real source exists yet, the page shows an honest empty / "not
+connected" state instead of invented numbers — never a faked
+connection. No demo users remain anywhere.
+
+| Page | Feature | Data source | Connected? |
+|---|---|---|---|
+| Overview | Total questions (57) | Static bank + localStorage additions | Yes — local bank |
+| Overview | Test takers / mo | Finished tests in this browser (`gts_result_*`) | Yes — local only |
+| Overview | Pending reports / Recent reports | QC reports in localStorage | Yes — empty until a real report exists (no submission path yet) |
+| Overview | Registered users | D1 users (real Google sign-ins) | Yes — D1 |
+| Overview | AI usage card | D1 `ai_usage` (one row per Meta call) | Yes — D1 |
+| Overview | User visits per month | — none — | No — visits are not tracked anywhere; the card says so instead of drawing a chart |
+| Databases | Volumes, question tables, QC approve/reject, edits | Static bank + localStorage volumes/additions/overrides | Yes — local bank |
+| Databases | Add volume ("Generate draft volume") | 30 hardcoded templates, cycled | Template stub, labeled as such — NOT AI generation; the real LLM path is `scripts/generate-questions/` |
+| Packages | Subscriber counts | D1 package grants (explicit grants only; admins have implicit all-access) | Yes — D1 |
+| Packages | Material matrix, question totals | Package picks (localStorage) + live bank | Yes — local |
+| Packages | Vouchers | Admin-created only (localStorage) | Local only — no redemption flow yet; no seed vouchers |
+| Audits | Audit chat | Meta LLM via `POST /api/admin/audit-chat` (admin-only, 30/hr, server key) | Yes — Meta; falls back to labeled local analysis when the key is missing |
+| Audits | User analysis | Real D1 users (by email) + local test results | Yes — D1 users, local results |
+| Audits | Volume audit / duplicates / key distribution / unrated | Live bank, computed locally | Yes — local bank |
+| Reports | QC queue | QC reports in localStorage | Empty until a real report exists — no submission path from the test UI yet |
+| Reports | Test results + certificates | Finished tests in this browser (`gts_result_*`) | Yes — local only, per browser |
+| Users | Real users table + role/grant controls | D1 users + grants | Yes — D1 |
+| Settings | Meta API key card | Browser-stored key (dev convenience) | Dev only — production uses `NITRO_MODEL_API_KEY` |
+
+Notes:
+- Bank-view question ids are `lr-N` (TOEIC LR), `sw-N` (TOEIC SW),
+  `free-N` (free test). SW used to be mapped to `lr-N`, which collided
+  with LR ids in audit scopes and duplicate detection — fixed 5 Nov 2026.
+- The three default volumes (TOEIC 1, TOEIC SW 1, Free Test 1) are
+  structural defaults built from the real bank on first load, not
+  fabricated data; their question counts are live bank counts.
+- Auth guards are server-first everywhere: a valid server session
+  opens the page even when the localStorage mirror is missing (cleared
+  storage); the mirror is display-only. A forged localStorage "admin"
+  with no server session is bounced to `/auth`.
+- **Questions → Generate draft volume**: the admin generates question
+  drafts (part/count/difficulty/topic) from templates, curates them in
+  the Draft QC tab (approve/reject per question), and merges approved
+  items into the bank with continuing numbers. The real LLM path is
+  `scripts/generate-questions/`.
 - **Packages**: Bulanan (1 material), Triwulanan (2), Semesteran (all);
   per-package material matrix, live question counts, subscriber counts.
   Flow: AI generates → admin curates → bank → package → customer.
   The AI never faces the customer live in phase 1.
 - **Users**: real Google sign-in accounts (from D1) with role + grant
   controls — promote/demote admin, grant materials/packages without
-  paying; grants take effect immediately. Below them, the 18 demo
-  users (clearly labeled, local-only) keep the detail modal with the
-  per-user ability map (per-part accuracy/level) used by the playlist
-  engine.
-- **AI assistant** (floating ✨ button): prompt the assistant
-  ("audit bank soal", "cek duplikat", "distribusi kunci jawaban") —
-  it runs real local analyses over the live bank and saves reports to
-  the **Audit** tab. Demo mode is algorithmic; the real Meta API plugs
-  in via backend later.
+  paying; grants take effect immediately.
+- **Audits chat**: prompt the assistant ("audit bank soal", "cek duplikat",
+  "distribusi kunci jawaban", "analisa user <email>") — the server asks
+  the Meta LLM with real numbers computed from the live bank, and saves
+  the answer as a report in the History tab. Without a key it falls back
+  to the labeled local analysis, never pretending a local answer came
+  from the LLM.
 - **Question bank**: View opens a detail modal that can also **edit**
   stem, options, correct answer, and difficulty (persisted, applied to
   the live bank everywhere). Overview counts now match Packages.

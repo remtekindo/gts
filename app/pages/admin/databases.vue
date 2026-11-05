@@ -2,7 +2,7 @@
 import {
   getVolumes, deleteVolume, volumeStats,
   getDraftVolumeItems, setDraftVolumeItems, activateVolume,
-  volumeQuestions, getVolume,
+  volumeQuestions, getVolume, bankViewId,
   type Volume, type DraftItem,
 } from '~/utils/admin'
 
@@ -67,7 +67,7 @@ const detailQuestions = computed(() => {
   return volumeQuestions(v).map((q, i) => ({
     key: `${q.materialSlug}-${q.number}`,
     idx: i,
-    id: q.materialSlug === 'toeic-lr' ? `lr-${q.number}` : `${q.materialSlug}-${q.number}`,
+    id: bankViewId(q.materialSlug, q.number),
     ovKey: `${q.materialSlug}-${q.number}`,
     stem: q.stem,
     options: q.options,

@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import { ownedMaterials } from '~/data/mock'
 import {
-  PACKAGES, MOCK_ADMIN_USERS, getAddedUsers, getPackageMaterials, setPackageMaterials,
+  PACKAGES, getPackageMaterials, setPackageMaterials,
   packageMaterials, liveQuestionsForMaterial,
   getVouchers, saveVoucher, deleteVoucher, type Voucher,
 } from '~/utils/admin'
+import { fetchRealUsers, type RealUser } from '~/utils/server-auth'
 
 definePageMeta({ layout: 'admin' })
 
@@ -17,6 +18,11 @@ const owned = computed(() => ownedMaterials())
 const pkgMats = ref<Record<string, string[]>>(getPackageMaterials())
 const vouchers = ref<Voucher[]>([])
 
+/* Subscribers = real Google accounts with an explicit D1 package grant
+ * (null while loading / on error). Admins have implicit all-access and
+ * are not counted per package. */
+const realUsers = ref<RealUser[] | null>(null)
+
 const showVoucher = ref(false)
 const vName = ref('')
 const vDiscount = ref(20)
@@ -28,16 +34,9 @@ function refresh(): void {
   vouchers.value = getVouchers()
 }
 
-function allUsers() {
-  return [...MOCK_ADMIN_USERS, ...getAddedUsers()]
-}
-
-function planKey(id: string): string {
-  return id === 'bulanan' ? 'Bulanan' : id === 'triwulanan' ? 'Triwulanan' : 'Semesteran'
-}
-
-function subscriberCount(pkgId: string): number {
-  return allUsers().filter(u => u.plan === planKey(pkgId) && u.status === 'active').length
+function subscriberCount(pkgId: string): number | string {
+  if (realUsers.value === null) return '—'
+  return realUsers.value.filter(u => u.grants.packages.includes(pkgId)).length
 }
 
 function effective(pkgId: string): string[] {
@@ -79,7 +78,10 @@ function addVoucher(): void {
   refresh()
 }
 
-onMounted(refresh)
+onMounted(async () => {
+  refresh()
+  realUsers.value = await fetchRealUsers()
+})
 </script>
 
 <template>
@@ -160,7 +162,8 @@ onMounted(refresh)
         <button class="text-sm font-semibold px-4 py-2 rounded-xl bg-blue-600 text-white" @click="showVoucher = true">+ {{ t('admin.packages.addVoucher') }}</button>
       </div>
       <div class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden">
-        <div class="overflow-x-auto">
+        <p v-if="vouchers.length === 0" class="px-4 py-6 text-sm text-slate-500 dark:text-slate-400">{{ t('admin.packages.noVouchers') }}</p>
+        <div v-else class="overflow-x-auto">
           <table class="w-full text-sm min-w-[560px]">
             <thead>
               <tr class="text-left text-xs uppercase tracking-wide text-slate-400 dark:text-slate-500 border-b border-slate-200 dark:border-slate-700">

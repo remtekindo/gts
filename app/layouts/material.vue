@@ -21,7 +21,7 @@ const material = computed(() => getMaterialOrFallback(route.params.slug as strin
 const allowed = ref<boolean | null>(null)
 
 onMounted(async () => {
-  if (!getAuth()) { router.replace('/auth'); return }
+  // Server session is the source of truth (see layouts/default.vue).
   const state = await fetchSessionState()
   if (!state.username) { router.replace('/auth'); return }
   allowed.value = state.admin || state.materials.includes(route.params.slug as string)

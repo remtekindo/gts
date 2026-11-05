@@ -1,17 +1,19 @@
 /**
- * In-panel AI assistant (demo mode).
+ * In-panel AI assistant.
  *
- * The admin opens the floating chat, types a prompt ("audit soal Part 5",
- * "cek duplikat", "distribusi kunci jawaban"), and the assistant runs a
- * REAL local analysis over the live bank — duplicates, answer-key
- * distribution, unrated questions, missing explanations — then saves the
- * result as an audit report shown in the Audit tab.
+ * The admin opens the chat, types a prompt ("audit soal Part 5",
+ * "cek duplikat", "distribusi kunci jawaban", "analisa user <email>"),
+ * and the assistant first asks the real Meta LLM via
+ * POST /api/admin/audit-chat with the real numbers computed locally
+ * (duplicates, key distribution, unrated questions, user per-part
+ * lines). When the LLM is unavailable (no key, rate-limited, error),
+ * the same prompt falls back to a local algorithmic analysis — and the
+ * UI labels it honestly as local analysis, never as an LLM answer.
  *
- * This is algorithmic analysis, not an LLM call. When the backend exists,
- * the same chat box will forward prompts to the real Meta API; the audit
- * tab and report format stay the same.
+ * User analysis matches against real Google sign-in accounts (their
+ * email, passed in by the Audits page); there are no demo users.
  */
-import { liveAllQuestions, liveFreeQuestions, getDifficultyOverrides, allManagedUsers } from './admin'
+import { liveAllQuestions, liveFreeQuestions, getDifficultyOverrides, bankViewId } from './admin'
 import { analyzeAbility } from './adaptive'
 
 export interface AuditReport {
@@ -73,7 +75,7 @@ interface BankItem {
 function bankItems(scopeIds?: Set<string>): BankItem[] {
   const all: BankItem[] = [
     ...liveAllQuestions().map(q => ({
-      id: `lr-${q.number}`,
+      id: bankViewId(q.materialSlug, q.number),
       stem: q.stem.trim(),
       correctLetter: q.correctLetter,
       explanation: q.explanation ?? '',
@@ -268,39 +270,163 @@ function runStats(lang: Lang, scopeIds?: Set<string>): AssistantAnswer {
   return { reply: summary, reportId: report.id }
 }
 
-function runUserAnalysis(lang: Lang, username: string): AssistantAnswer {
-  const user = allManagedUsers().find(u => u.username.toLowerCase() === username.toLowerCase())
-  if (!user) {
+function runUserAnalysis(lang: Lang, username: string, users: string[] = []): AssistantAnswer {
+  const data = userAnalysisData(username, lang, users)
+  if (!data.found) {
     return { reply: t(lang, 'userNotFound', { name: username }), reportId: null }
   }
-  const parts = analyzeAbility('toeic-lr', user.username)
-  const touched = parts.filter(p => p.answered > 0)
-  if (touched.length === 0) {
-    return { reply: t(lang, 'userNone', { name: user.username }), reportId: null }
+  if (data.lines.length === 0) {
+    return { reply: t(lang, 'userNone', { name: username }), reportId: null }
   }
+  const report: AuditReport = {
+    id: uid(), type: 'user', title: t(lang, 'userTitle', { name: username }),
+    createdAt: new Date().toISOString(), summary: data.summary as string, details: [data.summary as string, ...data.lines],
+  }
+  saveAudit(report)
+  return { reply: data.summary as string, reportId: report.id }
+}
+
+/**
+ * Per-part ability lines for one user, without saving a report.
+ * Shared by the local answer and by the LLM context builder.
+ * `users` is the list of known real-user emails (from D1, passed in
+ * by the Audits page); a username not on the list is "not found".
+ */
+function userAnalysisData(username: string, lang: Lang, users: string[] = []): { found: boolean, lines: string[], summary: string | null } {
+  const known = users.some(u => u.toLowerCase() === username.toLowerCase())
+  if (!known) return { found: false, lines: [], summary: null }
+  const parts = analyzeAbility('toeic-lr', username)
+  const touched = parts.filter(p => p.answered > 0)
+  if (touched.length === 0) return { found: true, lines: [], summary: null }
   const pct = (a: number | null) => (a === null ? '—' : `${Math.round(a * 100)}%`)
-  const details = touched.map(p =>
+  const lines = touched.map(p =>
     t(lang, 'userLine', { part: p.part, acc: pct(p.accuracy), level: p.level, n: p.answered }),
   )
   const weak = [...touched].sort((a, b) => (a.accuracy ?? 1) - (b.accuracy ?? 1))[0]!
   const strong = [...touched].sort((a, b) => (b.accuracy ?? 0) - (a.accuracy ?? 0))[0]!
   const summary = `${t(lang, 'userWeak', { part: weak.part, acc: pct(weak.accuracy), level: weak.level })} ${t(lang, 'userStrong', { part: strong.part, acc: pct(strong.accuracy) })}`
+  return { found: true, lines, summary }
+}
+
+/** Username/email after "analisa user …" — a full token, so emails work. */
+function extractUser(raw: string): string | null {
+  const m = raw.toLowerCase().match(/(?:analisa|analisis|analyze|analysis)\s+(?:user\s+)?([^\s]+)/)
+  if (!m) return null
+  return (m[1] as string).replace(/[.,;:!?]+$/, '')
+}
+
+/** Which intent a free-text prompt is, using the same routing as answerPrompt. */
+export type AuditKind = 'audit' | 'duplicates' | 'distribution' | 'unrated' | 'stats' | 'user' | 'help' | 'unknown'
+
+export function detectKind(raw: string): AuditKind {
+  const s = raw.toLowerCase()
+  const has = (...words: string[]) => words.some(w => s.includes(w))
+  if (extractUser(raw) && has('user', 'analisa', 'analisis', 'analyze', 'analysis')) return 'user'
+  if (has('audit')) return 'audit'
+  if (has('duplikat', 'duplicate', 'kembar', 'sama')) return 'duplicates'
+  if (has('distribusi', 'distribution', 'kunci', 'key', 'sebar')) return 'distribution'
+  if (has('belum dinilai', 'unrated', 'tanpa level', 'level', 'rating', 'dinilai')) return 'unrated'
+  if (has('ringkas', 'summary', 'statistik', 'stats', 'bank', 'total')) return 'stats'
+  if (has('bantuan', 'help', 'bisa apa', 'halo', 'hai', 'hello', 'hi')) return 'help'
+  return 'unknown'
+}
+
+/**
+ * Real audit context for the LLM: the same numbers the local analysis
+ * computes (bank stats, duplicates, key distribution, unrated items,
+ * user per-part lines). Nothing here is invented — the LLM is told to
+ * base every claim on these numbers.
+ */
+export interface AuditContext {
+  kind: AuditKind
+  scope: string | null
+  totalQuestions: number
+  keyDist: Record<string, number>
+  duplicates: { stem: string, ids: string[] }[]
+  unrated: { id: string, stem: string }[]
+  noExplanation: number
+  userLines: string[]
+  userSummary: string | null
+}
+
+export function buildAuditContext(raw: string, lang: Lang, scopeIds?: Set<string>, users: string[] = []): AuditContext {
+  const kind = detectKind(raw)
+  const items = bankItems(scopeIds)
+  const dist = keyDist(items)
+  const dups = duplicates(items)
+  const un = unrated(items)
+  const noExpl = items.filter(q => !q.explanation.trim()).length
+  let userLines: string[] = []
+  let userSummary: string | null = null
+  let scope: string | null = null
+  if (kind === 'user') {
+    const username = extractUser(raw) ?? ''
+    scope = username || null
+    const data = userAnalysisData(username, lang, users)
+    userLines = data.lines
+    userSummary = data.summary
+  }
+  return {
+    kind,
+    scope,
+    totalQuestions: items.length,
+    keyDist: dist,
+    duplicates: dups.slice(0, 10),
+    unrated: un.slice(0, 10).map(q => ({ id: q.id, stem: q.stem.slice(0, 80) })),
+    noExplanation: noExpl,
+    userLines,
+    userSummary
+  }
+}
+
+export interface AuditChatResult {
+  ok: boolean
+  reply?: string
+  findings?: string[]
+  title?: string
+  code?: string
+}
+
+/** Ask the server-side Meta LLM. Any failure is reported by code — the caller falls back to labeled local analysis. */
+export async function askAuditChat(prompt: string, lang: Lang, context: AuditContext, history: ChatMsg[]): Promise<AuditChatResult> {
+  try {
+    const res = await $fetch<{ reply: string, findings: string[], title: string }>('/api/admin/audit-chat', {
+      method: 'POST',
+      body: {
+        prompt,
+        lang,
+        context,
+        history: history.slice(-6).map(m => ({ from: m.from, text: m.text }))
+      }
+    })
+    return { ok: true, reply: res.reply, findings: res.findings ?? [], title: res.title ?? 'Audit chat' }
+  } catch (e) {
+    const data = (e as { data?: { data?: { code?: string }, code?: string } })?.data
+    const code = data?.data?.code || data?.code || 'unavailable'
+    return { ok: false, code }
+  }
+}
+
+/** Save an LLM answer as an audit report (same History tab as local reports). */
+export function saveLlmAuditReport(title: string, summary: string, findings: string[]): string {
   const report: AuditReport = {
-    id: uid(), type: 'user', title: t(lang, 'userTitle', { name: user.username }),
-    createdAt: new Date().toISOString(), summary, details: [summary, ...details],
+    id: uid(), type: 'audit', title,
+    createdAt: new Date().toISOString(),
+    summary,
+    details: findings.length > 0 ? findings : [summary],
   }
   saveAudit(report)
-  return { reply: summary, reportId: report.id }
+  return report.id
 }
 
 /** Route a free-text admin prompt to the right analysis. */
-export function answerPrompt(raw: string, lang: Lang, scopeIds?: Set<string>): AssistantAnswer {
+export function answerPrompt(raw: string, lang: Lang, scopeIds?: Set<string>, users: string[] = []): AssistantAnswer {
   if (typeof localStorage === 'undefined') return { reply: t(lang, 'unknown'), reportId: null }
   const s = raw.toLowerCase()
   const has = (...words: string[]) => words.some(w => s.includes(w))
-  const mUser = s.match(/(?:analisa|analisis|analyze|analysis)\s+(?:user\s+)?(\w+)/)
-  if (mUser && has('user', 'analisa', 'analisis', 'analyze', 'analysis')) {
-    return runUserAnalysis(lang, mUser[1] as string)
+  const username = extractUser(raw)
+  if (username && has('user', 'analisa', 'analisis', 'analyze', 'analysis')) {
+    return runUserAnalysis(lang, username, users)
   }
   if (has('audit')) return runAudit(lang, scopeIds)
   if (has('duplikat', 'duplicate', 'kembar', 'sama')) return runDuplicates(lang, scopeIds)
@@ -319,6 +445,10 @@ export interface ChatMsg {
   from: 'user' | 'ai'
   text: string
   reportId?: string | null
+  /** 'llm' = answered by Meta AI; 'local' = labeled local-analysis fallback. Absent on old stored messages. */
+  source?: 'llm' | 'local'
+  /** Explains a fallback (e.g. no API key configured). Shown under the message. */
+  note?: string | null
 }
 
 export interface ChatSession {

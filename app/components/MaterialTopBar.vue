@@ -24,6 +24,8 @@ const switcherRef = ref<HTMLElement | null>(null)
 const menuRef = ref<HTMLElement | null>(null)
 const auth = ref<AuthState | null>(null)
 const picBroken = ref(false)
+const serverAdmin = ref(false)
+const isAdmin = computed(() => serverAdmin.value)
 const others = computed(() => ownedMaterials().filter(m => m.slug !== props.material.slug))
 
 function isActive(to: string): boolean {
@@ -42,8 +44,24 @@ function onDocumentClick(e: MouseEvent): void {
   if (menuRef.value && !menuRef.value.contains(e.target as Node)) menuOpen.value = false
 }
 
-onMounted(() => {
+onMounted(async () => {
   auth.value = getAuth()
+  // The Dashboard link is admin-only. The role comes from the server
+  // session (GET /api/auth/session), never from the forgeable
+  // localStorage copy — a forged "admin" value shows no link.
+  const state = await fetchSessionState()
+  serverAdmin.value = state.admin
+  // Display fallback: the mirror may be missing while the cookie is
+  // valid (cleared storage) — show the server identity, not "Guest".
+  if (!auth.value && state.username) {
+    auth.value = {
+      username: state.username,
+      remember: false,
+      role: state.role,
+      name: state.name ?? undefined,
+      picture: state.picture ?? undefined,
+    }
+  }
   document.addEventListener('click', onDocumentClick)
 })
 
@@ -137,6 +155,9 @@ onUnmounted(() => {
               <p class="text-xs text-slate-400 dark:text-slate-500 truncate">{{ auth?.username || '' }}</p>
               <p class="text-xs text-slate-400 dark:text-slate-500">{{ auth?.role === 'admin' ? 'Admin' : 'Member' }}</p>
             </div>
+            <NuxtLink v-if="isAdmin" to="/admin" class="block px-4 py-2 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800" @click="menuOpen = false">
+              {{ t('nav.dashboard') }}
+            </NuxtLink>
             <NuxtLink to="/profile" class="block px-4 py-2 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800" @click="menuOpen = false">
               Profile
             </NuxtLink>

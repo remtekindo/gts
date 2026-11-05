@@ -1,4 +1,11 @@
-/** Minimal admin helpers for the GTS /admin panel (demo: localStorage-backed). */
+/**
+ * Admin helpers for the GTS /admin panel.
+ *
+ * Question bank, volumes, QC reports, vouchers and package material
+ * picks live in localStorage (per browser) until the D1 migration
+ * lands — see README "Admin panel audit". Real users live in D1
+ * (server/utils/user-store.ts); there are no demo users anywhere.
+ */
 
 export type DifficultyLevel = 1 | 2 | 3 | 4 | 5
 
@@ -20,21 +27,6 @@ export interface AdminReport {
   reporter: string
   status: 'pending' | 'resolved' | 'dismissed'
   createdAt: string
-}
-
-export interface AdminUser {
-  username: string
-  plan: string
-  status: 'active' | 'trial' | 'expired'
-  joined: string
-  attempts: number
-  phone: string
-  subscriptionEnds: string
-}
-
-export interface UserOverride {
-  status?: AdminUser['status']
-  subscriptionEnds?: string
 }
 
 function read<T>(key: string): T | null {
@@ -72,30 +64,14 @@ export function setDifficulty(questionId: string, level: DifficultyLevel): void 
 
 const REPORTS_KEY = 'gts_admin_reports'
 
-const SEED_REPORTS: AdminReport[] = [
-  {
-    id: 'r-1',
-    questionId: 'free-7',
-    reason: 'Stem ambiguous — two options could be correct',
-    reporter: 'demo-learner',
-    status: 'pending',
-    createdAt: '2026-10-30T09:12:00+07:00',
-  },
-  {
-    id: 'r-2',
-    questionId: 'lr-4',
-    reason: 'Suspected wrong answer key',
-    reporter: 'demo-learner',
-    status: 'pending',
-    createdAt: '2026-10-29T16:40:00+07:00',
-  },
-]
-
+/**
+ * QC reports. No seed rows: reports only exist once a real submission
+ * path writes them (none exists yet — see README "Admin panel audit").
+ * Rows `r-1`/`r-2` were pre-D1 demo data; stored copies are dropped.
+ */
 export function getReports(): AdminReport[] {
-  const stored = read<AdminReport[]>(REPORTS_KEY)
-  if (stored) return stored
-  write(REPORTS_KEY, SEED_REPORTS)
-  return SEED_REPORTS
+  const stored = read<AdminReport[]>(REPORTS_KEY) ?? []
+  return stored.filter(r => r.id !== 'r-1' && r.id !== 'r-2')
 }
 
 export function setReportStatus(id: string, status: AdminReport['status']): void {
@@ -103,48 +79,10 @@ export function setReportStatus(id: string, status: AdminReport['status']): void
   write(REPORTS_KEY, reports)
 }
 
-// ---- Demo users (until the real backend exists) ----
+// ---- Real users live in D1 (server/utils/user-store.ts). There are
+// no demo users: the 18-seed `MOCK_ADMIN_USERS` list was removed
+// 2026-11-05 — see README "Admin panel audit". ----
 
-export const MOCK_ADMIN_USERS: AdminUser[] = [
-  { username: 'budi', plan: 'Bulanan', status: 'active', joined: '2026-10-28', attempts: 12, phone: '6281234567890', subscriptionEnds: '2026-11-28' },
-  { username: 'sari', plan: 'Triwulanan', status: 'active', joined: '2026-10-25', attempts: 31, phone: '6281234567891', subscriptionEnds: '2027-01-25' },
-  { username: 'agus', plan: 'Free', status: 'trial', joined: '2026-10-30', attempts: 3, phone: '6281234567892', subscriptionEnds: '2026-11-06' },
-  { username: 'dewi', plan: 'Semesteran', status: 'active', joined: '2026-10-20', attempts: 47, phone: '6281234567893', subscriptionEnds: '2027-04-20' },
-  { username: 'rudi', plan: 'Bulanan', status: 'expired', joined: '2026-09-15', attempts: 8, phone: '6281234567894', subscriptionEnds: '2026-10-15' },
-  { username: 'maya', plan: 'Bulanan', status: 'active', joined: '2026-10-22', attempts: 19, phone: '6281234567895', subscriptionEnds: '2026-11-22' },
-  { username: 'joko', plan: 'Triwulanan', status: 'active', joined: '2026-10-18', attempts: 26, phone: '6281234567896', subscriptionEnds: '2027-01-18' },
-  { username: 'rina', plan: 'Free', status: 'trial', joined: '2026-11-01', attempts: 2, phone: '6281234567897', subscriptionEnds: '2026-11-08' },
-  { username: 'doni', plan: 'Semesteran', status: 'active', joined: '2026-10-12', attempts: 52, phone: '6281234567898', subscriptionEnds: '2027-04-12' },
-  { username: 'lina', plan: 'Bulanan', status: 'expired', joined: '2026-08-30', attempts: 14, phone: '6281234567899', subscriptionEnds: '2026-09-30' },
-  { username: 'fajar', plan: 'Triwulanan', status: 'active', joined: '2026-10-27', attempts: 9, phone: '6281234567800', subscriptionEnds: '2027-01-27' },
-  { username: 'nina', plan: 'Free', status: 'trial', joined: '2026-11-02', attempts: 1, phone: '6281234567801', subscriptionEnds: '2026-11-09' },
-  { username: 'eko', plan: 'Bulanan', status: 'active', joined: '2026-10-24', attempts: 22, phone: '6281234567802', subscriptionEnds: '2026-11-24' },
-  { username: 'wulan', plan: 'Semesteran', status: 'active', joined: '2026-10-15', attempts: 38, phone: '6281234567803', subscriptionEnds: '2027-04-15' },
-  { username: 'bima', plan: 'Bulanan', status: 'expired', joined: '2026-09-05', attempts: 6, phone: '6281234567804', subscriptionEnds: '2026-10-05' },
-  { username: 'tari', plan: 'Triwulanan', status: 'active', joined: '2026-10-29', attempts: 11, phone: '6281234567805', subscriptionEnds: '2027-01-29' },
-  { username: 'yoga', plan: 'Free', status: 'trial', joined: '2026-11-03', attempts: 4, phone: '6281234567806', subscriptionEnds: '2026-11-10' },
-  { username: 'putri', plan: 'Bulanan', status: 'active', joined: '2026-10-31', attempts: 7, phone: '6281234567807', subscriptionEnds: '2026-11-30' },
-]
-
-const USERS_KEY = 'gts_admin_user_overrides'
-
-export function getUserOverrides(): Record<string, UserOverride> {
-  return read<Record<string, UserOverride>>(USERS_KEY) ?? {}
-}
-
-export function setUserOverride(username: string, override: UserOverride): void {
-  const all = getUserOverrides()
-  all[username] = { ...(all[username] ?? {}), ...override }
-  write(USERS_KEY, all)
-}
-
-export function getEffectiveUsers(): AdminUser[] {
-  const overrides = getUserOverrides()
-  return MOCK_ADMIN_USERS.map(u => {
-    const o = overrides[u.username]
-    return o ? { ...u, ...o } : u
-  })
-}
 
 // ---- Attempts recorded in this browser ----
 
@@ -364,7 +302,7 @@ export function approveDraftIntoBank(draftId: string): number {
   // tag difficulty for the adaptive engine
   const diffs = getDifficultyOverrides()
   additions.forEach(a => {
-    diffs[`lr-${a.number}`] = draft.targetDifficulty
+    diffs[bankViewId(a.materialSlug, a.number)] = draft.targetDifficulty
   })
   try {
     localStorage.setItem(DIFF_KEY, JSON.stringify(diffs))
@@ -530,8 +468,17 @@ export function volumeCategoryFor(materialSlug: string): VolumeCategory {
   return MATERIAL_CATEGORIES[materialSlug] ?? 'english'
 }
 
-function qkey(scope: string, number: number): string {
-  return `${scope}-${number}`
+/**
+ * Bank-view question id used across the admin panel and the audit
+ * assistant: `lr-N` (TOEIC LR), `sw-N` (TOEIC SW), `free-N` (free
+ * test), otherwise `<materialSlug>-N`. Difficulty overrides and audit
+ * scopes are keyed by this id, so every material must map to a
+ * distinct prefix — mapping SW to `lr-N` used to collide with LR.
+ */
+export function bankViewId(materialSlug: string, number: number): string {
+  if (materialSlug === 'toeic-lr') return `lr-${number}`
+  if (materialSlug === 'toeic-sw') return `sw-${number}`
+  return `${materialSlug}-${number}`
 }
 
 export function getVolumes(): Volume[] {
@@ -647,7 +594,7 @@ export function activateVolume(volumeId: string): number {
   const diffs = getDifficultyOverrides()
   // target difficulty was stored on the draft items' volume; default L3
   additions.forEach(a => {
-    diffs[`lr-${a.number}`] = diffs[`lr-${a.number}`] ?? 3
+    diffs[bankViewId(a.materialSlug, a.number)] = diffs[bankViewId(a.materialSlug, a.number)] ?? 3
   })
   try {
     localStorage.setItem(DIFF_KEY, JSON.stringify(diffs))
@@ -731,26 +678,19 @@ export interface MonthPoint {
 
 const MONTHS_KEY = 'gts_admin_monthly'
 
-const SEED_MONTHS: MonthPoint[] = [
-  { month: '2026-06', visits: 820, testTakers: 96 },
-  { month: '2026-07', visits: 1140, testTakers: 138 },
-  { month: '2026-08', visits: 1610, testTakers: 201 },
-  { month: '2026-09', visits: 2230, testTakers: 284 },
-  { month: '2026-10', visits: 3120, testTakers: 402 },
-]
-
+/**
+ * Monthly activity. No seed series: visits are not tracked anywhere
+ * yet (the Overview chart was removed — see README "Admin panel audit").
+ * Stored rows are returned as-is; nothing is fabricated.
+ */
 export function getMonthly(): MonthPoint[] {
-  const stored = read<MonthPoint[]>(MONTHS_KEY)
-  if (stored) return stored
-  write(MONTHS_KEY, SEED_MONTHS)
-  return SEED_MONTHS
+  return read<MonthPoint[]>(MONTHS_KEY) ?? []
 }
 
-/** Test takers this month = seed baseline + local attempts this month. */
+/** Test takers this month = finished tests recorded in this browser. */
 export function testTakersThisMonth(): number {
   const now = new Date()
   const prefix = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
-  const seed = getMonthly().find(m => m.month === prefix)?.testTakers ?? 480
   let local = 0
   try {
     for (let i = 0; i < localStorage.length; i++) {
@@ -763,7 +703,7 @@ export function testTakersThisMonth(): number {
   } catch {
     /* noop */
   }
-  return seed + local
+  return local
 }
 
 /* ------------------------------------------------------------------ */
@@ -781,16 +721,14 @@ export interface Voucher {
 
 const VOUCHERS_KEY = 'gts_admin_vouchers'
 
-const SEED_VOUCHERS: Voucher[] = [
-  { id: 'v-1', name: 'LAUNCH20', discount: 20, maxUsers: 200, usedUsers: 47, dueDate: '2026-12-31' },
-  { id: 'v-2', name: 'STUDENT15', discount: 15, maxUsers: 500, usedUsers: 132, dueDate: '2027-03-31' },
-]
-
+/**
+ * Vouchers. No seed rows: vouchers only exist once an admin creates
+ * one (Add voucher). Rows `v-1`/`v-2` were pre-D1 demo data with
+ * invented usage counts; stored copies are dropped.
+ */
 export function getVouchers(): Voucher[] {
-  const stored = read<Voucher[]>(VOUCHERS_KEY)
-  if (stored) return stored
-  write(VOUCHERS_KEY, SEED_VOUCHERS)
-  return SEED_VOUCHERS
+  const stored = read<Voucher[]>(VOUCHERS_KEY) ?? []
+  return stored.filter(v => v.id !== 'v-1' && v.id !== 'v-2')
 }
 
 export function saveVoucher(v: Voucher): void {
@@ -803,43 +741,15 @@ export function deleteVoucher(id: string): void {
   write(VOUCHERS_KEY, getVouchers().filter(x => x.id !== id))
 }
 
-/* ------------------------------------------------------------------ */
-/* Managed users (admin can add; demo users remain until backend)       */
-/* ------------------------------------------------------------------ */
-
-const ADDED_USERS_KEY = 'gts_admin_added_users'
-
-export function getAddedUsers(): AdminUser[] {
-  return read<AdminUser[]>(ADDED_USERS_KEY) ?? []
-}
-
-export function addManagedUser(u: AdminUser): void {
-  const all = getAddedUsers().filter(x => x.username !== u.username)
-  all.unshift(u)
-  write(ADDED_USERS_KEY, all)
-}
-
-export function allManagedUsers(): AdminUser[] {
-  const overrides = getUserOverrides()
-  const base = [...getAddedUsers(), ...MOCK_ADMIN_USERS].map(u => {
-    const o = overrides[u.username]
-    return o ? { ...u, ...o } : u
-  })
-  // de-dupe by username, added users win
-  const seen = new Set<string>()
-  return base.filter(u => {
-    if (seen.has(u.username)) return false
-    seen.add(u.username)
-    return true
-  })
-}
-
-/** Find the active volume containing a bank-view question id (`lr-19`, `free-7`). */
+/** Find the active volume containing a bank-view question id (`lr-19`, `sw-3`, `free-7`). */
 export function findVolumeForQuestion(questionId: string): Volume | undefined {
   let scope = ''
   let number = 0
   if (questionId.startsWith('lr-')) {
     scope = 'toeic-lr'
+    number = Number(questionId.slice(3))
+  } else if (questionId.startsWith('sw-')) {
+    scope = 'toeic-sw'
     number = Number(questionId.slice(3))
   } else if (questionId.startsWith('free-')) {
     scope = 'free'

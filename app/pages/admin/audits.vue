@@ -1,8 +1,10 @@
 <script setup lang="ts">
-import { getVolumes, allManagedUsers, type Volume } from '~/utils/admin'
+import { getVolumes, bankViewId, type Volume } from '~/utils/admin'
+import { fetchRealUsers, type RealUser } from '~/utils/server-auth'
 import {
   answerPrompt, getAudits, getAuditById,
   getChatSessions, saveChatSession, deleteChatSession, newSessionId,
+  buildAuditContext, askAuditChat, saveLlmAuditReport,
   type ChatMsg, type ChatSession, type AuditReport,
 } from '~/utils/ai-assistant'
 
@@ -18,6 +20,7 @@ const sessionId = ref<string | null>(null)
 const sessions = ref<ChatSession[]>([])
 const reports = ref<AuditReport[]>([])
 const input = ref('')
+const sending = ref(false)
 const chatBox = ref<HTMLElement | null>(null)
 const ta = ref<HTMLTextAreaElement | null>(null)
 
@@ -27,7 +30,9 @@ const showAddVolume = ref(false)
 const reportDetail = ref<AuditReport | null>(null)
 
 const volumes = ref<Volume[]>([])
-const users = computed(() => allManagedUsers())
+/* Real users (Google sign-in, D1) for the user picker + analysis. */
+const realUsers = ref<RealUser[]>([])
+const realUsersLoading = ref(true)
 
 function lang(): 'id' | 'en' {
   return locale.value === 'id' ? 'id' : 'en'
@@ -41,7 +46,7 @@ function refreshLists(): void {
 function scopeForVolume(v: Volume): Set<string> {
   const ids = new Set<string>()
   for (const q of v.questions) {
-    ids.add(q.scope === 'free' ? `free-${q.number}` : `lr-${q.number}`)
+    ids.add(bankViewId(q.scope, q.number))
   }
   return ids
 }
@@ -72,12 +77,36 @@ function persist(): void {
 
 async function send(): Promise<void> {
   const text = input.value.trim()
-  if (!text) return
+  if (!text || sending.value) return
+  sending.value = true
   messages.value.push({ from: 'user', text })
   input.value = ''
   autoGrow()
-  const ans = answerPrompt(text, lang(), detectVolumeScope(text))
-  messages.value.push({ from: 'ai', text: ans.reply, reportId: ans.reportId })
+  try {
+    // Real LLM first: the server asks Meta with the real audit
+    // context (bank stats computed locally). Any failure falls back
+    // to the local analysis — labeled honestly, never pretending
+    // to be an LLM answer.
+    const scopeIds = detectVolumeScope(text)
+    const userList = realUsers.value.map(u => u.email)
+    const context = buildAuditContext(text, lang(), scopeIds, userList)
+    const history = messages.value.slice(0, -1).slice(-6)
+    const llm = await askAuditChat(text, lang(), context, history)
+    if (llm.ok && llm.reply) {
+      const reportId = saveLlmAuditReport(llm.title ?? 'Audit chat', llm.reply, llm.findings ?? [])
+      messages.value.push({ from: 'ai', text: llm.reply, reportId, source: 'llm' })
+    } else {
+      const ans = answerPrompt(text, lang(), scopeIds, realUsers.value.map(u => u.email))
+      const note = llm.code === 'no-key'
+        ? t('admin.audits.llmNoKey')
+        : llm.code === 'rate-limited'
+          ? t('admin.audits.llmRateLimited')
+          : t('admin.audits.llmUnavailable')
+      messages.value.push({ from: 'ai', text: ans.reply, reportId: ans.reportId, source: 'local', note })
+    }
+  } finally {
+    sending.value = false
+  }
   persist()
   await nextTick()
   if (chatBox.value) chatBox.value.scrollTop = chatBox.value.scrollHeight
@@ -155,6 +184,10 @@ onMounted(() => {
   volumes.value = getVolumes()
   refreshLists()
   autoGrow()
+  void (async () => {
+    realUsers.value = (await fetchRealUsers()) ?? []
+    realUsersLoading.value = false
+  })()
 })
 </script>
 
@@ -193,7 +226,12 @@ onMounted(() => {
             <div v-else class="flex gap-3">
               <div class="shrink-0 w-8 h-8 rounded-full bg-violet-600 text-white flex items-center justify-center text-sm">✨</div>
               <div class="flex-1 text-sm leading-relaxed min-w-0">
+                <p v-if="m.source" class="mb-1.5">
+                  <span v-if="m.source === 'llm'" class="inline-block text-[11px] font-bold px-2 py-0.5 rounded-full bg-violet-100 text-violet-700 dark:bg-violet-900/50 dark:text-violet-200">Meta AI</span>
+                  <span v-else class="inline-block text-[11px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300">{{ t('admin.audits.localBadge') }}</span>
+                </p>
                 <p class="whitespace-pre-wrap text-slate-700 dark:text-slate-200">{{ m.text }}</p>
+                <p v-if="m.note" class="mt-1.5 text-[11px] text-slate-400 dark:text-slate-500">{{ m.note }}</p>
                 <button
                   v-if="m.reportId"
                   class="mt-2 text-xs font-bold text-violet-700 dark:text-violet-300 underline"
@@ -248,7 +286,7 @@ onMounted(() => {
               />
               <button
                 class="shrink-0 w-10 h-10 rounded-xl bg-violet-600 text-white disabled:opacity-40 flex items-center justify-center"
-                :disabled="!input.trim()"
+                :disabled="!input.trim() || sending"
                 :aria-label="t('admin.aichat.send')"
                 @click="send"
               >↑</button>
@@ -353,14 +391,16 @@ onMounted(() => {
           <h2 class="font-bold">{{ t('admin.audits.pickUser') }}</h2>
           <button class="text-slate-400 hover:text-slate-600 px-2 py-1" @click="showUserModal = false" aria-label="Close">✕</button>
         </div>
-        <ul class="mt-3 space-y-2">
-          <li v-for="u in users" :key="u.username">
+        <p v-if="realUsersLoading" class="mt-3 text-sm text-slate-400 dark:text-slate-500">{{ t('access.loading') }}</p>
+        <p v-else-if="realUsers.length === 0" class="mt-3 text-sm text-slate-400 dark:text-slate-500">{{ t('admin.users.realEmpty') }}</p>
+        <ul v-else class="mt-3 space-y-2">
+          <li v-for="u in realUsers" :key="u.sub">
             <button
-              class="w-full text-left px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 hover:border-violet-400 dark:hover:border-violet-500 hover:shadow transition-all flex items-center justify-between"
-              @click="pickUser(u.username)"
+              class="w-full text-left px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 hover:border-violet-400 dark:hover:border-violet-500 hover:shadow transition-all"
+              @click="pickUser(u.email)"
             >
-              <span class="font-bold text-sm">{{ u.username }}</span>
-              <span class="text-xs text-slate-500 dark:text-slate-400">{{ u.plan }} · {{ u.attempts }} tes</span>
+              <span class="font-bold text-sm block truncate">{{ u.name || u.email }}</span>
+              <span class="text-xs text-slate-500 dark:text-slate-400">{{ u.email }}</span>
             </button>
           </li>
         </ul>

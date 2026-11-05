@@ -9,7 +9,7 @@
  * Plain algorithms (free). The LLM is only used to *create* questions.
  */
 import { QUESTIONS, getPaper, type Question } from '~/data/mock'
-import { getBankAdditions, getDifficultyOverrides, liveAllQuestions } from './admin'
+import { getBankAdditions, getDifficultyOverrides, liveAllQuestions, bankViewId } from './admin'
 
 export interface PartAbility {
   part: number
@@ -155,7 +155,7 @@ export function buildPlaylist(materialSlug: string, count = 10, username?: strin
     const level = a.level
     const candidates = bank
       .filter(q => q.part === a.part && !picked.includes(q))
-      .map(q => ({ q, d: Math.abs((diffs[`lr-${q.number}`] ?? 3) - level) }))
+      .map(q => ({ q, d: Math.abs((diffs[bankViewId(q.materialSlug, q.number)] ?? 3) - level) }))
       .sort((x, y) => x.d - y.d || x.q.number - y.q.number)
       .slice(0, Math.max(need, 0))
       .map(x => x.q)

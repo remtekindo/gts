@@ -5,6 +5,33 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added
+- **Profile dropdown: admin Dashboard link** (5 Nov 2026): the account
+  menu (TopBar + MaterialTopBar) shows a "Dashboard" link to `/admin`
+  above "Profile" for admins only. The role comes from the server
+  session (`GET /api/auth/session`), never from the forgeable
+  localStorage copy — a forged admin value shows no link.
+- **Audits chat is a real LLM** (5 Nov 2026): `POST /api/admin/audit-chat`
+  asks Meta (muse-spark-1.3-contributor) with real audit context
+  computed from the live bank; admin-only, 30 chats/hour per IP,
+  server key only. Without a key it answers 503 `no-key` and the page
+  falls back to the labeled local analysis ("Analisis lokal"), never
+  pretending a local answer came from the LLM.
+- **AI usage card on Overview** (5 Nov 2026): `migrations/0003_ai_usage.sql`
+  logs one row per Meta API call (model, prompt/completion tokens,
+  endpoint, UTC timestamp). The card shows a per-model breakdown,
+  totals, estimated cost in Rupiah (Contributor $0.10/1M input,
+  $0.20/1M output at a fixed Rp16,500/USD, labeled "estimasi"), and a
+  0–23 WIB hourly histogram with the peak hour; period selector today
+  / 7 days / 30 days (default) / all time. An empty table shows an
+  honest empty state; no dummy rows are ever seeded.
+- **Two D1 databases documented** (5 Nov 2026): remote `gts-db`
+  (production, no dummy data — only real Google sign-ins) vs local
+  SQLite (scratch, reconciled 5 Nov: empty files deleted, migrations
+  0001–0003 re-applied cleanly). The admin row is never created by
+  hand — the first Google sign-in upserts it keyed by `google_sub`,
+  and the bootstrap allowlist makes it an admin automatically.
+
 ### Changed
 - **Google Sign-In replaces the password login — for everyone**
   (5 Nov 2026): one "Sign in with Google" button for admin and
@@ -25,9 +52,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   (`migrations/0002_users_google.sql`); Admin → Users lists real
   accounts and grants roles (promote/demote admin) and material/package
   access without paying — server-enforced, effective immediately.
-  The 18 seed users stay as a clearly labeled local-only demo section.
-  Question bank and test results are still localStorage — only
-  identity/privilege moved to D1.
+  The 18 seed demo users were removed 5 Nov 2026 (see Removed below);
+  the Users page is real accounts only. Question bank and test results
+  are still localStorage — only identity/privilege moved to D1.
+- **Overview + Packages + Audits now read real users** (5 Nov 2026):
+  the Overview users tile counts real D1 accounts ("Registered users");
+  Packages subscriber counts count explicit D1 package grants; the
+  Audits user picker lists real D1 users by email and user analysis
+  matches by email. No demo user is referenced anywhere.
+- **"Generate by AI" labels corrected** (5 Nov 2026): the in-panel
+  volume generator uses 30 hardcoded templates, not the LLM — the modal
+  title is now "Generate draft volume" and the Audits card says
+  "Generate a new draft volume from templates". The stub note was
+  already honest; the headings now match it.
 - **Materials locked without access**: the hub shows a lock on
   materials the user cannot open; the material layout shows a locked
   panel instead of the dashboard. The access verdict comes from the
@@ -41,6 +78,64 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   `/admin`, material/package grants change what the user can open,
   grant UI end-to-end). No real Meta credits used; the one real Google
   sign-in click remains the owner's step.
+- **Verified locally — revisions 1–4** (5 Nov 2026): typecheck 0 errors
+  (a root `tsconfig.json` was missing — see Fixed); `pnpm build` 0
+  errors; unit tests 23/23 (ai-usage recording/math); Playwright
+  18/18 on `pnpm dev` (dropdown admin/learner/forged, audit-chat
+  401/503/400/429, ai-usage 503 without D1, local-fallback UI),
+  24/24 on `wrangler pages dev` with real local D1 (user upsert,
+  ai-usage endpoint math Rp10,923 / peak 13 WIB, Overview card,
+  dummy-key audit-chat 502, promote/demote re-lock), and 25/25 for
+  the dummy removal (Overview 57/0/0/1 tiles, no demo users/vouchers/
+  reports, Audits real-user picker + SW scope 6 / bank 57). All test
+  rows deleted afterwards; no real Meta credits used.
+
+### Removed
+- **All demo/seed data in the admin panel** (5 Nov 2026): the 18 demo
+  users (`MOCK_ADMIN_USERS`) and the whole demo-users section in
+  Admin → Users (status cards, demo table, Add user modal, detail
+  modal with ability map and WhatsApp link); the 2 seed QC reports
+  (`r-1`, `r-2` from `demo-learner`); the 2 seed vouchers (`LAUNCH20`
+  47/200, `STUDENT15` 132/500); the seed monthly series (visits
+  820–3120, test takers 96–402) and the 480 fallback in
+  `testTakersThisMonth()` — test takers are now the real local count
+  (0 when nothing was taken in this browser). Stored copies of the
+  seed reports/vouchers in a browser's localStorage are dropped on
+  read. The Overview visits chart is gone, replaced by an honest
+  "not connected" note (visits are not tracked anywhere).
+- **Demo-only i18n keys** removed from `app/i18n/en.ts` + `id.ts`
+  (demo users, Add user form, status cards, ability map, voucher
+  seeds); en/id parity re-verified (620 keys each, no misses).
+
+### Fixed
+- **Auth-guard redirect loop** (5 Nov 2026, found by Playwright):
+  the default layout, the materials hub, the material layout, and the
+  take page redirected to `/auth` whenever the localStorage mirror
+  was missing — even with a valid server session — while `/auth`
+  auto-redirects a valid session straight back, so the app bounced
+  between the two pages ~25–50 times/second and the TopBar kept
+  unmounting (the account-menu button could never be clicked). All
+  four guards are now server-first: redirect only when the server
+  session has no user. TopBar/MaterialTopBar and the materials hub
+  also fall back to the server identity for display instead of
+  showing "Guest" when the mirror is missing.
+- **SW/LR question-id collision** (5 Nov 2026): the audit bank used
+  `lr-N` for every material, so TOEIC SW questions collided with LR
+  ones in duplicate detection and volume scoping ("TOEIC SW 1"
+  audited the wrong ids). New shared helper `bankViewId()`:
+  `lr-N` (LR), `sw-N` (SW), `free-N` (free test); used by the audit
+  assistant, audit scope, volume lookup, difficulty overrides, and
+  the adaptive playlist. Verified: SW volume audit totals 6,
+  whole bank 57.
+- **Audit-chat validation order** (5 Nov 2026): an empty prompt now
+  returns 400 `bad-prompt` before the API-key check (was 503
+  `no-key`, hiding the real reason).
+- **Missing root `tsconfig.json`** (5 Nov 2026): the repo never had
+  one, so `pnpm typecheck` / `pnpm exec vue-tsc --noEmit` could not
+  run anywhere (they printed the tsc help and exited 1). Added the
+  standard one-line file (`{"extends": "./.nuxt/tsconfig.json"}`);
+  typecheck now exits 0 (only the known non-fatal vue-router/volar
+  warning remains).
 
 ### Security
 - **Server-side auth via Google ID token**: `POST /api/auth/google`

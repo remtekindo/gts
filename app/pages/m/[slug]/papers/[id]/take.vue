@@ -2,6 +2,7 @@
 import { getMaterialOrFallback, getPaperOrFallback, partsForMaterial, questionsForMaterial } from '~/data/mock'
 import type { Question } from '~/data/mock'
 import type { AnswerMap } from '~/utils/storage'
+import { fetchSessionState } from '~/utils/server-auth'
 
 const { t } = useLocale()
 
@@ -69,8 +70,11 @@ function skillLabel(skill: string): string {
   return { listening: 'Listening', reading: 'Reading', speaking: 'Speaking', writing: 'Writing' }[skill] ?? skill
 }
 
-onMounted(() => {
-  if (!getAuth()) {
+onMounted(async () => {
+  // Server session is the source of truth (see layouts/default.vue):
+  // the localStorage mirror may be missing while the cookie is valid.
+  const state = await fetchSessionState()
+  if (!state.username) {
     router.replace('/auth')
     return
   }

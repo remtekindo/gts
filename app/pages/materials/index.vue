@@ -20,10 +20,18 @@ function canOpen(slug: string): boolean {
 }
 
 onMounted(async () => {
-  auth.value = getAuth()
-  if (!auth.value) { router.replace('/auth'); return }
+  // Server session first (see layouts/default.vue): the localStorage
+  // mirror may be missing while the cookie is valid — never redirect
+  // on the mirror alone. The mirror is display-only here.
   const state = await fetchSessionState()
   if (!state.username) { router.replace('/auth'); return }
+  auth.value = getAuth() ?? {
+    username: state.username,
+    remember: false,
+    role: state.role,
+    name: state.name ?? undefined,
+    picture: state.picture ?? undefined,
+  }
   allowed.value = new Set(state.materials)
 })
 </script>
