@@ -1,0 +1,14 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "gts",
+  "pages_build_output_dir": "dist",
+  "compatibility_date": "2025-07-15",
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "gts-db",
+      // Filled in after `npx wrangler d1 create gts-db` (see README § Cloudflare).
+      "database_id": "df450308-8a55-45e5-a992-4547646055c7"
+    }
+  ]
+}
