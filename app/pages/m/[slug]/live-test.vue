@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { getMaterialOrFallback, partsForMaterial } from '~/data/mock'
+import { getStoredModelKey } from '~/utils/model-key'
 
 const { t } = useLocale()
 
@@ -68,7 +69,8 @@ async function fetchBatch(): Promise<void> {
         skill: skillForPart(part.value),
         difficulty: difficulty.value,
         count: 5,
-        excludeStems: history.value.map(q => q.stem)
+        excludeStems: history.value.map(q => q.stem),
+        apiKey: getStoredModelKey() || undefined
       }
     })
     batchNo.value += 1

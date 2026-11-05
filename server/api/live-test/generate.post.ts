@@ -7,10 +7,13 @@
  *
  * Generates a fresh batch of TOEIC-style questions with Meta's Model API
  * (muse-spark-1.3-contributor) and validates them with the same rules as
- * scripts/generate-questions/generate.mjs. The API key NEVER leaves the
- * server: it is read from runtime config, which Nitro fills from the
- * NITRO_MODEL_API_KEY environment variable.
- * For local dev: NITRO_MODEL_API_KEY=LLM_xxx pnpm dev
+ * scripts/generate-questions/generate.mjs.
+ *
+ * Key resolution (in order):
+ * 1. NITRO_MODEL_API_KEY from the environment (production path — preferred).
+ * 2. `apiKey` in the request body (dev/demo path — the admin pastes the key
+ *    in Admin → Settings and the browser sends it along; only use this on
+ *    a trusted local/dev server, never in production).
  * For Cloudflare Pages: set NITRO_MODEL_API_KEY in the dashboard (Functions env).
  * (The CLI pipeline keeps using MODEL_API_KEY — same key value, other name.)
  */
@@ -166,16 +169,16 @@ async function callMeta(prompt: string, apiKey: string): Promise<{ questions: Ge
 }
 
 export default defineEventHandler(async (event) => {
+  const body = await readBody<{ part?: number, skill?: string, difficulty?: number, count?: number, excludeStems?: string[], apiKey?: string }>(event)
   const { modelApiKey } = useRuntimeConfig(event)
-  const apiKey = modelApiKey || ''
+  const apiKey = modelApiKey || (typeof body.apiKey === 'string' ? body.apiKey.trim() : '')
   if (!apiKey) {
     throw createError({
       statusCode: 503,
-      statusMessage: 'MODEL_API_KEY is not set on the server. Set NITRO_MODEL_API_KEY in the environment and restart.'
+      statusMessage: 'No Meta API key configured. Set NITRO_MODEL_API_KEY on the server or paste a key in Admin → Settings.'
     })
   }
 
-  const body = await readBody<{ part?: number, skill?: string, difficulty?: number, count?: number, excludeStems?: string[] }>(event)
   const part = body.part && body.part >= 1 && body.part <= 7 ? Math.floor(body.part) : 5
   const skill = body.skill || (part <= 4 ? 'listening' : 'reading')
   const difficulty = body.difficulty && body.difficulty >= 1 && body.difficulty <= 5 ? Math.floor(body.difficulty) : 3

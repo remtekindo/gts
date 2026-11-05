@@ -149,7 +149,7 @@ export default {
     playAgain: 'Main lagi (5 soal baru)',
     backDashboard: 'Kembali ke dashboard',
     errorGen: 'Gagal membuat soal. Silakan coba lagi.',
-    errorKey: 'Server belum dikonfigurasi (NITRO_MODEL_API_KEY belum diset). Set key di server lalu coba lagi.',
+    errorKey: 'Key belum diset. Buka Admin → Pengaturan, tempel Meta API key, lalu coba lagi.',
     cardTitle: 'Tes Live dengan AI',
     cardSub: 'Soal segar dibuat langsung oleh AI, 5 soal sekali jalan.',
     cardCta: 'Mulai tes live'
@@ -403,7 +403,25 @@ export default {
       "audits": "Audit",
       "reports": "Laporan",
       "users": "Pengguna",
+      "settings": "Pengaturan",
       "results": "Hasil"
+    },
+    "settings": {
+      "heading": "Pengaturan",
+      "sub": "Konfigurasi aplikasi dan integrasi AI.",
+      "keyTitle": "Meta Model API key",
+      "keySub": "Key ini dipakai Tes Live untuk generate soal realtime. Disimpan di browser admin ini saja.",
+      "keyLabel": "API key (diawali LLM_)",
+      "keyPh": "Tempel key baru di sini",
+      "save": "Simpan key",
+      "saved": "Key tersimpan. Tes Live sudah bisa dipakai.",
+      "clear": "Hapus key",
+      "cleared": "Key dihapus.",
+      "configured": "Key terpasang",
+      "notConfigured": "Belum ada key tersimpan",
+      "show": "Lihat",
+      "hide": "Sembunyi",
+      "demoNote": "Mode demo/dev: key tersimpan di browser ini dan dikirim bersama permintaan generate. Untuk produksi, set key sebagai environment variable server (NITRO_MODEL_API_KEY) — jangan andalkan key di browser."
     },
     "dashboard": {
       "heading": "Ringkasan",

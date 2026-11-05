@@ -5,6 +5,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added
+- **Admin → Settings: Meta Model API key in-app**: the key can now be
+  pasted once in the admin panel (stored in the admin's browser) and the
+  Live Test sends it along automatically — no terminal env var needed.
+  The server route still prefers `NITRO_MODEL_API_KEY` from the
+  environment and only falls back to the body key (dev/demo mode;
+  production must use the server env var).
+
 ### Changed
 - **Admin layout is now full-width** (max 1600px): the centered
   `max-w-5xl` container was removed, so content starts right at the

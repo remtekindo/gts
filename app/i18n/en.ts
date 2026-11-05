@@ -150,7 +150,7 @@ export default {
     playAgain: 'Play again (5 new questions)',
     backDashboard: 'Back to dashboard',
     errorGen: 'Failed to generate questions. Please try again.',
-    errorKey: 'The server is not configured yet (NITRO_MODEL_API_KEY is missing). Set the key on the server and retry.',
+    errorKey: 'No key set yet. Open Admin → Settings, paste your Meta API key, then retry.',
     cardTitle: 'Live Test with AI',
     cardSub: 'Fresh questions generated live by AI, 5 at a time.',
     cardCta: 'Start live test'
@@ -404,7 +404,25 @@ export default {
       "audits": "Audit",
       "reports": "Reports",
       "users": "Users",
+      "settings": "Settings",
       "results": "Results"
+    },
+    "settings": {
+      "heading": "Settings",
+      "sub": "App configuration and AI integrations.",
+      "keyTitle": "Meta Model API key",
+      "keySub": "This key powers the Live Test realtime generation. It is stored in this admin browser only.",
+      "keyLabel": "API key (starts with LLM_)",
+      "keyPh": "Paste a new key here",
+      "save": "Save key",
+      "saved": "Key saved. The Live Test is ready to use.",
+      "clear": "Remove key",
+      "cleared": "Key removed.",
+      "configured": "Key configured",
+      "notConfigured": "No key stored yet",
+      "show": "Show",
+      "hide": "Hide",
+      "demoNote": "Demo/dev mode: the key is stored in this browser and sent along with generation requests. For production, set the key as a server environment variable (NITRO_MODEL_API_KEY) — do not rely on the browser-stored key."
     },
     "dashboard": {
       "heading": "Overview",
