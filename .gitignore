@@ -22,3 +22,6 @@ scripts/generate-questions/out/
 # Cloudflare local state + build output
 .wrangler/
 dist/
+
+# Wrangler local dev vars (never commit secrets)
+.dev.vars

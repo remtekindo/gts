@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { getAuth, clearAuth } from '~/utils/storage'
+import { fetchSessionState, logoutServer } from '~/utils/server-auth'
 import { getReports } from '~/utils/admin'
 
 const route = useRoute()
@@ -24,21 +25,27 @@ function isActive(to: string): boolean {
   return to === '/admin' ? route.path === '/admin' : route.path.startsWith(to)
 }
 
-function signOut(): void {
+async function signOut(): Promise<void> {
+  await logoutServer()
   clearAuth()
   router.replace('/auth')
 }
 
-onMounted(() => {
-  const auth = getAuth()
-  if (!auth) {
+onMounted(async () => {
+  // The server session cookie is the real gate. The localStorage role
+  // is UI-only and forgeable — an old/forged "admin" value without a
+  // valid server session is bounced to /auth. (A direct page load is
+  // already redirected by the server middleware before this runs.)
+  const state = await fetchSessionState()
+  if (!state.admin) {
+    const auth = getAuth()
+    if (auth && auth.role !== 'admin') {
+      // Logged in as a regular user: show "access denied" instead of
+      // redirecting (redirecting would loop with /auth's auto-redirect).
+      deniedUser.value = auth.username
+      return
+    }
     router.replace('/auth?next=/admin')
-    return
-  }
-  if (auth.role !== 'admin') {
-    // Logged in as a regular user: show "access denied" instead of
-    // redirecting (redirecting would loop with /auth's auto-redirect).
-    deniedUser.value = auth.username
     return
   }
   authed.value = true
@@ -46,6 +53,7 @@ onMounted(() => {
 })
 
 function switchAccount(): void {
+  void logoutServer()
   clearAuth()
   router.replace('/auth?next=/admin')
 }

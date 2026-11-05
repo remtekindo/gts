@@ -9,6 +9,8 @@
  * needed for the build to typecheck.
  */
 
+import type { H3Event } from 'h3'
+
 export interface D1Result<T = Record<string, unknown>> {
   results: T[]
   success: boolean
@@ -29,8 +31,8 @@ export interface CloudflareEnvEvent {
   context: { cloudflare?: { env?: Record<string, unknown> } }
 }
 
-export function getDb(event: CloudflareEnvEvent): D1Database | null {
-  const env = event.context.cloudflare?.env
+export function getDb(event: H3Event): D1Database | null {
+  const env = (event.context as CloudflareEnvEvent['context']).cloudflare?.env
   const db = env?.DB as D1Database | undefined
   return db && typeof db.prepare === 'function' ? db : null
 }

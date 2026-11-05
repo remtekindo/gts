@@ -23,6 +23,7 @@ const menuOpen = ref(false)
 const switcherRef = ref<HTMLElement | null>(null)
 const menuRef = ref<HTMLElement | null>(null)
 const auth = ref<AuthState | null>(null)
+const picBroken = ref(false)
 const others = computed(() => ownedMaterials().filter(m => m.slug !== props.material.slug))
 
 function isActive(to: string): boolean {
@@ -30,6 +31,7 @@ function isActive(to: string): boolean {
 }
 
 function signOut(): void {
+  void logoutServer()
   clearAuth()
   menuOpen.value = false
   router.push('/auth')
@@ -119,19 +121,21 @@ onUnmounted(() => {
         <ThemeToggle />
         <div ref="menuRef" class="relative">
           <button
-            class="w-9 h-9 rounded-full bg-slate-700 text-white text-xs font-bold flex items-center justify-center hover:bg-slate-600"
+            class="w-9 h-9 rounded-full bg-slate-700 text-white text-xs font-bold flex items-center justify-center hover:bg-slate-600 overflow-hidden"
             aria-label="Account menu"
             @click.stop="menuOpen = !menuOpen"
           >
-            {{ (auth?.username || 'G').slice(0, 1).toUpperCase() }}
+            <img v-if="auth?.picture && !picBroken" :src="auth.picture" :alt="auth?.name || auth?.username || ''" class="w-9 h-9 object-cover" @error="picBroken = true" />
+            <span v-else>{{ (auth?.name || auth?.username || 'G').slice(0, 1).toUpperCase() }}</span>
           </button>
           <div
             v-if="menuOpen"
             class="absolute right-0 mt-2 w-44 bg-white dark:bg-slate-900 rounded-xl shadow-lg border border-slate-200 dark:border-slate-700 py-1 text-sm z-50"
           >
             <div class="px-4 py-2 border-b border-slate-100 dark:border-slate-800">
-              <p class="font-semibold text-slate-800 dark:text-slate-200 truncate">{{ auth?.username || 'Guest' }}</p>
-              <p class="text-xs text-slate-400 dark:text-slate-500">Demo account</p>
+              <p class="font-semibold text-slate-800 dark:text-slate-200 truncate">{{ auth?.name || auth?.username || 'Guest' }}</p>
+              <p class="text-xs text-slate-400 dark:text-slate-500 truncate">{{ auth?.username || '' }}</p>
+              <p class="text-xs text-slate-400 dark:text-slate-500">{{ auth?.role === 'admin' ? 'Admin' : 'Member' }}</p>
             </div>
             <NuxtLink to="/profile" class="block px-4 py-2 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800" @click="menuOpen = false">
               Profile

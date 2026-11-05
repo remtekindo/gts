@@ -1,9 +1,13 @@
-/** Typed localStorage helpers for the GTS demo (mock auth, answers, results, notes). */
+/** Typed localStorage helpers for the GTS demo (answers, results, notes). */
 
 export interface AuthState {
+  /** Email of the signed-in user (Google sign-in). UI-only copy of the
+   * server session — the server never trusts this value. */
   username: string
   remember: boolean
   role: 'admin' | 'user'
+  name?: string
+  picture?: string
 }
 
 export type AnswerMap = Record<number, string>

@@ -11,7 +11,19 @@ export default defineNuxtConfig({
   },
   runtimeConfig: {
     // Filled from NITRO_MODEL_API_KEY at runtime. Never expose to the client.
-    modelApiKey: ''
+    modelApiKey: '',
+    // Google Sign-In (server-side). Filled from env at runtime; see
+    // README § Auth and .env.example. The Client ID is public by
+    // design (the browser needs it); the client reads it from
+    // GET /api/auth/config, not from this config.
+    sessionSecret: '',
+    adminEmails: '',
+    // Test-only JWKS override, honored for localhost requests only.
+    // Leave unset everywhere else.
+    googleJwksUrl: '',
+    public: {
+      googleClientId: ''
+    }
   },
   css: ['~/assets/css/main.css'],
   vite: {

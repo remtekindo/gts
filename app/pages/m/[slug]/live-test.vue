@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { getMaterialOrFallback, partsForMaterial } from '~/data/mock'
 import { getStoredModelKey } from '~/utils/model-key'
+import { fetchSessionState } from '~/utils/server-auth'
 
 const { t } = useLocale()
 
@@ -61,6 +62,10 @@ function skillForPart(p: number): string {
 async function fetchBatch(): Promise<void> {
   phase.value = 'loading'
   error.value = ''
+  // The generate endpoint requires a session: this mints the anonymous
+  // visitor id cookie (and reports a real admin session) if needed.
+  // Best-effort — if it fails, the generate call below answers 401.
+  await fetchSessionState()
   try {
     const res = await $fetch<{ questions: LiveQuestion[] }>('/api/live-test/generate', {
       method: 'POST',
@@ -85,7 +90,10 @@ async function fetchBatch(): Promise<void> {
   } catch (e) {
     const status = (e as { response?: { status?: number }, statusCode?: number }).response?.status
       ?? (e as { statusCode?: number }).statusCode
-    error.value = status === 503 ? t('liveTest.errorKey') : t('liveTest.errorGen')
+    if (status === 401) error.value = t('liveTest.errorAuth')
+    else if (status === 429) error.value = t('liveTest.errorRateLimit')
+    else if (status === 503) error.value = t('liveTest.errorKey')
+    else error.value = t('liveTest.errorGen')
     phase.value = 'setup'
   }
 }

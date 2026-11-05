@@ -1,24 +1,18 @@
 <script setup lang="ts">
 const { t } = useLocale()
-const activeTab = ref<'profile' | 'password' | 'purchase' | 'enroll'>('profile')
+const activeTab = ref<'profile' | 'purchase' | 'enroll'>('profile')
 
 const auth = ref<AuthState | null>(null)
 const name = ref('')
 const email = ref('')
 const savedMsg = ref('')
 
-const currentPw = ref('')
-const newPw = ref('')
-const confirmPw = ref('')
-const pwMsg = ref('')
-const pwError = ref('')
-
 const avatarPreview = ref<string | null>(null)
 
 onMounted(() => {
   auth.value = getAuth()
   name.value = getDisplayName() || auth.value?.username || ''
-  email.value = auth.value ? `${auth.value.username}@example.com` : ''
+  email.value = auth.value?.username || ''
 })
 
 function onAvatarChange(e: Event): void {
@@ -30,27 +24,6 @@ function saveProfile(): void {
   setDisplayName(name.value.trim())
   savedMsg.value = t('profile.profileSaved')
   setTimeout(() => { savedMsg.value = '' }, 2500)
-}
-
-function changePassword(): void {
-  pwMsg.value = ''
-  pwError.value = ''
-  if (!currentPw.value || !newPw.value || !confirmPw.value) {
-    pwError.value = t('profile.errPwFields')
-    return
-  }
-  if (newPw.value !== confirmPw.value) {
-    pwError.value = t('profile.errPwMatch')
-    return
-  }
-  if (newPw.value.length < 8) {
-    pwError.value = t('profile.errPwLen')
-    return
-  }
-  pwMsg.value = t('profile.pwUpdated')
-  currentPw.value = ''
-  newPw.value = ''
-  confirmPw.value = ''
 }
 
 const staticEnrollHistory = [
@@ -75,7 +48,6 @@ const enrollHistory = computed(() => {
 
 const tabs = computed(() => [
   { id: 'profile', label: t('profile.myProfile') },
-  { id: 'password', label: t('profile.changePassword') },
   { id: 'purchase', label: t('profile.purchaseHistory') },
   { id: 'enroll', label: t('profile.enrollHistory') }
 ] as const)
@@ -86,7 +58,7 @@ const tabs = computed(() => [
     <!-- Avatar card -->
     <div class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 p-6 flex items-center gap-5">
       <div class="w-20 h-20 rounded-full bg-slate-200 overflow-hidden flex items-center justify-center shrink-0">
-        <img v-if="avatarPreview" :src="avatarPreview" alt="Avatar preview" class="w-full h-full object-cover" />
+        <img v-if="avatarPreview || auth?.picture" :src="avatarPreview || auth?.picture || ''" alt="Avatar" class="w-full h-full object-cover" />
         <span v-else class="text-2xl font-extrabold text-slate-400 dark:text-slate-500">{{ (name || 'G').slice(0, 1).toUpperCase() }}</span>
       </div>
       <div>
@@ -144,30 +116,6 @@ const tabs = computed(() => [
         </button>
         <p v-if="savedMsg" class="text-sm text-green-600 font-medium">{{ savedMsg }}</p>
       </div>
-    </div>
-
-    <!-- Change Password -->
-    <div v-if="activeTab === 'password'" class="mt-5 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 p-6 space-y-4">
-      <div>
-        <label for="pw-current" class="block text-sm font-medium text-slate-600 dark:text-slate-300 mb-1.5">{{ t('profile.currentPassword') }}</label>
-        <input id="pw-current" v-model="currentPw" type="password" autocomplete="current-password" class="w-full rounded-xl border border-slate-300 dark:border-slate-600 px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
-      </div>
-      <div>
-        <label for="pw-new" class="block text-sm font-medium text-slate-600 dark:text-slate-300 mb-1.5">{{ t('profile.newPassword') }}</label>
-        <input id="pw-new" v-model="newPw" type="password" autocomplete="new-password" class="w-full rounded-xl border border-slate-300 dark:border-slate-600 px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
-      </div>
-      <div>
-        <label for="pw-confirm" class="block text-sm font-medium text-slate-600 dark:text-slate-300 mb-1.5">{{ t('profile.confirmNewPassword') }}</label>
-        <input id="pw-confirm" v-model="confirmPw" type="password" autocomplete="new-password" class="w-full rounded-xl border border-slate-300 dark:border-slate-600 px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
-      </div>
-      <p v-if="pwError" class="text-sm text-red-600 dark:text-red-300 bg-red-50 dark:bg-red-950/60 rounded-xl px-3.5 py-2.5">{{ pwError }}</p>
-      <p v-if="pwMsg" class="text-sm text-green-600 bg-green-50 dark:bg-green-950/60 rounded-xl px-3.5 py-2.5">{{ pwMsg }}</p>
-      <button
-        class="text-sm font-semibold px-5 py-2.5 rounded-xl bg-blue-600 text-white hover:bg-blue-700 transition-colors"
-        @click="changePassword"
-      >
-        {{ t('profile.updatePassword') }}
-      </button>
     </div>
 
     <!-- Purchase History -->

@@ -5,6 +5,74 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Changed
+- **Google Sign-In replaces the password login — for everyone**
+  (5 Nov 2026): one "Sign in with Google" button for admin and
+  learners; the password admin login built earlier the same day was
+  replaced before it ever deployed, so no password ever shipped.
+  `POST /api/auth/google` verifies the Google ID token server-side
+  (JWKS signature, audience, issuer, expiry, verified email) and
+  mints the same httpOnly `gts_session` cookie. Bad token → 401
+  `bad-token`; sign-in unconfigured or Google unreachable → 503
+  (fail closed). Env vars changed: new `NUXT_PUBLIC_GOOGLE_CLIENT_ID`
+  (public variable), `NITRO_ADMIN_EMAILS` (comma-separated allowlist,
+  default `remtekindo@gmail.com`); `NITRO_ADMIN_USERNAME` /
+  `NITRO_ADMIN_PASSWORD_HASH` are obsolete and must be deleted from
+  Pages secrets. Requires a NEW "Glots" OAuth client (see README
+  § Auth) — the Kinov client is not reused.
+- **D1 user store + grants** (5 Nov 2026): first Google sign-in
+  creates a user row keyed by Google `sub`
+  (`migrations/0002_users_google.sql`); Admin → Users lists real
+  accounts and grants roles (promote/demote admin) and material/package
+  access without paying — server-enforced, effective immediately.
+  The 18 seed users stay as a clearly labeled local-only demo section.
+  Question bank and test results are still localStorage — only
+  identity/privilege moved to D1.
+- **Materials locked without access**: the hub shows a lock on
+  materials the user cannot open; the material layout shows a locked
+  panel instead of the dashboard. The access verdict comes from the
+  server session; full server-side content gating waits for the D1
+  question-bank migration.
+- **Verified locally** (5 Nov 2026): typecheck 0 errors; unit tests
+  13/13 (token verification incl. wrong aud/iss, expired, unverified
+  email, tampered signature, unreachable JWKS); Playwright 25/25 on
+  `pnpm dev` (no D1) and 28/28 on `wrangler pages dev` with real
+  local D1 (user row created on first login, promote/demote re-locks
+  `/admin`, material/package grants change what the user can open,
+  grant UI end-to-end). No real Meta credits used; the one real Google
+  sign-in click remains the owner's step.
+
+### Security
+- **Server-side auth via Google ID token**: `POST /api/auth/google`
+  verifies the token (JWKS signature, audience = Client ID, issuer,
+  expiry, verified email) and mints an httpOnly `gts_session` cookie
+  (HMAC-signed, 24 h, or 30 days with Remember me). Bad token → 401
+  `bad-token`; sign-in unconfigured or Google unreachable → 503
+  (fail closed). Roles and material access are resolved server-side
+  per request (D1 user row + grants, bootstrap allowlist
+  `NITRO_ADMIN_EMAILS`), never from browser claims. New env vars:
+  `NUXT_PUBLIC_GOOGLE_CLIENT_ID`, `NITRO_ADMIN_EMAILS`,
+  `NITRO_SESSION_SECRET` (see README § Auth and `.env.example`).
+  The mock login and the password login (built the same day, never
+  deployed) are gone.
+- **`/admin` guarded server-side**: `server/middleware/01-admin-guard.ts`
+  redirects unauthenticated page requests to `/auth?next=<path>` before
+  HTML is served; the admin layout also verifies the session on mount.
+  A forged localStorage admin role is bounced.
+- **Live Test endpoint hardened** (`POST /api/live-test/generate`):
+  requires a session (401 otherwise) and is rate-limited per client IP
+  — 12 batches/hour anonymous, 60/hour admin (429 + `Retry-After`).
+  A request-body Meta API key is honored only for a signed-in admin;
+  anonymous callers always use the server env key. No key configured
+  → 503. Verified locally with Playwright: 13/13 checks pass (wrong
+  password rejected, correct login works, unauthenticated POST → 401,
+  12 anonymous batches then 429, forged localStorage bounced, logout
+  re-locks `/admin`); admin generation with a dummy key reaches Meta
+  and fails cleanly with 502 (no real credits used).
+- **Fixed (pre-existing type error)**: `server/utils/d1.ts` `getDb`
+  now takes the H3 event directly instead of a narrow custom event
+  type, so `pnpm typecheck` passes again.
+
 ### Added
 - **Meta Global AI Developer Hackathon 2026 entry**: GTS submitted
   5 Nov 2026 (late window, before 15:00 WIB) — Indie Developer Track,
@@ -44,8 +112,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   pasted once in the admin panel (stored in the admin's browser) and the
   Live Test sends it along automatically — no terminal env var needed.
   The server route still prefers `NITRO_MODEL_API_KEY` from the
-  environment and only falls back to the body key (dev/demo mode;
-  production must use the server env var).
+  environment. Since the 5 Nov 2026 auth hardening, a body key is
+  honored only for a signed-in admin session; anonymous callers always
+  use the server env key.
 
 ### Changed
 - **Admin layout is now full-width** (max 1600px): the centered

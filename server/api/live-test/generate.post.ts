@@ -9,11 +9,23 @@
  * (muse-spark-1.3-contributor) and validates them with the same rules as
  * scripts/generate-questions/generate.mjs.
  *
+ * Auth (added 2026-11-05 — the endpoint used to be open, so anyone could
+ * burn Meta credits with a bare POST):
+ * - A session is required: either a valid user session cookie
+ *   (`gts_session`, from POST /api/auth/google) or a valid anonymous
+ *   visitor id (`gts_sid`, minted by GET /api/auth/session). The Live
+ *   Test page fetches the session before generating.
+ * - Rate limit per client IP: 12 batches/hour for anonymous visitors,
+ *   60/hour for the admin. Counts are in-memory (per process/isolate);
+ *   see server/utils/rate-limit.ts.
+ *
  * Key resolution (in order):
  * 1. NITRO_MODEL_API_KEY from the environment (production path — preferred).
- * 2. `apiKey` in the request body (dev/demo path — the admin pastes the key
- *    in Admin → Settings and the browser sends it along; only use this on
- *    a trusted local/dev server, never in production).
+ * 2. `apiKey` in the request body — ONLY when the request carries a
+ *    valid admin session (the admin pastes the key in Admin → Settings
+ *    as a dev convenience). Anonymous requests never get to spend a
+ *    caller-supplied key, and the server key is never used without a
+ *    session + rate-limit check above.
  * For Cloudflare Pages: set NITRO_MODEL_API_KEY in the dashboard (Functions env).
  * (The CLI pipeline keeps using MODEL_API_KEY — same key value, other name.)
  */
@@ -168,14 +180,47 @@ async function callMeta(prompt: string, apiKey: string): Promise<{ questions: Ge
   throw lastErr || new Error('Meta API call failed')
 }
 
+import { getAdminSession, getAnonSid, getClientIp } from '../../utils/auth'
+import { checkRateLimit } from '../../utils/rate-limit'
+
 export default defineEventHandler(async (event) => {
   const body = await readBody<{ part?: number, skill?: string, difficulty?: number, count?: number, excludeStems?: string[], apiKey?: string }>(event)
+
+  // 1. A session is required — admin session or anonymous visitor id.
+  //    Without this, any script on the internet could POST here and
+  //    spend the server's Meta credits.
+  const admin = await getAdminSession(event)
+  const sid = admin ? null : await getAnonSid(event)
+  if (!admin && !sid) {
+    throw createError({
+      statusCode: 401,
+      statusMessage: 'A session is required. Open the app and sign in first.',
+      data: { code: 'no-session' }
+    })
+  }
+
+  // 2. Rate limit per client IP so one visitor cannot drain credits.
+  const ip = getClientIp(event)
+  const limit = admin ? 60 : 12
+  const rl = checkRateLimit(`live-test:${admin ? 'admin' : 'anon'}:${ip}`, limit)
+  if (!rl.allowed) {
+    setResponseHeader(event, 'Retry-After', rl.resetAfterSec)
+    throw createError({
+      statusCode: 429,
+      statusMessage: 'Too many Live Test requests. Please wait and try again.',
+      data: { code: 'rate-limited', retryAfterSec: rl.resetAfterSec }
+    })
+  }
+
+  // 3. Key: server env first; a body key is honored ONLY for a signed-in
+  //    admin (dev convenience). Anonymous callers can never bring a key,
+  //    and the env key is only spent behind the checks above.
   const { modelApiKey } = useRuntimeConfig(event)
-  const apiKey = modelApiKey || (typeof body.apiKey === 'string' ? body.apiKey.trim() : '')
+  const apiKey = modelApiKey || (admin && typeof body.apiKey === 'string' ? body.apiKey.trim() : '')
   if (!apiKey) {
     throw createError({
       statusCode: 503,
-      statusMessage: 'No Meta API key configured. Set NITRO_MODEL_API_KEY on the server or paste a key in Admin → Settings.'
+      statusMessage: 'No Meta API key configured. Set NITRO_MODEL_API_KEY on the server.'
     })
   }
 

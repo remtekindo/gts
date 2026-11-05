@@ -9,9 +9,12 @@ const { t } = useLocale()
 const signedIn = ref(false)
 const dashboardTo = ref('/auth')
 
-onMounted(() => {
+onMounted(async () => {
   signedIn.value = !!getAuth()
-  if (signedIn.value) dashboardTo.value = postLoginPath()
+  if (signedIn.value) {
+    const state = await fetchSessionState()
+    dashboardTo.value = postLoginPath(state.username ? state.materials : undefined)
+  }
 })
 
 const owned = computed(() => MATERIALS.filter(m => m.status === 'owned'))
