@@ -6,6 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Changed
+- **Material dashboard: Performance merged into one section**: the
+  Performance Journey and Performance cards are now a single card —
+  journey chart + overall score on top, radar + skill scores below.
+
+### Changed
 - **Material dashboard grids**: action cards (Continue, Live Test, Playlist)
   now sit in a full-width 3-column row; Available Papers moved below them
   as a full-width 2-column grid.
