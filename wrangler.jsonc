@@ -1,6 +1,6 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "gts",
+  "name": "gts-7ac",
   "pages_build_output_dir": "dist",
   "compatibility_date": "2025-07-15",
   "d1_databases": [
