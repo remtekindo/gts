@@ -12,6 +12,7 @@ const router = useRouter()
 const base = computed(() => `/m/${props.material.slug}`)
 const nav = computed(() => [
   { label: t('nav.dashboard'), to: base.value },
+  { label: t('nav.liveTest'), to: `${base.value}/live-test` },
   { label: t('nav.papers'), to: `${base.value}/papers` },
   { label: t('nav.performance'), to: `${base.value}/performance` },
   { label: 'Leaderboard', to: `${base.value}/leaderboard` }

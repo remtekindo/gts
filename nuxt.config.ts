@@ -4,6 +4,10 @@ import tailwindcss from '@tailwindcss/vite'
 export default defineNuxtConfig({
   compatibilityDate: '2025-07-15',
   devtools: { enabled: true },
+  runtimeConfig: {
+    // Filled from NITRO_MODEL_API_KEY at runtime. Never expose to the client.
+    modelApiKey: ''
+  },
   css: ['~/assets/css/main.css'],
   vite: {
     plugins: [tailwindcss()]

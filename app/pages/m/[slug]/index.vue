@@ -152,6 +152,18 @@ const continuePaper = computed(() => papers.value[0])
         </NuxtLink>
       </div>
 
+      <!-- Live test with AI -->
+      <div class="rounded-2xl border border-emerald-200 bg-emerald-50 dark:border-emerald-800 dark:bg-emerald-950 p-5">
+        <h2 class="font-bold text-slate-800 dark:text-slate-200">{{ t('liveTest.cardTitle') }}</h2>
+        <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">{{ t('liveTest.cardSub') }}</p>
+        <NuxtLink
+          :to="`${base}/live-test`"
+          class="mt-3 inline-block text-sm font-semibold px-4 py-2.5 rounded-xl bg-emerald-600 text-white hover:bg-emerald-700 transition-colors"
+        >
+          {{ t('liveTest.cardCta') }}
+        </NuxtLink>
+      </div>
+
       <!-- Available papers -->
       <div>
         <div class="flex items-center justify-between mb-3">
