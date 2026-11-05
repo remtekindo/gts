@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Added
+- **Live on Cloudflare Pages**: https://gts-7ac.pages.dev (project `gts`).
+  Remote D1 `gts-db` bound, schema applied, Meta API key set as a Pages
+  secret — the Live Test now generates real questions in production.
+  Repository made public at https://github.com/remtekindo/gts.
 - **Cloudflare Pages + D1 groundwork**: Nitro preset `cloudflare-pages`,
   `wrangler.jsonc` (D1 binding `DB`), `migrations/0001_init.sql`
   (`questions`, `test_results`, `users`), `server/utils/d1.ts`, and

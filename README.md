@@ -2,6 +2,11 @@
 
 Multi-subject online testing platform. English first, more subjects later.
 
+**Live:** https://gts-7ac.pages.dev (Cloudflare Pages, project `gts` — the
+`gts.pages.dev` subdomain was already taken, so Cloudflare assigned
+`gts-7ac.pages.dev`). **Repository:** public at
+https://github.com/remtekindo/gts.
+
 **What this is:** an assessment-first testing platform — users pay for tests and an instant predicted score/level, NOT theory lessons.
 **What this is NOT:** a course app, a chatbot tutor, or an official TOEIC/TOEFL/IELTS product. Not affiliated with or endorsed by ETS.
 
@@ -69,31 +74,34 @@ pnpm typecheck   # vue-tsc, must pass with 0 errors
 ## Cloudflare Pages + D1
 
 Deploy target is Cloudflare Pages (static + Pages Functions) with D1 as the
-database. Local verification done 5 Nov 2026: `pnpm build` (cloudflare-pages
-preset) + `wrangler pages dev --d1=DB` serves the app, and
-`GET /api/health/d1` reports the bound tables (`questions`, `test_results`,
-`users`) with a live row count.
+database. **Live since 5 Nov 2026:** https://gts-7ac.pages.dev (project
+`gts`), D1 database `gts-db` (`df450308-8a55-45e5-a992-4547646055c7`, APAC)
+bound as `DB`, migrations applied, `GET /api/health/d1` returns the live
+tables (`questions`, `test_results`, `users`). The Meta API key is set as a
+Pages secret (`NITRO_MODEL_API_KEY`), so the Live Test generates for real.
+Local verification: `pnpm build` (cloudflare-pages preset) +
+`wrangler pages dev --d1=DB` serves the app, and the health endpoint reports
+the bound tables with a live row count.
 
-### First-time setup (from your own machine — needs your Cloudflare login)
+### Deploy (from your own machine — needs your Cloudflare login)
+
+```bash
+pnpm build
+npx wrangler pages deploy dist
+```
+
+First-time setup (already done 5 Nov 2026, kept here for reference):
 
 ```bash
 npx wrangler login
 npx wrangler d1 create gts-db        # copy the database_id it prints
-```
-
-Paste the `database_id` into `wrangler.jsonc` (replace
-`REPLACE_WITH_D1_DATABASE_ID`), then:
-
-```bash
 npx wrangler d1 migrations apply gts-db --remote
-npx wrangler pages deploy dist      # after pnpm build
-```
-
-Set the Meta API key as a Pages secret (production path for the live test):
-
-```bash
 npx wrangler pages secret put NITRO_MODEL_API_KEY
 ```
+
+Note the project name is `gts` — `gts-7ac` is only the assigned
+`pages.dev` subdomain, not the project name. Secrets only take effect on
+the next deployment, so redeploy after setting one.
 
 ### Local D1 check
 
