@@ -447,7 +447,8 @@ export default {
         "hourlyTitle": "Calls by hour (WIB)",
         "empty": "No AI usage in this period yet.",
         "unavailable": "Usage data is not available — the D1 store is not connected on this server, so AI calls made in this mode are not recorded. Locally, run `pnpm run dev:d1` for the real store.",
-        "rateNote": "Rates: {input}/1M input tokens · {output}/1M output tokens · Exchange rate Rp{rate}/USD · Estimate, not a bill."
+        "rateNote": "Rates: {input}/1M input tokens · {output}/1M output tokens · Exchange rate Rp{rate}/USD · Estimate, not a bill.",
+        "details": "See details"
       }
     },
     "questions": {
@@ -522,6 +523,7 @@ export default {
       "llmRateLimited": "Meta AI rate limit reached — showing local analysis instead.",
       "llmMetaError": "Meta API rejected the request — the API key may be invalid or revoked. Check NITRO_MODEL_API_KEY, then restart the dev server.",
       "llmUnavailable": "Meta AI is unavailable right now — showing local analysis instead.",
+      "processing": "AI is processing your audit…"
     },
     "databases": {
       "heading": "Question databases",
@@ -593,6 +595,7 @@ export default {
       "heading": "Question reports",
       "tab_qc": "Reports",
       "tab_results": "Test results",
+      "tab_ai-usage": "AI usage",
       "sub": "QC queue: user-reported question issues.",
       "status_all": "All",
       "status_pending": "Pending",
@@ -602,7 +605,23 @@ export default {
       "resolve": "Mark resolved",
       "dismiss": "Dismiss",
       "viewQuestion": "View question",
-      "empty": "No reports with this status."
+      "empty": "No reports with this status.",
+      "aiUsage": {
+        "explainerTitle": "Why is the output 1,500++ tokens?",
+        "explainerBody": "Completion tokens are not just the reply text you see. The model returns a structured JSON answer (reply + findings + title), and before answering it reasons first (reasoning_effort 'low') — those hidden reasoning tokens are also counted by Meta as completion tokens.\n\nPrompt tokens come from the system prompt plus the bank context (10 sample items + totals). Reasoning tokens are part of completion tokens, not extra — total tokens are always prompt + completion. Rows recorded before reasoning tracking show '—' for reasoning instead of 0.",
+        "rowsTitle": "Per-call detail",
+        "rowsEmpty": "No AI calls in this period.",
+        "colTime": "Time (WIB)",
+        "colEndpoint": "Endpoint",
+        "colModel": "Model",
+        "colPrompt": "Prompt",
+        "colCompletion": "Completion",
+        "colReasoning": "Reasoning",
+        "colTotal": "Total",
+        "colCost": "Est. cost",
+        "endpointAudit": "Audit chat",
+        "endpointLiveTest": "Live Test"
+      }
     },
     "users": {
       "heading": "Users",

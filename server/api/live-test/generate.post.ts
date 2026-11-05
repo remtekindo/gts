@@ -139,7 +139,7 @@ function validateBatch(questions: GenQuestion[], exclude: Set<string>): { valid:
   return { valid, errors }
 }
 
-async function callMeta(prompt: string, apiKey: string): Promise<{ questions: GenQuestion[], usage: Record<string, number> }> {
+async function callMeta(prompt: string, apiKey: string): Promise<{ questions: GenQuestion[], usage: Record<string, unknown> }> {
   const body = {
     model: MODEL,
     messages: [
@@ -166,7 +166,7 @@ async function callMeta(prompt: string, apiKey: string): Promise<{ questions: Ge
         const text = await res.text()
         throw new Error(`Meta API HTTP ${res.status}: ${text.slice(0, 300)}`)
       }
-      const data = await res.json() as { choices?: Array<{ message?: { content?: string } }>, usage?: Record<string, number> }
+      const data = await res.json() as { choices?: Array<{ message?: { content?: string } }>, usage?: Record<string, unknown> }
       const content = data.choices?.[0]?.message?.content
       if (!content) throw new Error('Empty response content from Meta API')
       const parsed = JSON.parse(content) as { questions?: GenQuestion[] }
@@ -182,7 +182,7 @@ async function callMeta(prompt: string, apiKey: string): Promise<{ questions: Ge
 
 import { getAdminSession, getAnonSid, getClientIp } from '../../utils/auth'
 import { checkRateLimit } from '../../utils/rate-limit'
-import { recordAiUsage } from '../../utils/ai-usage'
+import { recordAiUsage, reasoningTokensFromUsage } from '../../utils/ai-usage'
 import { getRequestDb } from '../../utils/user-store'
 
 export default defineEventHandler(async (event) => {
@@ -237,18 +237,21 @@ export default defineEventHandler(async (event) => {
   let lastErrors: string[] = []
   // Up to 3 API calls to fill the batch (model may return dupes/empties).
   for (let attempt = 0; attempt < 3 && collected.length < count; attempt++) {
-    let res: { questions: GenQuestion[], usage: Record<string, number> }
+    let res: { questions: GenQuestion[], usage: Record<string, unknown> }
     try {
       res = await callMeta(prompt, apiKey)
     } catch (e) {
       throw createError({ statusCode: 502, statusMessage: `Meta API error: ${(e as Error).message}` })
     }
     // Log the call (best-effort) so the Overview AI card counts it.
+    // Reasoning tokens are recorded too when Meta reports them — they
+    // are part of completion, not extra (see server/utils/ai-usage.ts).
     await recordAiUsage(getRequestDb(event), {
       endpoint: 'live-test',
       model: MODEL,
       promptTokens: Number(res.usage?.prompt_tokens) || 0,
-      completionTokens: Number(res.usage?.completion_tokens) || 0
+      completionTokens: Number(res.usage?.completion_tokens) || 0,
+      reasoningTokens: reasoningTokensFromUsage(res.usage)
     })
     const { valid, errors } = validateBatch(res.questions, new Set([...exclude, ...collected.map(q => normalize(q.stem))]))
     lastErrors = errors

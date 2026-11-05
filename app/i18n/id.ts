@@ -447,7 +447,8 @@ export default {
         "hourlyTitle": "Pemanggilan per jam (WIB)",
         "empty": "Belum ada pemakaian AI pada periode ini.",
         "unavailable": "Data pemakaian tidak tersedia — D1 belum tersambung di server ini, jadi panggilan AI di mode ini tidak tercatat. Di lokal, jalankan `pnpm run dev:d1` untuk store beneran.",
-        "rateNote": "Tarif: {input}/1Jt token input · {output}/1Jt token output · Kurs Rp{rate}/USD · Estimasi, bukan tagihan."
+        "rateNote": "Tarif: {input}/1Jt token input · {output}/1Jt token output · Kurs Rp{rate}/USD · Estimasi, bukan tagihan.",
+        "details": "Lihat detail"
       }
     },
     "questions": {
@@ -522,6 +523,7 @@ export default {
       "llmRateLimited": "Batas pemakaian Meta AI tercapai — menampilkan analisis lokal.",
       "llmMetaError": "Meta API menolak permintaan — API key mungkin tidak valid atau sudah dicabut. Periksa NITRO_MODEL_API_KEY, lalu restart dev server.",
       "llmUnavailable": "Meta AI sedang tidak tersedia — menampilkan analisis lokal.",
+      "processing": "AI sedang memproses auditmu…"
     },
     "databases": {
       "heading": "Database soal",
@@ -593,6 +595,7 @@ export default {
       "heading": "Laporan soal",
       "tab_qc": "Laporan",
       "tab_results": "Hasil tes",
+      "tab_ai-usage": "Konsumsi AI",
       "sub": "Antrian QC: masalah soal yang dilaporkan user.",
       "status_all": "Semua",
       "status_pending": "Pending",
@@ -602,7 +605,23 @@ export default {
       "resolve": "Tandai selesai",
       "dismiss": "Tolak",
       "viewQuestion": "Lihat soal",
-      "empty": "Tidak ada laporan dengan status ini."
+      "empty": "Tidak ada laporan dengan status ini.",
+      "aiUsage": {
+        "explainerTitle": "Kenapa output 1.500++ token?",
+        "explainerBody": "Token completion bukan hanya teks balasan yang terlihat. Model mengembalikan jawaban JSON terstruktur (reply + findings + title), dan sebelum menjawab model berpikir dulu (reasoning_effort 'low') — token penalaran tersembunyi itu juga dihitung Meta sebagai token completion.\n\nToken prompt berasal dari system prompt + konteks bank (10 contoh soal + angka total). Token reasoning adalah bagian dari token completion, bukan tambahan — jadi total token selalu prompt + completion. Baris yang tercatat sebelum pelacakan reasoning menampilkan '—' untuk reasoning, bukan 0.",
+        "rowsTitle": "Rincian per panggilan",
+        "rowsEmpty": "Belum ada panggilan AI pada periode ini.",
+        "colTime": "Waktu (WIB)",
+        "colEndpoint": "Endpoint",
+        "colModel": "Model",
+        "colPrompt": "Prompt",
+        "colCompletion": "Completion",
+        "colReasoning": "Reasoning",
+        "colTotal": "Total",
+        "colCost": "Estimasi biaya",
+        "endpointAudit": "Audit chat",
+        "endpointLiveTest": "Live Test"
+      }
     },
     "users": {
       "heading": "Pengguna",

@@ -73,7 +73,7 @@ Rules:
   ]
 }
 
-async function callMeta(body: AuditChatBody, apiKey: string): Promise<{ reply: string, findings: string[], title: string, usage: Record<string, number> }> {
+async function callMeta(body: AuditChatBody, apiKey: string): Promise<{ reply: string, findings: string[], title: string, usage: Record<string, unknown> }> {
   const payload = {
     model: MODEL,
     messages: buildMessages(body),
@@ -98,7 +98,7 @@ async function callMeta(body: AuditChatBody, apiKey: string): Promise<{ reply: s
         const text = await res.text()
         throw new Error(`Meta API HTTP ${res.status}: ${text.slice(0, 300)}`)
       }
-      const data = await res.json() as { choices?: Array<{ message?: { content?: string } }>, usage?: Record<string, number> }
+      const data = await res.json() as { choices?: Array<{ message?: { content?: string } }>, usage?: Record<string, unknown> }
       const content = data.choices?.[0]?.message?.content
       if (!content) throw new Error('Empty response content from Meta API')
       const parsed = JSON.parse(content) as { reply?: string, findings?: string[], title?: string }
@@ -119,7 +119,7 @@ async function callMeta(body: AuditChatBody, apiKey: string): Promise<{ reply: s
 
 import { getAdminSession, getClientIp } from '../../utils/auth'
 import { checkRateLimit } from '../../utils/rate-limit'
-import { recordAiUsage } from '../../utils/ai-usage'
+import { recordAiUsage, reasoningTokensFromUsage } from '../../utils/ai-usage'
 import { getRequestDb } from '../../utils/user-store'
 
 export default defineEventHandler(async (event) => {
@@ -169,7 +169,7 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  let answer: { reply: string, findings: string[], title: string, usage: Record<string, number> }
+  let answer: { reply: string, findings: string[], title: string, usage: Record<string, unknown> }
   try {
     answer = await callMeta({ ...body, prompt }, apiKey)
   } catch (e) {
@@ -177,11 +177,14 @@ export default defineEventHandler(async (event) => {
   }
 
   // 4. Log the call (best-effort) so the Overview AI card counts it.
+  // Reasoning tokens are recorded too when Meta reports them — they
+  // are part of completion, not extra (see server/utils/ai-usage.ts).
   await recordAiUsage(getRequestDb(event), {
     endpoint: 'audit-chat',
     model: MODEL,
     promptTokens: Number(answer.usage.prompt_tokens) || 0,
-    completionTokens: Number(answer.usage.completion_tokens) || 0
+    completionTokens: Number(answer.usage.completion_tokens) || 0,
+    reasoningTokens: reasoningTokensFromUsage(answer.usage)
   })
 
   return {

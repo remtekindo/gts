@@ -9,6 +9,12 @@
  * histogram with the peak hour. No dummy rows are ever seeded:
  * an empty table returns zeros and peakHour null.
  *
+ * Optional ?rows=1 adds the newest per-call rows of the same period
+ * (max 50, newest first — each with prompt/completion/reasoning
+ * tokens; reasoning is null when it was not recorded). The Reports
+ * "Konsumsi AI" tab uses it; the Overview card does not ask for it,
+ * so its response shape is unchanged.
+ *
  * 401 when the request has no admin session; 503 when the usage
  * store is not available on this server (plain `pnpm dev` has no
  * D1 binding) — the card then shows an honest "no data" state.
@@ -37,6 +43,7 @@ export default defineEventHandler(async (event) => {
   const q = getQuery(event)
   const rawPeriod = typeof q.period === 'string' ? q.period : '30d'
   const period = ['today', '7d', '30d', 'all'].includes(rawPeriod) ? rawPeriod : '30d'
+  const withRows = q.rows === '1'
   let rows
   try {
     rows = await fetchAiUsageRows(db, periodStartIso(period))
@@ -53,6 +60,7 @@ export default defineEventHandler(async (event) => {
   return {
     ...summarizeAiUsage(rows, period),
     rates: AI_USAGE_RATES,
-    currency: 'IDR'
+    currency: 'IDR',
+    ...(withRows ? { rows: rows.slice(0, 50) } : {})
   }
 })

@@ -37,6 +37,35 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   endpoints answer 503 there by design — the README now documents
   both modes and the per-endpoint table instead of leaving the 503s
   unexplained.
+- **AI usage detail tab** (5 Nov 2026): Reports → "Konsumsi AI"
+  (`GET /api/admin/ai-usage?rows=1` adds the newest 50 per-call rows,
+  same period as the summary) shows the same summary as the Overview
+  card — the card itself links there ("See details" / "Lihat detail",
+  `?tab=ai-usage`) — plus a per-call table (time in WIB, endpoint,
+  model, prompt / completion / reasoning / total tokens, est. cost)
+  and a short explainer for why completion tokens exceed the visible
+  reply: the model returns structured JSON (reply + findings + title)
+  and reasons first (`reasoning_effort: 'low'`), so hidden reasoning
+  tokens count as completion tokens. Both pages share one
+  `AiUsagePanel` component, so the numbers can never drift apart.
+- **Reasoning tokens recorded** (5 Nov 2026):
+  `migrations/0004_ai_usage_reasoning.sql` adds a nullable
+  `reasoning_tokens` column to `ai_usage`; both Meta call sites
+  (Live Test, audit chat) store
+  `usage.completion_tokens_details.reasoning_tokens` when Meta
+  reports it. Reasoning is a subset of completion, never extra —
+  totals and cost still use prompt + completion only, so nothing is
+  double-counted. Rows written before this change show "—" for
+  reasoning, never 0. Local D1 files migrated (CLI file via wrangler,
+  pages-dev file via sqlite3); remote migration is the owner's step
+  (`--remote`).
+- **Audits chat processing state** (5 Nov 2026): while the LLM
+  answers (~6 s for a Meta call) the chat shows an "AI sedang
+  memproses…" bubble with animated dots and the composer is disabled
+  — the wait reads as working, not frozen.
+- **New chat button on Audits** (5 Nov 2026): "+ New chat" in the
+  sidebar (desktop) and the History tab (mobile) starts a fresh
+  session; past sessions stay in the history list.
 
 ### Changed
 - **Google Sign-In replaces the password login — for everyone**
@@ -58,6 +87,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   (`migrations/0002_users_google.sql`); Admin → Users lists real
   accounts and grants roles (promote/demote admin) and material/package
   access without paying — server-enforced, effective immediately.
+- **Audit report detail is full height** (5 Nov 2026): the report
+  modal now stretches to the bottom of the viewport (header fixed,
+  body scrolls) instead of a short `max-h-[85vh]` box, so long
+  reports need as little inner scrolling as possible.
+- **Audits category cards match the composer width** (5 Nov 2026):
+  the three cards (Audit volume / Add volume / User analysis) share
+  the composer's `max-w-3xl` wrapper, so the cards row and the
+  textarea are exactly the same width on desktop and mobile.
   The 18 seed demo users were removed 5 Nov 2026 (see Removed below);
   the Users page is real accounts only. Question bank and test results
   are still localStorage — only identity/privilege moved to D1.

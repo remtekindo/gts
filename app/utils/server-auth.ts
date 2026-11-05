@@ -145,6 +145,17 @@ export interface AiUsageModelRow {
   costIdr: number
 }
 
+export interface AiUsageRow {
+  id: number
+  endpoint: string
+  model: string
+  promptTokens: number
+  completionTokens: number
+  /** Hidden reasoning tokens (subset of completionTokens), or null when not recorded. */
+  reasoningTokens: number | null
+  createdAt: string
+}
+
 export interface AiUsageSummary {
   period: string
   totalCalls: number
@@ -159,14 +170,16 @@ export interface AiUsageSummary {
   peakHour: number | null
   rates: { inputUsdPerMtok: number, outputUsdPerMtok: number }
   currency: string
+  /** Newest per-call rows (max 50) — only when requested with { rows: true }. */
+  rows?: AiUsageRow[]
 }
 
 export type AiUsagePeriod = 'today' | '7d' | '30d' | 'all'
 
 /** AI usage summary, or an error code ('unavailable' when D1 is not connected). */
-export async function fetchAiUsage(period: AiUsagePeriod): Promise<{ ok: true, summary: AiUsageSummary } | { ok: false, code: string }> {
+export async function fetchAiUsage(period: AiUsagePeriod, opts?: { rows?: boolean }): Promise<{ ok: true, summary: AiUsageSummary } | { ok: false, code: string }> {
   try {
-    const res = await $fetch<AiUsageSummary>('/api/admin/ai-usage', { query: { period } })
+    const res = await $fetch<AiUsageSummary>('/api/admin/ai-usage', { query: { period, ...(opts?.rows ? { rows: '1' } : {}) } })
     return { ok: true, summary: res }
   } catch (e) {
     return { ok: false, code: errorCode(e) ?? 'unavailable' }

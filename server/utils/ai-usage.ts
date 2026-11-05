@@ -3,7 +3,13 @@
  *
  * Both server routes that call Meta (Live Test + admin audit chat)
  * record here: model, prompt/completion tokens (from the `usage`
- * field of Meta's response), endpoint, and timestamp. The Overview
+ * field of Meta's response), endpoint, and timestamp. Since
+ * migration 0004 they also record `reasoning_tokens` when Meta
+ * reports it (`usage.completion_tokens_details.reasoning_tokens`):
+ * hidden reasoning tokens are a SUBSET of completion tokens, never
+ * extra — totals and cost still use prompt + completion only. NULL
+ * means "not recorded" (older rows, or a response without the
+ * breakdown) and is displayed as "—", never as 0. The Overview
  * "Aktivitas Penggunaan AI" card reads this table — so its numbers
  * are real, never seeded. An empty table honestly means "no usage
  * yet". Recording is best-effort and never throws: a logging failure
@@ -30,6 +36,8 @@ export interface AiUsageRow {
   model: string
   promptTokens: number
   completionTokens: number
+  /** Hidden reasoning tokens (subset of completionTokens), or null when not recorded. */
+  reasoningTokens: number | null
   createdAt: string
 }
 
@@ -63,20 +71,32 @@ export function costUsd(promptTokens: number, completionTokens: number): number 
     + (completionTokens / 1_000_000) * AI_USAGE_RATES.outputUsdPerMtok
 }
 
+/** Read the hidden reasoning-token count out of a Meta `usage` object.
+ * Meta's OpenAI-compatible usage may carry
+ * `completion_tokens_details.reasoning_tokens`; anything else (absent,
+ * wrong shape, negative) is "not recorded" → null, never 0. */
+export function reasoningTokensFromUsage(usage: unknown): number | null {
+  const details = (usage as { completion_tokens_details?: { reasoning_tokens?: unknown } } | null)?.completion_tokens_details
+  const n = details?.reasoning_tokens
+  if (typeof n !== 'number' || !Number.isFinite(n) || n < 0) return null
+  return Math.floor(n)
+}
+
 /** Record one Meta API call. Best-effort: never throws. */
 export async function recordAiUsage(
   db: D1Database | null,
-  entry: { endpoint: string, model: string, promptTokens: number, completionTokens: number }
+  entry: { endpoint: string, model: string, promptTokens: number, completionTokens: number, reasoningTokens?: number | null }
 ): Promise<void> {
   if (!db) return
   try {
     await db.prepare(
-      'INSERT INTO ai_usage (endpoint, model, prompt_tokens, completion_tokens) VALUES (?1, ?2, ?3, ?4)'
+      'INSERT INTO ai_usage (endpoint, model, prompt_tokens, completion_tokens, reasoning_tokens) VALUES (?1, ?2, ?3, ?4, ?5)'
     ).bind(
       entry.endpoint,
       entry.model,
       Math.max(0, Math.floor(entry.promptTokens)),
-      Math.max(0, Math.floor(entry.completionTokens))
+      Math.max(0, Math.floor(entry.completionTokens)),
+      entry.reasoningTokens == null ? null : Math.max(0, Math.floor(entry.reasoningTokens))
     ).run()
   } catch (e) {
     console.warn('[ai-usage] record failed:', (e as Error).message)
@@ -107,7 +127,7 @@ export function periodStartIso(period: string, nowMs = Date.now()): string | nul
 
 /** Raw rows for a period (newest first, capped — the card aggregates client-side data from here). */
 export async function fetchAiUsageRows(db: D1Database, sinceIso: string | null): Promise<AiUsageRow[]> {
-  const base = 'SELECT id, endpoint, model, prompt_tokens, completion_tokens, created_at FROM ai_usage'
+  const base = 'SELECT id, endpoint, model, prompt_tokens, completion_tokens, reasoning_tokens, created_at FROM ai_usage'
   const stmt = sinceIso
     ? db.prepare(`${base} WHERE created_at >= ?1 ORDER BY created_at DESC LIMIT 5000`).bind(sinceIso)
     : db.prepare(`${base} ORDER BY created_at DESC LIMIT 5000`)
@@ -118,6 +138,7 @@ export async function fetchAiUsageRows(db: D1Database, sinceIso: string | null):
     model: String(r.model || ''),
     promptTokens: Number(r.prompt_tokens) || 0,
     completionTokens: Number(r.completion_tokens) || 0,
+    reasoningTokens: r.reasoning_tokens === null || r.reasoning_tokens === undefined ? null : Number(r.reasoning_tokens),
     createdAt: String(r.created_at || '')
   }))
 }

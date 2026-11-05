@@ -208,10 +208,16 @@ login was built the same day and replaced before it ever deployed).
   never pretends a local answer came from the LLM. Meta errors
   surface as 502.
 - **AI usage is logged, not estimated from thin air**
-  (`migrations/0003_ai_usage.sql`, `server/utils/ai-usage.ts`): every
-  Meta call (Live Test batches + audit chats) writes one row to the
-  `ai_usage` table — model, prompt/completion tokens (from Meta's
-  `usage` field), endpoint, UTC timestamp. The Overview card
+  (`migrations/0003_ai_usage.sql`, `migrations/0004_ai_usage_reasoning.sql`,
+  `server/utils/ai-usage.ts`): every Meta call (Live Test batches +
+  audit chats) writes one row to the `ai_usage` table — model,
+  prompt/completion tokens (from Meta's `usage` field), endpoint, UTC
+  timestamp. Since migration 0004 the row also carries
+  `reasoning_tokens` when Meta reports it
+  (`usage.completion_tokens_details.reasoning_tokens`): hidden
+  reasoning tokens are a SUBSET of completion tokens, never extra —
+  totals and cost still use prompt + completion only. NULL means "not
+  recorded" and is shown as "—", never as 0. The Overview card
   "Aktivitas Penggunaan AI" reads it via `GET /api/admin/ai-usage`
   (admin-only; 503 when D1 is not connected) with a period selector
   (today / 7 days / 30 days, default / all time): per-model
@@ -221,7 +227,14 @@ login was built the same day and replaced before it ever deployed).
   Rp16,500/USD — both shown in the UI and labeled "estimasi", never
   presented as a bill. An empty table shows an honest empty state
   (0 calls, 0 tokens, Rp0, "belum ada data"); no dummy rows are
-  ever seeded.
+  ever seeded. The card links to a detail tab — Reports → "Konsumsi
+  AI" (`GET /api/admin/ai-usage?rows=1` adds the newest 50 per-call
+  rows) — with the same summary plus a per-call table (time in WIB,
+  endpoint, model, prompt / completion / reasoning / total tokens,
+  est. cost) and a short explainer for why completion tokens exceed
+  the visible reply: the model returns structured JSON (reply +
+  findings + title) and reasons first (`reasoning_effort: 'low'`), so
+  hidden reasoning tokens count as completion tokens.
 - **Live Test endpoint is session-gated + rate-limited**
   (`POST /api/live-test/generate`): no session → 401; anonymous
   visitors get 12 batches/hour, signed-in admins 60/hour (per client
@@ -317,10 +330,10 @@ There are two D1 databases, and they must not be confused:
   DB is scratch, the remote DB is not. Note: a fresh pages-dev file
   starts with NO tables (wrangler does not apply migrations to it), so
   login upserts and the ai-usage endpoint fail with "no such table"
-  until the migrations are applied to that file — apply the three
+  until the migrations are applied to that file — apply the four
   `migrations/*.sql` files to it with sqlite3 and record them in its
   `d1_migrations` table (same names as wrangler records: `0001_init.sql`,
-  `0002_users_google.sql`, `0003_ai_usage.sql`).
+  `0002_users_google.sql`, `0003_ai_usage.sql`, `0004_ai_usage_reasoning.sql`).
 
 Remote has no such split — one database, one `migrations apply --remote`.
 
@@ -404,7 +417,7 @@ server/
   utils/auth.ts                 # HMAC session tokens, anon visitor ids, admin allowlist
   utils/google-auth.ts          # Google ID-token verification (JWKS, claims)
   utils/user-store.ts           # D1 users + grants, access resolution
-  utils/ai-usage.ts             # ai_usage log: record/summarize (WIB hours, IDR estimate)
+  utils/ai-usage.ts             # ai_usage log: record/summarize (WIB hours, IDR estimate, reasoning split)
   utils/catalog.ts              # server-side material/package catalog (grant targets)
   utils/rate-limit.ts           # in-memory fixed-window limiter
   utils/d1.ts                   # getDb(event) for the D1 binding
@@ -416,7 +429,7 @@ server/
   api/admin/users/role.post.ts  # promote/demote (admin-only)
   api/admin/users/grants.post.ts  # replace grants (admin-only)
   api/admin/audit-chat.post.ts  # Audits chat via Meta LLM (admin-only, 30/hr)
-  api/admin/ai-usage.get.ts     # AI usage summary for the Overview card (admin-only)
+  api/admin/ai-usage.get.ts     # AI usage summary (+ optional ?rows=1 per-call rows) for Overview + Reports (admin-only)
   api/live-test/generate.post.ts  # session-gated, rate-limited Meta generation
   api/health/d1.get.ts          # public D1 probe (tables + question count)
 scripts/
@@ -472,6 +485,7 @@ connection. No demo users remain anywhere.
 | Audits | Volume audit / duplicates / key distribution / unrated | Live bank, computed locally | Yes — local bank |
 | Reports | QC queue | QC reports in localStorage | Empty until a real report exists — no submission path from the test UI yet |
 | Reports | Test results + certificates | Finished tests in this browser (`gts_result_*`) | Yes — local only, per browser |
+| Reports | AI usage detail (Konsumsi AI) | D1 `ai_usage` — same rows as the Overview card, plus a per-call table and a "why 1,500++ tokens" explainer | Yes — D1 |
 | Users | Real users table + role/grant controls | D1 users + grants | Yes — D1 |
 | Settings | Meta API key card | Browser-stored key (dev convenience) | Dev only — production uses `NITRO_MODEL_API_KEY` |
 
@@ -524,8 +538,16 @@ Notes:
   NITRO_MODEL_API_KEY, then restart the dev server."; rate limit →
   429 `rate-limited`. A rejected key is slow: Meta takes ~6 s to
   answer a bogus key, so the fallback reply arrives after a few
-  seconds — not instant, not stuck. `.env` edits need a restart (see
-  Run locally).
+  seconds — not instant, not stuck. While the LLM answers, the chat
+  shows an "AI sedang memproses…" bubble with animated dots and the
+  composer is disabled, so the wait reads as working, not frozen.
+  `.env` edits need a restart (see Run locally).
+  The audits page has a "+ New chat" button (sidebar on desktop,
+  History tab on mobile) that starts a fresh session without deleting
+  history. The report detail view is full height to the bottom of the
+  viewport (header fixed, body scrolls). The three category cards
+  share the composer's `max-w-3xl` wrapper, so the cards row and the
+  textarea are exactly the same width on desktop and mobile.
   Bank numbers behind one audit report, verified against the real
   static bank: 57 questions total (TOEIC LR 21 + TOEIC SW 6 + Free
   Test 30), keys A:18 B:23 C:10 D:6, 0 duplicate stems, 30 missing

@@ -83,6 +83,8 @@ async function send(): Promise<void> {
   messages.value.push({ from: 'user', text })
   input.value = ''
   autoGrow()
+  await nextTick()
+  if (chatBox.value) chatBox.value.scrollTop = chatBox.value.scrollHeight
   try {
     // Real LLM first: the server asks Meta with the real audit
     // context (bank stats computed locally). Any failure falls back
@@ -127,6 +129,14 @@ function autoGrow(): void {
   if (!el) return
   el.style.height = 'auto'
   el.style.height = Math.min(160, el.scrollHeight) + 'px'
+}
+
+/** Start a fresh chat. Past sessions stay in the history list. */
+function newChat(): void {
+  messages.value = []
+  sessionId.value = null
+  input.value = ''
+  tab.value = 'chat'
 }
 
 function openSession(s: ChatSession): void {
@@ -251,10 +261,31 @@ onMounted(() => {
               </div>
             </div>
           </div>
+          <!-- Processing state while the LLM answers (~6s): an assistant
+               bubble with animated dots, so the wait reads as working,
+               not frozen. -->
+          <div v-if="sending" class="max-w-3xl mx-auto w-full px-1">
+            <div class="flex gap-3">
+              <div class="shrink-0 w-8 h-8 rounded-full bg-violet-600 text-white flex items-center justify-center text-sm">✨</div>
+              <div class="flex-1 text-sm leading-relaxed min-w-0">
+                <p class="text-slate-500 dark:text-slate-400">
+                  {{ t('admin.audits.processing') }}
+                  <span class="inline-flex gap-1 ml-1 align-middle">
+                    <span class="inline-block w-1.5 h-1.5 rounded-full bg-violet-500 animate-bounce" />
+                    <span class="inline-block w-1.5 h-1.5 rounded-full bg-violet-500 animate-bounce" style="animation-delay: 150ms" />
+                    <span class="inline-block w-1.5 h-1.5 rounded-full bg-violet-500 animate-bounce" style="animation-delay: 300ms" />
+                  </span>
+                </p>
+              </div>
+            </div>
+          </div>
         </div>
 
-        <!-- Category cards + composer: fixed at bottom, no gap below -->
+        <!-- Category cards + composer: fixed at bottom, no gap below.
+             The cards row shares the composer's max-w-3xl wrapper so
+             both are exactly the same width. -->
         <div class="mt-auto bg-slate-50 dark:bg-slate-950 pt-3 pb-1">
+        <div class="max-w-3xl mx-auto">
         <div class="grid grid-cols-3 gap-2 md:gap-3">
           <button
             class="text-left bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 p-3 hover:border-violet-400 dark:hover:border-violet-500 hover:shadow-lg transition-all"
@@ -281,6 +312,7 @@ onMounted(() => {
             <p class="mt-0.5 text-[11px] text-slate-500 dark:text-slate-400 hidden sm:block">{{ t('admin.audits.cardUserSub') }}</p>
           </button>
         </div>
+        </div>
 
         <!-- Composer -->
         <div class="mt-3">
@@ -290,6 +322,7 @@ onMounted(() => {
                 ref="ta"
                 v-model="input"
                 rows="1"
+                :disabled="sending"
                 :placeholder="t('admin.audits.composerPh')"
                 class="flex-1 bg-transparent text-sm px-3 py-2 outline-none resize-none max-h-40"
                 @keydown="onKeydown"
@@ -310,7 +343,10 @@ onMounted(() => {
 
       <!-- Right sidebar: fixed at right edge, no gap -->
       <aside class="hidden md:block fixed top-0 right-0 h-screen w-72 z-30 bg-slate-50 dark:bg-slate-950 border-l border-slate-200 dark:border-slate-800 overflow-y-auto px-4 py-6">
-        <p class="mt-5 text-xs font-bold uppercase tracking-wide text-slate-400 dark:text-slate-500">{{ t('admin.audits.conversations') }}</p>
+        <div class="mt-5 flex items-center justify-between gap-2">
+          <p class="text-xs font-bold uppercase tracking-wide text-slate-400 dark:text-slate-500">{{ t('admin.audits.conversations') }}</p>
+          <button class="shrink-0 text-xs font-bold text-violet-700 dark:text-violet-300 hover:underline" @click="newChat">+ {{ t('admin.audits.newChat') }}</button>
+        </div>
         <ul class="mt-2 space-y-1.5 max-h-[38vh] overflow-y-auto">
           <li v-for="s in sessions" :key="s.id">
             <div
@@ -343,7 +379,10 @@ onMounted(() => {
 
       <!-- Mobile history tab -->
       <div class="md:hidden" :class="tab === 'history' ? 'block' : 'hidden'">
-        <p class="mt-5 text-xs font-bold uppercase tracking-wide text-slate-400 dark:text-slate-500">{{ t('admin.audits.conversations') }}</p>
+        <div class="mt-5 flex items-center justify-between gap-2">
+          <p class="text-xs font-bold uppercase tracking-wide text-slate-400 dark:text-slate-500">{{ t('admin.audits.conversations') }}</p>
+          <button class="shrink-0 text-xs font-bold text-violet-700 dark:text-violet-300 hover:underline" @click="newChat">+ {{ t('admin.audits.newChat') }}</button>
+        </div>
         <ul class="mt-2 space-y-1.5">
           <li v-for="s in sessions" :key="s.id">
             <button
@@ -419,10 +458,12 @@ onMounted(() => {
       </div>
     </div>
 
-    <!-- Report detail modal -->
-    <div v-if="reportDetail" class="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4" role="dialog" aria-modal="true">
+    <!-- Report detail modal — full height to the bottom of the
+         viewport (header fixed, body scrolls), so the report reads
+         with as little inner scrolling as possible. -->
+    <div v-if="reportDetail" class="fixed inset-0 z-50 flex items-end sm:items-stretch justify-center p-0 sm:p-4" role="dialog" aria-modal="true">
       <div class="absolute inset-0 bg-slate-900/70" />
-      <div class="relative bg-white dark:bg-slate-800 w-full sm:rounded-2xl sm:max-w-lg max-h-[85vh] overflow-y-auto p-5 md:p-6 rounded-t-2xl shadow-2xl border border-slate-200 dark:border-slate-600">
+      <div class="relative bg-white dark:bg-slate-800 w-full sm:rounded-2xl sm:max-w-lg h-[100dvh] sm:h-auto flex flex-col overflow-hidden p-5 md:p-6 rounded-t-2xl shadow-2xl border border-slate-200 dark:border-slate-600">
         <div class="flex items-start justify-between gap-3">
           <div>
             <h2 class="font-bold">{{ reportDetail.title }}</h2>
@@ -430,10 +471,12 @@ onMounted(() => {
           </div>
           <button class="text-slate-400 hover:text-slate-600 px-2 py-1" @click="reportDetail = null" aria-label="Close">✕</button>
         </div>
-        <p class="mt-3 text-sm font-semibold">{{ reportDetail.summary }}</p>
-        <ul class="mt-3 text-sm space-y-1 text-slate-600 dark:text-slate-300 bg-slate-50 dark:bg-slate-900/60 rounded-xl p-4">
-          <li v-for="(d, i) in reportDetail.details" :key="i">{{ d }}</li>
-        </ul>
+        <div class="mt-3 flex-1 overflow-y-auto min-h-0">
+          <p class="text-sm font-semibold">{{ reportDetail.summary }}</p>
+          <ul class="mt-3 text-sm space-y-1 text-slate-600 dark:text-slate-300 bg-slate-50 dark:bg-slate-900/60 rounded-xl p-4">
+            <li v-for="(d, i) in reportDetail.details" :key="i">{{ d }}</li>
+          </ul>
+        </div>
       </div>
     </div>
 

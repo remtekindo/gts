@@ -7,9 +7,25 @@ import {
 definePageMeta({ layout: 'admin' })
 
 const { t } = useLocale()
+const route = useRoute()
 
-type Tab = 'qc' | 'results'
+type Tab = 'qc' | 'results' | 'ai-usage'
 const tab = ref<Tab>('qc')
+
+/* The Overview AI usage card links here with ?tab=ai-usage. Read it
+ * on mount and whenever the query changes (e.g. in-page navigation). */
+function tabFromQuery(): Tab {
+  const q = route.query.tab
+  return q === 'results' || q === 'ai-usage' ? q : 'qc'
+}
+
+onMounted(() => {
+  tab.value = tabFromQuery()
+})
+
+watch(() => route.query.tab, () => {
+  tab.value = tabFromQuery()
+})
 
 function volumeQuery(questionId: string): Record<string, string> {
   const v = findVolumeForQuestion(questionId)
@@ -64,7 +80,7 @@ function formatDate(iso: string): string {
 
     <div class="mt-4 flex gap-1 p-1 rounded-xl bg-slate-100 dark:bg-slate-800 w-fit">
       <button
-        v-for="tb in (['qc', 'results'] as const)" :key="tb"
+        v-for="tb in (['qc', 'results', 'ai-usage'] as const)" :key="tb"
         class="px-4 py-2 rounded-lg text-sm font-semibold transition-colors"
         :class="tab === tb ? 'bg-white dark:bg-slate-900 shadow text-slate-900 dark:text-white' : 'text-slate-500 dark:text-slate-400'"
         @click="tab = tb"
@@ -112,7 +128,7 @@ function formatDate(iso: string): string {
     </template>
 
     <!-- Test results -->
-    <template v-else>
+    <template v-else-if="tab === 'results'">
       <div v-if="attempts.length === 0" class="mt-4 text-sm text-slate-500 dark:text-slate-400 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 p-6 text-center">
         {{ t('admin.results.empty') }}
       </div>
@@ -145,6 +161,12 @@ function formatDate(iso: string): string {
         </div>
       </div>
       <p class="mt-3 text-xs text-slate-400 dark:text-slate-500">{{ t('admin.results.browserNote') }}</p>
+    </template>
+
+    <!-- AI usage detail: same summary as the Overview card, plus the
+         per-call rows table and the "why 1,500++ tokens" explainer. -->
+    <template v-if="tab === 'ai-usage'">
+      <AiUsagePanel detailed class="mt-5" />
     </template>
 
     <!-- Certificate modal -->
