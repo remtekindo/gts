@@ -15,6 +15,21 @@ https://github.com/remtekindo/gts.
 A user signs in, picks a material they own (e.g. TOEIC Listening & Reading), and inside that material takes timed test papers, gets a predicted score with CEFR level plus per-part breakdown. Progress, streaks, and weak areas are tracked per material. New papers ship monthly for subscribers.
 
 **What was pre-existing:** nothing — this repo was created 30 Oct 2026 for the GTS project.
+
+## Meta Global AI Developer Hackathon 2026
+
+GTS was submitted to the Meta Global AI Developer Hackathon 2026
+(26 Oct–4 Nov 2026; late-submission window 5 Nov, submitted 5 Nov 2026
+before 15:00 WIB). Track: **Indie Developer Track**; problem statement:
+**"Build for Your World"**. Team: Remtekindo, solo (refa dewangga).
+Demo video (1:57), public repository, live deployment at
+https://gts-7ac.pages.dev.
+
+For the historical record: this repo predates the hackathon entry — it was
+created 30 Oct 2026 as a real test-prep business, and the decision to enter
+it into the hackathon was made 31 Oct 2026. The Live Test feature (real-time
+question generation via the Meta Model API) was built for the demo. The app
+is a genuine product, not a hackathon-only prototype.
 **What was built on 30 Oct 2026:** the full UI below (page structure inspired by SmartPrep's UX; all code, branding, and question content are original).
 
 ## What was built (30 Oct 2026)

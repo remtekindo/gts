@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Added
+- **Meta Global AI Developer Hackathon 2026 entry**: GTS submitted
+  5 Nov 2026 (late window, before 15:00 WIB) — Indie Developer Track,
+  "Build for Your World", solo team Remtekindo. Demo video (1:57), public
+  repository, live deployment. Historical note: the repo predates the entry
+  (created 30 Oct 2026 as a real test-prep business); the entry decision was
+  made 31 Oct 2026.
 - **Live on Cloudflare Pages**: https://gts-7ac.pages.dev (project `gts`).
   Remote D1 `gts-db` bound, schema applied, Meta API key set as a Pages
   secret — the Live Test now generates real questions in production.
