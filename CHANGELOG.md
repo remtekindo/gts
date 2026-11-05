@@ -5,6 +5,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Changed
+- **Material dashboard rearranged**: Performance card moved under
+  Performance Journey (right column); Continue and Live Test cards moved
+  under Weekly Quest (left column); Available Papers moved below them.
+
 ### Added
 - **Admin → Settings: Meta Model API key in-app**: the key can now be
   pasted once in the admin panel (stored in the admin's browser) and the
