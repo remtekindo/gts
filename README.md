@@ -21,7 +21,7 @@ A user signs in, picks a material they own (e.g. TOEIC Listening & Reading), and
 GTS was submitted to the Meta Global AI Developer Hackathon 2026
 (26 Oct–4 Nov 2026; late-submission window 5 Nov, submitted 5 Nov 2026
 before 15:00 WIB). Track: **Indie Developer Track**; problem statement:
-**"Build for Your World"**. Team: Remtekindo, solo (refa dewangga).
+**"Build for Your World"**. Team: Remtekindo, solo (refa).
 Demo video (1:57), public repository, live deployment at
 https://gts-7ac.pages.dev.
 
