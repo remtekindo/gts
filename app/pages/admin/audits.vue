@@ -33,6 +33,7 @@ const volumes = ref<Volume[]>([])
 /* Real users (Google sign-in, D1) for the user picker + analysis. */
 const realUsers = ref<RealUser[]>([])
 const realUsersLoading = ref(true)
+const realUsersError = ref(false)
 
 function lang(): 'id' | 'en' {
   return locale.value === 'id' ? 'id' : 'en'
@@ -101,7 +102,9 @@ async function send(): Promise<void> {
         ? t('admin.audits.llmNoKey')
         : llm.code === 'rate-limited'
           ? t('admin.audits.llmRateLimited')
-          : t('admin.audits.llmUnavailable')
+          : llm.code === 'meta-error'
+            ? t('admin.audits.llmMetaError')
+            : t('admin.audits.llmUnavailable')
       messages.value.push({ from: 'ai', text: ans.reply, reportId: ans.reportId, source: 'local', note })
     }
   } finally {
@@ -185,7 +188,15 @@ onMounted(() => {
   refreshLists()
   autoGrow()
   void (async () => {
-    realUsers.value = (await fetchRealUsers()) ?? []
+    const list = await fetchRealUsers()
+    if (list === null) {
+      // D1 down (plain `pnpm dev` has no binding) — say so in the
+      // picker instead of the misleading "no accounts yet" text.
+      realUsersError.value = true
+      realUsers.value = []
+    } else {
+      realUsers.value = list
+    }
     realUsersLoading.value = false
   })()
 })
@@ -392,6 +403,7 @@ onMounted(() => {
           <button class="text-slate-400 hover:text-slate-600 px-2 py-1" @click="showUserModal = false" aria-label="Close">✕</button>
         </div>
         <p v-if="realUsersLoading" class="mt-3 text-sm text-slate-400 dark:text-slate-500">{{ t('access.loading') }}</p>
+        <p v-else-if="realUsersError" class="mt-3 text-sm text-red-600 dark:text-red-300 bg-red-50 dark:bg-red-950/60 rounded-xl px-3.5 py-2.5">{{ t('admin.users.realLoadError') }}</p>
         <p v-else-if="realUsers.length === 0" class="mt-3 text-sm text-slate-400 dark:text-slate-500">{{ t('admin.users.realEmpty') }}</p>
         <ul v-else class="mt-3 space-y-2">
           <li v-for="u in realUsers" :key="u.sub">

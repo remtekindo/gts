@@ -446,7 +446,7 @@ export default {
         "peakHourValue": "{h}:00–{h2}:00 WIB",
         "hourlyTitle": "Calls by hour (WIB)",
         "empty": "No AI usage in this period yet.",
-        "unavailable": "Usage data is not available — the D1 store is not connected on this server.",
+        "unavailable": "Usage data is not available — the D1 store is not connected on this server, so AI calls made in this mode are not recorded. Locally, run `pnpm run dev:d1` for the real store.",
         "rateNote": "Rates: {input}/1M input tokens · {output}/1M output tokens · Exchange rate Rp{rate}/USD · Estimate, not a bill."
       }
     },
@@ -520,6 +520,7 @@ export default {
       "localBadge": "Local analysis",
       "llmNoKey": "Meta AI is not configured (no API key) — showing local analysis instead.",
       "llmRateLimited": "Meta AI rate limit reached — showing local analysis instead.",
+      "llmMetaError": "Meta API rejected the request — the API key may be invalid or revoked. Check NITRO_MODEL_API_KEY, then restart the dev server.",
       "llmUnavailable": "Meta AI is unavailable right now — showing local analysis instead.",
     },
     "databases": {
@@ -609,7 +610,7 @@ export default {
       "realHeading": "Real users",
       "realSub": "Google sign-in accounts. Grants set here take effect immediately.",
       "realEmpty": "No Google sign-in accounts yet — accounts appear here after their first sign-in.",
-      "realLoadError": "Could not load real users. The user store may be unavailable on this server.",
+      "realLoadError": "Could not load real users. The user store may be unavailable on this server. Locally, run `pnpm run dev:d1` for the real store.",
       "colRole": "Role",
       "colLastLogin": "Last login",
       "colAccess": "Can open",

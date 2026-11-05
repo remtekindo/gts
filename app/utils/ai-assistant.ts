@@ -104,6 +104,7 @@ const STR: Record<Lang, Record<string, string>> = {
     unratedFound: '{n} soal belum punya level kesulitan:',
     help: 'Saya bisa: "audit bank soal", "cek duplikat", "distribusi kunci jawaban", "soal belum dinilai", "ringkasan bank".',
     unknown: 'Saya belum paham perintah itu. Coba: "audit bank soal", "cek duplikat", atau "distribusi kunci jawaban".',
+    unknownStats: 'Perintah tidak dikenali — berikut ringkasan bank saat ini:',
     doneAudit: 'Audit selesai — {issues} temuan. Hasil lengkap tersimpan di tab Riwayat.',
     doneOk: 'Bank soal bersih, tidak ada temuan. Hasil tersimpan di tab Audit.',
     q: 'soal',
@@ -129,6 +130,7 @@ const STR: Record<Lang, Record<string, string>> = {
     unratedFound: '{n} questions without a difficulty level:',
     help: 'I can: "audit question bank", "check duplicates", "answer key distribution", "unrated questions", "bank summary".',
     unknown: 'I did not understand that. Try: "audit question bank", "check duplicates", or "answer key distribution".',
+    unknownStats: 'Command not recognized — here is the current bank summary:',
     doneAudit: 'Audit done — {issues} findings. Full result saved in the History tab.',
     doneOk: 'Bank is clean, no findings. Result saved in the Audit tab.',
     q: 'questions',
@@ -343,8 +345,14 @@ export interface AuditContext {
   totalQuestions: number
   keyDist: Record<string, number>
   duplicates: { stem: string, ids: string[] }[]
+  /** True totals — the arrays above are samples (first 10), never totals. */
+  totalDuplicates: number
+  totalDuplicateIds: number
   unrated: { id: string, stem: string }[]
+  totalUnrated: number
   noExplanation: number
+  /** Free-test items have no explanation field by design (see mock data). */
+  freeQuestions: number
   userLines: string[]
   userSummary: string | null
 }
@@ -372,8 +380,12 @@ export function buildAuditContext(raw: string, lang: Lang, scopeIds?: Set<string
     totalQuestions: items.length,
     keyDist: dist,
     duplicates: dups.slice(0, 10),
+    totalDuplicates: dups.length,
+    totalDuplicateIds: dups.reduce((n, d) => n + d.ids.length, 0),
     unrated: un.slice(0, 10).map(q => ({ id: q.id, stem: q.stem.slice(0, 80) })),
+    totalUnrated: un.length,
     noExplanation: noExpl,
+    freeQuestions: items.filter(q => q.id.startsWith('free-')).length,
     userLines,
     userSummary
   }
@@ -434,7 +446,11 @@ export function answerPrompt(raw: string, lang: Lang, scopeIds?: Set<string>, us
   if (has('belum dinilai', 'unrated', 'tanpa level', 'level', 'rating', 'dinilai')) return runUnrated(lang, scopeIds)
   if (has('ringkas', 'summary', 'statistik', 'stats', 'bank', 'total')) return runStats(lang, scopeIds)
   if (has('bantuan', 'help', 'bisa apa', 'halo', 'hai', 'hello', 'hi')) return { reply: t(lang, 'help'), reportId: null }
-  return { reply: t(lang, 'unknown'), reportId: null }
+  // Unknown free text (a greeting, a test word, anything else): do not
+  // leave the admin with a bare "I don't understand". Answer with the
+  // labeled bank summary so the reply is always useful.
+  const stats = runStats(lang, scopeIds)
+  return { reply: `${t(lang, 'unknownStats')}\n${stats.reply}`, reportId: stats.reportId }
 }
 
 /* ------------------------------------------------------------------ */

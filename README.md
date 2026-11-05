@@ -82,6 +82,36 @@ pnpm dev
 
 Open http://localhost:3000 — the public landing page. Sign in at http://localhost:3000/auth with Google (one button for everyone — admin or learner; the role is decided server-side). For local sign-in, copy `.env.example` to `.env` and set `NUXT_PUBLIC_GOOGLE_CLIENT_ID` (a Glots OAuth client with http://localhost:3000 as an authorized JavaScript origin) — see [Auth](#auth).
 
+Two local modes — pick the right one:
+
+- `pnpm dev` (plain): no D1 binding exists in this mode, so every
+  endpoint that needs D1 answers **503 by design** (fail closed):
+  `GET /api/health/d1`, `GET /api/admin/users`, `GET /api/admin/ai-usage`,
+  `POST /api/admin/users/role`, `POST /api/admin/users/grants`.
+  Login, session, and the audit-chat fallback still work — the admin
+  pages show an honest "D1 store is not connected" note with the
+  `pnpm run dev:d1` hint instead of failing silently. If the admin
+  panel returns 503s locally, this is almost certainly the cause —
+  it is not a broken binding. **One real consequence: AI calls made
+  in this mode are never recorded.** The audit chat and Live Test
+  call Meta directly and work fine without D1, but their usage rows
+  go nowhere — `recordAiUsage` silently drops them when there is no
+  database — so the Overview AI card has nothing to show for those
+  calls, and the stats are lost for good. The card says so
+  explicitly. Any session whose stats must be kept has to run under
+  `pnpm run dev:d1`.
+- `pnpm run dev:d1`: builds, then serves with a real local D1
+  (`wrangler pages dev dist --d1=DB --port 8788`). All D1 endpoints
+  answer 200. See [Local D1 check](#local-d1-check) for the fresh-file
+  quirk (a new pages-dev file starts with no tables).
+
+**`.env` changes need a dev-server restart.** Nuxt reads `.env` once
+at startup: filling in `NITRO_MODEL_API_KEY` while the server is
+running changes nothing — audit-chat keeps answering 503 `no-key`
+until the server is restarted, after which the key is read and the
+call reaches Meta (a bad key then answers 502 `meta-error`, see the
+Audits chat notes in Admin panel audit below).
+
 ```bash
 pnpm typecheck   # vue-tsc, must pass with 0 errors
 ```
@@ -294,6 +324,47 @@ There are two D1 databases, and they must not be confused:
 
 Remote has no such split — one database, one `migrations apply --remote`.
 
+Per-endpoint behavior, verified 5 Nov 2026 (Playwright, local):
+
+| Endpoint | Plain `pnpm dev` (no D1) | `pnpm run dev:d1` (D1 bound) |
+|---|---|---|
+| `GET /api/health/d1` | 503 `unavailable` | 200, tables listed |
+| `GET /api/admin/users` | 503 | 200, real users |
+| `GET /api/admin/ai-usage` | 503 | 200, totals (0 on a clean DB) |
+| `POST /api/admin/users/role` | 503 | 200/400 (400 for the bootstrap admin) |
+| `POST /api/admin/users/grants` | 503 | 200 |
+| `POST /api/auth/google` | 200 (role from the allowlist) | 200, user row upserted in D1 |
+| `GET /api/auth/session` | 200 | 200 |
+| `POST /api/admin/audit-chat` | 401 without a session; 503 `no-key` without a Meta key | 502 `meta-error` with a dummy key (Meta rejects it, zero real credits) |
+
+A fresh pages-dev file (no tables yet) no longer fails with a bare
+500: `admin/users` and `ai-usage` answer 503 "D1 tables are missing
+for this database — apply the migrations" until the three
+`migrations/*.sql` files are applied to that file with sqlite3 (see
+above). The live site is unaffected — its D1 is bound by the Pages
+project and already carries all tables including `ai_usage` and
+`grants` (verified via `GET /api/health/d1` on 5 Nov 2026).
+
+The two 503s are intentional fail-closed errors, confirmed from the
+owner's machine (5 Nov 2026, 23:04, plain `pnpm dev`):
+`GET /api/admin/ai-usage?period=30d` → 503 "Usage store is not
+available on this server." (`server/api/admin/ai-usage.get.ts:31`)
+and `GET /api/admin/users` → 503 "User store is not available on
+this server." (`server/api/admin/users.get.ts:22`). Both are `h3`
+`createError` throws when `getDb(event)` returns null — the binding
+simply does not exist in plain dev. They are not a broken binding.
+
+**Recording rule: every successful Meta call writes one row.**
+`server/utils/ai-usage.ts` (`recordAiUsage`, best-effort, never
+throws) inserts one `ai_usage` row per call — endpoint, model,
+prompt/completion tokens from Meta's `usage` field, UTC timestamp.
+Both Meta endpoints call it after every successful `callMeta`:
+Live Test once per attempt in its retry loop (up to 3 calls per
+batch — each attempt that reaches Meta is a row), audit chat once
+per answer. Failed calls (502 from Meta, 503 no-key) log nothing —
+no tokens were spent. With no D1 the row is silently dropped (see
+Run locally above) — the Overview card can only show what D1 holds.
+
 ## Project structure
 
 ```
@@ -433,6 +504,36 @@ Notes:
   the answer as a report in the History tab. Without a key it falls back
   to the labeled local analysis, never pretending a local answer came
   from the LLM.
+  Free-form prompts ("testing", greetings) are answered as audit
+  questions, not refused: the old system prompt told the model to say
+  "No audit was requested" for prompts without an audit scope, so a
+  test word got a refusal plus a dump of raw context numbers. The
+  prompt now answers every prompt from the context numbers, and the
+  context sends totals alongside its 10-item samples — the model used
+  to mistake the sample for the total ("10 unrated" was the truncated
+  sample, not a verified count). The local fallback gives the same
+  treatment: an unknown prompt returns a labeled bank summary, not a
+  bare "unknown" line. Duplication was checked, not assumed: typing
+  "testing" and "TEST" produces exactly one reply per send (verified
+  with Playwright) — a doubled block in a chat report is a paste
+  artifact, not an app bug.
+  Fallback chain, in order: no key → 503 `no-key` → labeled local
+  analysis ("Meta AI is not configured"); Meta rejects the key →
+  502 `meta-error` → labeled local analysis with the note "Meta API
+  rejected the request — the API key may be invalid or revoked. Check
+  NITRO_MODEL_API_KEY, then restart the dev server."; rate limit →
+  429 `rate-limited`. A rejected key is slow: Meta takes ~6 s to
+  answer a bogus key, so the fallback reply arrives after a few
+  seconds — not instant, not stuck. `.env` edits need a restart (see
+  Run locally).
+  Bank numbers behind one audit report, verified against the real
+  static bank: 57 questions total (TOEIC LR 21 + TOEIC SW 6 + Free
+  Test 30), keys A:18 B:23 C:10 D:6, 0 duplicate stems, 30 missing
+  explanations — all 30 are Free Test questions, which have no
+  explanation field by design. A report showing "97 questions" counts
+  the browser's localStorage bank (57 static + additions, most likely
+  approved template-draft volumes); the key skew and duplicates in
+  such a report are real bank-quality findings, not audit bugs.
 - **Question bank**: View opens a detail modal that can also **edit**
   stem, options, correct answer, and difficulty (persisted, applied to
   the live bank everywhere). Overview counts now match Packages.

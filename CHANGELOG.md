@@ -31,6 +31,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   0001–0003 re-applied cleanly). The admin row is never created by
   hand — the first Google sign-in upserts it keyed by `google_sub`,
   and the bootstrap allowlist makes it an admin automatically.
+- **`pnpm run dev:d1`** (5 Nov 2026): one command for local dev with
+  a real D1 (`pnpm build && npx wrangler pages dev dist --d1=DB
+  --port 8788`). Plain `pnpm dev` has no D1 binding, so admin D1
+  endpoints answer 503 there by design — the README now documents
+  both modes and the per-endpoint table instead of leaving the 503s
+  unexplained.
 
 ### Changed
 - **Google Sign-In replaces the password login — for everyone**
@@ -136,6 +142,69 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   standard one-line file (`{"extends": "./.nuxt/tsconfig.json"}`);
   typecheck now exits 0 (only the known non-fatal vue-router/volar
   warning remains).
+- **Audits chat refused free-form prompts** (5 Nov 2026): the system
+  prompt told the model to answer "No audit was requested" for any
+  prompt without an audit scope, so typing "testing" got a refusal
+  plus a dump of raw context numbers — and the context only sent
+  10-item samples without totals, so the model reported the sample
+  as the total ("10 unrated"). The prompt now answers every prompt
+  as the audit assistant, never repeats itself, and the context
+  carries totals (`totalDuplicates`, `totalUnrated`, `freeQuestions`)
+  next to the samples. The local fallback also answers unknown
+  prompts with a labeled bank summary instead of a bare "unknown"
+  line. Duplication was reproduction-checked, not assumed: "testing"
+  and "TEST" each produce exactly one reply (Playwright).
+- **Meta key errors were indistinguishable** (5 Nov 2026): a rejected
+  key answered 502 with no code, so the page fell back with the
+  generic "Meta AI is unavailable" note and gave no hint the key
+  itself was the problem. The 502 now carries `data: { code:
+  'meta-error' }` and the page shows "Meta API rejected the request
+  — the API key may be invalid or revoked. Check
+  NITRO_MODEL_API_KEY, then restart the dev server." Verified with a
+  dummy key only (Meta takes ~6 s to reject it, zero real credits);
+  a real-key success path is still the owner's step.
+- **Fresh local D1 file failed with a bare 500** (5 Nov 2026): a new
+  pages-dev SQLite file starts with no tables, and `admin/users` /
+  `ai-usage` threw an uncaught "no such table" error. Both endpoints
+  now catch it and answer 503 "D1 tables are missing for this
+  database — apply the migrations", pointing at the sqlite3 fix in
+  the README. Verified by moving the bound file aside and starting
+  from a fresh one, then applying the three migrations.
+- **Verified locally — D1 503s + Audits** (5 Nov 2026): typecheck 0
+  errors; `pnpm build` 0 errors; Playwright 29/29 on plain `pnpm
+  dev` (per-endpoint 503 table, honest D1 notes + `dev:d1` hints,
+  no-duplication reproduction, local-fallback badges) and 21/21 on
+  `wrangler pages dev` (all D1 endpoints 200, fresh-file 503s +
+  sqlite3 recovery, dummy-key 502 `meta-error`); restart demo proved
+  `.env` edits need a server restart (503 `no-key` before and after
+  the edit, 502 after restart). No real Meta credits used.
+- **AI usage card did not say calls go unrecorded** (5 Nov 2026):
+  the unavailable note said D1 wasn't connected but not that AI
+  calls made in plain `pnpm dev` are never recorded — the owner ran
+  a real LLM audit that worked (Meta AI badge) while the card still
+  showed "not available", because `recordAiUsage` silently drops the
+  row when there is no database. The note now says so explicitly
+  (EN + ID): "…so AI calls made in this mode are not recorded."
+  The recording rule is documented in README § Local D1 check.
+- **503 evidence confirmed from the owner's machine** (5 Nov 2026,
+  23:04): the two local 503s are the intentional fail-closed
+  `createError`s at `server/api/admin/ai-usage.get.ts:31` ("Usage
+  store is not available on this server.") and
+  `server/api/admin/users.get.ts:22` ("User store is not available
+  on this server."), both thrown when `getDb(event)` returns null
+  in plain dev — not a broken binding.
+- **Verified locally — AI usage recording** (5 Nov 2026): unit
+  14/14 on the real `recordAiUsage` (INSERT statement + bound
+  values, token clamping, null-db silent no-op, throwing-db never
+  throws, `summarizeAiUsage` totals/cost/WIB peak math); pages-dev
+  card test 16/16 (3 seeded rows in `recordAiUsage`'s exact shape →
+  endpoint totals prompt 4,721 / completion 2,799, Rp17, peak
+  current WIB hour; Overview card shows CALLS 3, 7.520 tokens,
+  Rp17, 23:00–0:00 WIB + histogram; rows deleted after). Both Meta
+  endpoints call `recordAiUsage` after every successful `callMeta`
+  (Live Test once per retry attempt, audit chat once per answer);
+  failed calls log nothing. A real successful Meta call's
+  end-to-end write is still the owner's step (his key).
 
 ### Security
 - **Server-side auth via Google ID token**: `POST /api/auth/google`

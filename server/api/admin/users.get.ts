@@ -25,5 +25,17 @@ export default defineEventHandler(async (event) => {
       data: { code: 'unavailable' }
     })
   }
-  return { users: await listRealUsers(db, getAdminEmails(event)) }
+  try {
+    return { users: await listRealUsers(db, getAdminEmails(event)) }
+  } catch (e) {
+    // The binding exists but the users/grants tables are missing (a
+    // fresh pages-dev file starts with no tables) — say so plainly
+    // instead of a bare 500. Apply the migrations to that file
+    // (README § Local D1 check).
+    throw createError({
+      statusCode: 503,
+      statusMessage: `User store tables are missing on this server: ${(e as Error).message}`,
+      data: { code: 'unavailable' }
+    })
+  }
 })

@@ -37,7 +37,19 @@ export default defineEventHandler(async (event) => {
   const q = getQuery(event)
   const rawPeriod = typeof q.period === 'string' ? q.period : '30d'
   const period = ['today', '7d', '30d', 'all'].includes(rawPeriod) ? rawPeriod : '30d'
-  const rows = await fetchAiUsageRows(db, periodStartIso(period))
+  let rows
+  try {
+    rows = await fetchAiUsageRows(db, periodStartIso(period))
+  } catch (e) {
+    // The binding exists but the ai_usage table is missing (a fresh
+    // pages-dev file starts with no tables) — say so plainly instead
+    // of a bare 500. Apply the migrations to that file (README § Local D1 check).
+    throw createError({
+      statusCode: 503,
+      statusMessage: `Usage store tables are missing on this server: ${(e as Error).message}`,
+      data: { code: 'unavailable' }
+    })
+  }
   return {
     ...summarizeAiUsage(rows, period),
     rates: AI_USAGE_RATES,

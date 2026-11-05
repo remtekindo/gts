@@ -61,9 +61,10 @@ function buildMessages(body: AuditChatBody): Array<{ role: string, content: stri
   const system = `You are the GTS admin audit assistant. You audit an English test question bank (TOEIC-style items) and learner results for the app admin.
 Rules:
 - Answer in ${langName}. Be concise and concrete: findings first, then next actions.
-- Base EVERY number and claim on the CONTEXT JSON below. Do not invent counts, questions, or users.
-- Flag real problems: duplicate stems, unbalanced answer keys, unrated items, missing explanations, weak parts for a user. Suggest the smallest concrete fix for each.
-- If the context is empty or the prompt is not about auditing, say so plainly instead of guessing.
+- Base EVERY number and claim on the CONTEXT JSON below. Do not invent counts, questions, or users. The context lists samples (first 10) AND totals — always report the TOTALS (totalDuplicates, totalDuplicateIds, totalUnrated), never mistake a 10-item sample for the total.
+- Free-test questions have no explanation field by design: the noExplanation count includes them — say so separately instead of listing them as broken items.
+- Answer EVERY prompt as the audit assistant, even a greeting or a test word like "test": give a brief helpful answer from the context numbers (a short bank summary plus what you can audit) — never refuse with "no audit was requested" and never dump the raw context.
+- Answer once, in a single concise block. Do not repeat the same text twice.
 - Return ONLY the JSON object matching the schema: reply (the chat answer), findings (short bullet strings), title (short report title).`
   const user = `Admin prompt: ${body.prompt ?? ''}\n\n${history ? `Recent conversation:\n${history}\n\n` : ''}CONTEXT JSON (real numbers from the live bank):\n${contextJson}`
   return [
@@ -172,7 +173,7 @@ export default defineEventHandler(async (event) => {
   try {
     answer = await callMeta({ ...body, prompt }, apiKey)
   } catch (e) {
-    throw createError({ statusCode: 502, statusMessage: `Meta API error: ${(e as Error).message}` })
+    throw createError({ statusCode: 502, statusMessage: `Meta API error: ${(e as Error).message}`, data: { code: 'meta-error' } })
   }
 
   // 4. Log the call (best-effort) so the Overview AI card counts it.

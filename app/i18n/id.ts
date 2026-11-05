@@ -446,7 +446,7 @@ export default {
         "peakHourValue": "{h}:00–{h2}:00 WIB",
         "hourlyTitle": "Pemanggilan per jam (WIB)",
         "empty": "Belum ada pemakaian AI pada periode ini.",
-        "unavailable": "Data pemakaian tidak tersedia — D1 belum tersambung di server ini.",
+        "unavailable": "Data pemakaian tidak tersedia — D1 belum tersambung di server ini, jadi panggilan AI di mode ini tidak tercatat. Di lokal, jalankan `pnpm run dev:d1` untuk store beneran.",
         "rateNote": "Tarif: {input}/1Jt token input · {output}/1Jt token output · Kurs Rp{rate}/USD · Estimasi, bukan tagihan."
       }
     },
@@ -520,6 +520,7 @@ export default {
       "localBadge": "Analisis lokal",
       "llmNoKey": "Meta AI belum dikonfigurasi (belum ada API key) — menampilkan analisis lokal.",
       "llmRateLimited": "Batas pemakaian Meta AI tercapai — menampilkan analisis lokal.",
+      "llmMetaError": "Meta API menolak permintaan — API key mungkin tidak valid atau sudah dicabut. Periksa NITRO_MODEL_API_KEY, lalu restart dev server.",
       "llmUnavailable": "Meta AI sedang tidak tersedia — menampilkan analisis lokal.",
     },
     "databases": {
@@ -609,7 +610,7 @@ export default {
       "realHeading": "User asli",
       "realSub": "Akun Google yang masuk. Grant di sini langsung berlaku.",
       "realEmpty": "Belum ada akun Google yang masuk — akun muncul di sini setelah masuk pertama kali.",
-      "realLoadError": "Gagal memuat user asli. User store mungkin tidak tersedia di server ini.",
+      "realLoadError": "Gagal memuat user asli. User store mungkin tidak tersedia di server ini. Di lokal, jalankan `pnpm run dev:d1` untuk store beneran.",
       "colRole": "Peran",
       "colLastLogin": "Terakhir masuk",
       "colAccess": "Bisa buka",
