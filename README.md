@@ -34,7 +34,7 @@ A user signs in, picks a material they own (e.g. TOEIC Listening & Reading), and
 
 ## What is NOT built yet
 
-- Real backend (auth, database, API) — planned Nov 2026
+- Real backend (auth, database, API) — Cloudflare groundwork done 5 Nov 2026 (Pages + D1 binding + schema); data migration pending
 - Real question bank (AI-generated, human-reviewed) — planned Nov 2026
 - Real TTS audio for listening — planned Nov 2026
 - Play Billing subscriptions — planned Nov 2026
@@ -45,7 +45,8 @@ A user signs in, picks a material they own (e.g. TOEIC Listening & Reading), and
 
 - Nuxt 4, Vue 3.5, TypeScript, Tailwind CSS v4 (`@tailwindcss/vite`)
 - pnpm 10 (use pnpm, not npm)
-- No backend yet — mock state in localStorage
+- Cloudflare Pages (Nitro preset `cloudflare-pages`) + D1 (`DB` binding, see `wrangler.jsonc` + `migrations/`)
+- App data still mock state in localStorage — migration to D1 pending
 
 ## Branches
 
@@ -64,6 +65,49 @@ Open http://localhost:3000 — the public landing page. Sign in at http://localh
 ```bash
 pnpm typecheck   # vue-tsc, must pass with 0 errors
 ```
+
+## Cloudflare Pages + D1
+
+Deploy target is Cloudflare Pages (static + Pages Functions) with D1 as the
+database. Local verification done 5 Nov 2026: `pnpm build` (cloudflare-pages
+preset) + `wrangler pages dev --d1=DB` serves the app, and
+`GET /api/health/d1` reports the bound tables (`questions`, `test_results`,
+`users`) with a live row count.
+
+### First-time setup (from your own machine — needs your Cloudflare login)
+
+```bash
+npx wrangler login
+npx wrangler d1 create gts-db        # copy the database_id it prints
+```
+
+Paste the `database_id` into `wrangler.jsonc` (replace
+`REPLACE_WITH_D1_DATABASE_ID`), then:
+
+```bash
+npx wrangler d1 migrations apply gts-db --remote
+npx wrangler pages deploy dist      # after pnpm build
+```
+
+Set the Meta API key as a Pages secret (production path for the live test):
+
+```bash
+npx wrangler pages secret put NITRO_MODEL_API_KEY
+```
+
+### Local D1 check
+
+```bash
+pnpm build
+npx wrangler pages dev dist --d1=DB --port 8788
+curl http://localhost:8788/api/health/d1
+```
+
+Note: locally wrangler keeps the CLI-managed D1 and the pages-dev D1 as two
+separate files; if tables are missing from the served instance, apply
+`migrations/0001_init.sql` to the active file under
+`.wrangler/state/v3/d1/miniflare-D1DatabaseObject/`. Remote has no such
+split — one database, one `migrations apply --remote`.
 
 ## Project structure
 

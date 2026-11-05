@@ -18,3 +18,7 @@ scripts/generate-questions/out/
 
 # Secrets
 .env
+
+# Cloudflare local state + build output
+.wrangler/
+dist/

@@ -5,6 +5,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added
+- **Cloudflare Pages + D1 groundwork**: Nitro preset `cloudflare-pages`,
+  `wrangler.jsonc` (D1 binding `DB`), `migrations/0001_init.sql`
+  (`questions`, `test_results`, `users`), `server/utils/d1.ts`, and
+  `GET /api/health/d1` probe. Verified locally: build + pages dev serve
+  the app, D1 binding live, schema applied, write/read proven through the
+  health endpoint. Remote D1 creation + deploy still needs the owner's
+  Cloudflare login.
+
 ### Changed
 - **Material dashboard: Performance merged into one section**: the
   Performance Journey and Performance cards are now a single card —
