@@ -80,43 +80,6 @@ const continuePaper = computed(() => papers.value[0])
         </div>
       </div>
 
-
-      <!-- Continue -->
-      <div class="rounded-2xl border border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-950 dark:bg-blue-950 p-5">
-        <h2 class="font-bold text-slate-800 dark:text-slate-200">{{ t('dashboard.continueTitle') }}</h2>
-        <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">{{ continuePaper?.title }} · {{ t('dashboard.continueSub') }}</p>
-        <NuxtLink
-          :to="`${base}/papers/${continuePaper?.id}/take`"
-          class="mt-3 inline-block text-sm font-semibold px-4 py-2.5 rounded-xl bg-blue-600 text-white hover:bg-blue-700 transition-colors"
-        >
-          {{ t('dashboard.resume') }}
-        </NuxtLink>
-      </div>
-
-
-      <!-- Live test with AI -->
-      <div class="rounded-2xl border border-emerald-200 bg-emerald-50 dark:border-emerald-800 dark:bg-emerald-950 p-5">
-        <h2 class="font-bold text-slate-800 dark:text-slate-200">{{ t('liveTest.cardTitle') }}</h2>
-        <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">{{ t('liveTest.cardSub') }}</p>
-        <NuxtLink
-          :to="`${base}/live-test`"
-          class="mt-3 inline-block text-sm font-semibold px-4 py-2.5 rounded-xl bg-emerald-600 text-white hover:bg-emerald-700 transition-colors"
-        >
-          {{ t('liveTest.cardCta') }}
-        </NuxtLink>
-      </div>
-
-
-      <!-- Available papers -->
-      <div>
-        <div class="flex items-center justify-between mb-3">
-          <h2 class="font-bold text-slate-800 dark:text-slate-200">{{ t('dashboard.availablePapers') }}</h2>
-          <NuxtLink :to="`${base}/papers`" class="text-sm font-medium text-blue-600 hover:text-blue-700">{{ t('dashboard.viewAll') }}</NuxtLink>
-        </div>
-        <div class="space-y-4">
-          <PaperCard v-for="p in availablePapers" :key="p.id" :paper="p" :base="base" />
-        </div>
-      </div>
     </div>
 
     <!-- Right column -->
@@ -137,6 +100,7 @@ const continuePaper = computed(() => papers.value[0])
           <span class="text-xs font-bold px-3 py-1.5 rounded-full bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-200">CEFR · B2</span>
         </div>
       </div>
+
 
 
       <!-- Performance card -->
@@ -167,18 +131,63 @@ const continuePaper = computed(() => papers.value[0])
         </div>
       </div>
 
-      <!-- Personal playlist (adaptive) -->
-      <div class="rounded-2xl border border-violet-200 bg-violet-50 dark:border-violet-800 dark:bg-violet-950 p-5">
-        <h2 class="font-bold text-slate-800 dark:text-slate-200">{{ t('dashboard.playlistTitle') }}</h2>
-        <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">{{ t('dashboard.playlistSub') }}</p>
-        <NuxtLink
-          :to="`${base}/playlist`"
-          class="mt-3 inline-block text-sm font-semibold px-4 py-2.5 rounded-xl bg-violet-600 text-white hover:bg-violet-700 transition-colors"
-        >
-          {{ t('dashboard.playlistCta') }}
-        </NuxtLink>
-      </div>
+    </div>
+  </div>
+  <!-- Action cards: 3-column grid -->
+  <div class="mt-5 grid md:grid-cols-3 gap-5">
+    <!-- Continue -->
+    <div class="rounded-2xl border border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-950 dark:bg-blue-950 p-5">
+      <h2 class="font-bold text-slate-800 dark:text-slate-200">{{ t('dashboard.continueTitle') }}</h2>
+      <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">{{ continuePaper?.title }} · {{ t('dashboard.continueSub') }}</p>
+      <NuxtLink
+        :to="`${base}/papers/${continuePaper?.id}/take`"
+        class="mt-3 inline-block text-sm font-semibold px-4 py-2.5 rounded-xl bg-blue-600 text-white hover:bg-blue-700 transition-colors"
+      >
+        {{ t('dashboard.resume') }}
+      </NuxtLink>
+    </div>
 
+
+
+    <!-- Live test with AI -->
+    <div class="rounded-2xl border border-emerald-200 bg-emerald-50 dark:border-emerald-800 dark:bg-emerald-950 p-5">
+      <h2 class="font-bold text-slate-800 dark:text-slate-200">{{ t('liveTest.cardTitle') }}</h2>
+      <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">{{ t('liveTest.cardSub') }}</p>
+      <NuxtLink
+        :to="`${base}/live-test`"
+        class="mt-3 inline-block text-sm font-semibold px-4 py-2.5 rounded-xl bg-emerald-600 text-white hover:bg-emerald-700 transition-colors"
+      >
+        {{ t('liveTest.cardCta') }}
+      </NuxtLink>
+    </div>
+
+
+
+    <!-- Personal playlist (adaptive) -->
+    <div class="rounded-2xl border border-violet-200 bg-violet-50 dark:border-violet-800 dark:bg-violet-950 p-5">
+      <h2 class="font-bold text-slate-800 dark:text-slate-200">{{ t('dashboard.playlistTitle') }}</h2>
+      <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">{{ t('dashboard.playlistSub') }}</p>
+      <NuxtLink
+        :to="`${base}/playlist`"
+        class="mt-3 inline-block text-sm font-semibold px-4 py-2.5 rounded-xl bg-violet-600 text-white hover:bg-violet-700 transition-colors"
+      >
+        {{ t('dashboard.playlistCta') }}
+      </NuxtLink>
+    </div>
+
+  </div>
+
+  <!-- Available papers: 2-column grid -->
+  <div class="mt-5">
+    <!-- Available papers -->
+    <div>
+      <div class="flex items-center justify-between mb-3">
+        <h2 class="font-bold text-slate-800 dark:text-slate-200">{{ t('dashboard.availablePapers') }}</h2>
+        <NuxtLink :to="`${base}/papers`" class="text-sm font-medium text-blue-600 hover:text-blue-700">{{ t('dashboard.viewAll') }}</NuxtLink>
+      </div>
+      <div class="grid sm:grid-cols-2 gap-4">
+        <PaperCard v-for="p in availablePapers" :key="p.id" :paper="p" :base="base" />
+      </div>
     </div>
   </div>
 </template>

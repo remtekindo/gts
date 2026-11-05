@@ -6,6 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Changed
+- **Material dashboard grids**: action cards (Continue, Live Test, Playlist)
+  now sit in a full-width 3-column row; Available Papers moved below them
+  as a full-width 2-column grid.
+
+### Changed
 - **Material dashboard rearranged**: Performance card moved under
   Performance Journey (right column); Continue and Live Test cards moved
   under Weekly Quest (left column); Available Papers moved below them.
