@@ -148,7 +148,7 @@ login was built the same day and replaced before it ever deployed).
      are needed — this flow uses only the Client ID, no client secret.
   4. Set `NUXT_PUBLIC_GOOGLE_CLIENT_ID` as a Cloudflare Pages
      **variable** (not a secret) and in local `.env`, then redeploy.
-  5. Apply migrations 0002–0005 to the remote D1
+  5. Apply migrations 0002–0006 to the remote D1
      (`npx wrangler d1 migrations apply gts-db --remote`).
   6. Set `NITRO_ADMIN_EMAILS` (comma-separated, default
      `remtekindo@gmail.com`) and `NITRO_SESSION_SECRET` (generate with
@@ -162,8 +162,11 @@ login was built the same day and replaced before it ever deployed).
   account id); later sign-ins refresh name/picture/last login. The
   `grants` table holds material grants (open one material) and package
   grants (open the materials that package covers: Monthly 1, Quarterly
-  2, Semester all). The question bank and test results are still in
-  localStorage — only identity/privilege moved to D1.
+  2, Semester all). The question bank is still in localStorage —
+  only identity/privilege moved to D1. Test results are dual-written
+  since migration 0006: the browser keeps its localStorage copy, and
+  each completed paper also POSTs a row to D1 (`test_results`) — that
+  server copy is what the leaderboard reads.
   **The admin row is never created by hand.** `google_sub` is issued
   by Google at first sign-in and must not be invented: the first
   Google sign-in upserts the row (matched by `google_sub`, with the
@@ -288,6 +291,47 @@ login was built the same day and replaced before it ever deployed).
   anonymous visitor id (`gts_sid` cookie, minted by the session
   endpoint) exists only so the limiter can tell repeat visitors apart;
   it is not an identity.
+- **Leaderboard — two tiers, real users only**
+  (`migrations/0006_leaderboard_results.sql`,
+  `server/utils/leaderboard.ts`, `app/components/LeaderboardBoard.vue`):
+  one page (`/leaderboard`, also reachable from the material
+  Leaderboard tab with that material preselected) with a Global tab
+  and one tab per material the user can open. **Global (monthly
+  competition):** rank by TOTAL monthly points, season = UTC month
+  `YYYY-MM`. Points = (a) test points — per paper, best-attempt
+  accuracy % (correct/total × 100, rounded whole), summed across
+  papers, capped at 500/month; (b) quest points — 50 per completed
+  Weekly Quest, counted only after the user claims it (`POST
+  /api/quests/claim` records the claim in `quest_claims`; one claim
+  per quest per week); (c) streak points — +10 per active day (≥1
+  submitted result that day), +50 bonus each time a run of
+  consecutive active days reaches a multiple of 7 (the bonus counts
+  in the month its 7th/14th/… day falls in). Ties: points desc, then
+  whoever earned their first point of the month earliest, then
+  user_sub — ranks are unique positions, never shared. **Per-material
+  (mastery, self-measurement):** rank by AVERAGE best-attempt
+  accuracy on FULL SIMULATIONS in that material (0–100%); a user
+  appears only after completing ≥1 full simulation there. This board
+  is ALL-TIME (accuracy is a level, not an accumulation — no monthly
+  reset). Ties: accuracy desc, then more simulations, then user_sub.
+  Results reach D1 via `POST /api/results/submit` (signed-in users
+  only, material access enforced; one row per attempt — retakes are
+  separate rows, the board takes the best accuracy per paper). Live
+  tests are never submitted (AI-generated questions, not the curated
+  bank) and the free test needs no login, so neither earns points.
+  Quest completion is derived from D1 results for the current week
+  (Monday 00:00 UTC): sim = ≥1 full simulation; score700 = any paper
+  with predicted score ≥ 700; drills = ≥3 distinct drill packs. The
+  hub tiles (points / streak / rank), the Weekly Quest card, and the
+  "Your scores" chips (best accuracy % per material) all read the
+  same endpoints — no hardcoded numbers anywhere on the hub. The
+  board shows real users only: the old hardcoded demo rows are gone;
+  when the current user is the only participant the page says so
+  honestly instead of inventing competitors. Names are masked
+  (first letter + `***` + last letter); emails are never exposed.
+  The material dashboard Performance card (795/990, journey chart)
+  is still demo data — it is not part of the leaderboard and has not
+  been rewired yet.
 
 Known limitations: the rate limiter keeps its counters in memory, so on
 Cloudflare Pages each isolate has its own budget (correct on the local
@@ -373,11 +417,11 @@ There are two D1 databases, and they must not be confused:
   DB is scratch, the remote DB is not. Note: a fresh pages-dev file
   starts with NO tables (wrangler does not apply migrations to it), so
   login upserts and the ai-usage endpoint fail with "no such table"
-  until the migrations are applied to that file — apply the five
+  until the migrations are applied to that file — apply the six
   `migrations/*.sql` files to it with sqlite3 and record them in its
   `d1_migrations` table (same names as wrangler records: `0001_init.sql`,
   `0002_users_google.sql`, `0003_ai_usage.sql`, `0004_ai_usage_reasoning.sql`,
-  `0005_ai_usage_actor.sql`).
+  `0005_ai_usage_actor.sql`, `0006_leaderboard_results.sql`).
 
 Remote has no such split — one database, one `migrations apply --remote`.
 
@@ -393,10 +437,14 @@ Per-endpoint behavior, verified 5 Nov 2026 (Playwright, local):
 | `POST /api/auth/google` | 200 (role from the allowlist) | 200, user row upserted in D1 |
 | `GET /api/auth/session` | 200 | 200 |
 | `POST /api/admin/audit-chat` | 401 without a session; 503 `no-key` without a Meta key | 502 `meta-error` with a dummy key (Meta rejects it, zero real credits) |
+| `GET /api/leaderboard` | 503 | 200, global/material boards (401 without session; 403 without material access) |
+| `POST /api/results/submit` | 503 | 200 (401 without session; 403 without material access; 400 on invalid input) |
+| `GET /api/quests/status` | 503 | 200, this week's quest progress |
+| `POST /api/quests/claim` | 503 | 200 claimed; 409 `not-complete` / `already-claimed` |
 
 A fresh pages-dev file (no tables yet) no longer fails with a bare
 500: `admin/users` and `ai-usage` answer 503 "D1 tables are missing
-for this database — apply the migrations" until the three
+for this database — apply the migrations" until the six
 `migrations/*.sql` files are applied to that file with sqlite3 (see
 above). The live site is unaffected — its D1 is bound by the Pages
 project and already carries all tables including `ai_usage` and

@@ -75,7 +75,7 @@ export default {
   hub: {
     welcomeBack: 'Selamat datang kembali,',
     title: 'Materi Saya',
-    sub: 'Pilih materi untuk lanjut belajar. Progres, soal, dan papan peringkat disimpan terpisah per materi.',
+    sub: 'Pilih materi untuk lanjut belajar. Progres dan soal disimpan terpisah per materi — papan peringkat bersifat global.',
     scoresTitle: 'Skormu',
     active: 'Aktif',
     comingSoon: 'Segera hadir',
@@ -84,7 +84,8 @@ export default {
     credits: 'kredit',
     open: 'Buka materi',
     locked: 'Terkunci',
-    lockedNote: 'Minta akses ke admin untuk membuka materi ini.'
+    lockedNote: 'Minta akses ke admin untuk membuka materi ini.',
+    viewLeaderboard: 'Lihat papan peringkat'
   },
   access: {
     loading: 'Memuat…',
@@ -105,6 +106,9 @@ export default {
     quest1: 'Selesaikan 1 simulasi penuh',
     quest2: 'Raih skor di atas 700 di soal mana pun',
     quest3: 'Selesaikan 3 paket drill',
+    endsIn: 'Berakhir dalam {d} hari {h} jam',
+    pointsBreakdown: 'Tes {t} · Misi {q} · Beruntun {s}',
+    rankOf: 'Dari {n} peserta bulan ini',
     playlistTitle: 'Playlist latihanmu',
     playlistSub: 'AI menganalisa kelemahanmu dan menyusun set soal personal — seperti playlist Spotify.',
     playlistCta: 'Buka playlist',
@@ -277,12 +281,28 @@ export default {
   leaderboard: {
     title: 'Papan Peringkat',
     sub: 'Lihat peringkatmu dibanding peserta lain bulan ini.',
+    subMaterial: 'Penguasaan di {name} — rata-rata akurasi simulasi penuh, sepanjang waktu.',
+    tabsGlobal: 'Global',
+    season: 'Musim',
     yourRanking: 'Peringkatmu',
     rank: 'Peringkat',
     user: 'Peserta',
     score: 'Skor',
     you: 'Kamu',
-    keepClimbing: 'Terus naik — 130 poin lagi ke #41'
+    keepClimbing: 'Terus naik — 130 poin lagi ke #41',
+    emptyGlobal: 'Belum ada peserta bulan ini — jadilah yang pertama meraih poin.',
+    emptyMaterial: 'Belum ada yang menyelesaikan simulasi penuh di materi ini.',
+    onlyYou: 'Sejauh ini baru kamu yang ikut — belum ada peserta lain.',
+    notRanked: 'Belum berperingkat',
+    testPoints: 'Poin tes',
+    questPoints: 'Poin misi',
+    streakPoints: 'Poin beruntun',
+    accuracy: 'Akurasi',
+    sims: 'Simulasi',
+    completeSimFirst: 'Selesaikan satu simulasi penuh untuk muncul di sini.',
+    loadError: 'Papan peringkat tidak tersedia saat ini.',
+    claimed: 'Diklaim',
+    claimPoints: 'Klaim Poin'
   },
   profile: {
     title: 'Profil',

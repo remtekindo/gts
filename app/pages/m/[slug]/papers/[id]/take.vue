@@ -3,6 +3,7 @@ import { getMaterialOrFallback, getPaperOrFallback, partsForMaterial, questionsF
 import type { Question } from '~/data/mock'
 import type { AnswerMap } from '~/utils/storage'
 import { fetchSessionState } from '~/utils/server-auth'
+import { submitResult } from '~/utils/leaderboard'
 
 const { t } = useLocale()
 
@@ -112,6 +113,7 @@ function gradeAndSave(): void {
     if (answers.value[q.number] === q.correctLetter) correct += 1
   }
   const score = predictedScore(correct, questions.value.length)
+  const finishedAt = new Date().toISOString()
   saveResult({
     paperId: paper.value.id,
     attempt: attempt.value,
@@ -120,11 +122,24 @@ function gradeAndSave(): void {
     correct,
     total: questions.value.length,
     answers: answers.value,
-    finishedAt: new Date().toISOString(),
+    finishedAt,
     username: getAuth()?.username ?? 'guest',
     timings: timeSpent.value
   })
   clearAnswers(paper.value.id, attempt.value)
+  // Server copy for the leaderboard — best-effort and non-blocking:
+  // the local result above is already saved, so a failed submit (or
+  // a signed-out browser) never breaks the flow. Live tests are not
+  // submitted — they use AI-generated questions, not the bank.
+  void submitResult({
+    paperId: paper.value.id,
+    materialSlug: slug.value,
+    kind: paper.value.category === 'Full Simulation' ? 'simulation' : 'drill',
+    correct,
+    total: questions.value.length,
+    score,
+    finishedAt
+  })
 }
 
 function doSubmit(): void {

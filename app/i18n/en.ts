@@ -75,7 +75,7 @@ export default {
   hub: {
     welcomeBack: 'Welcome back,',
     title: 'My Materials',
-    sub: 'Pick a material to continue learning. Your progress, papers, and leaderboard are kept separately per material.',
+    sub: 'Pick a material to continue learning. Your progress and papers are kept separately per material — the leaderboard is global.',
     scoresTitle: 'Your scores',
     active: 'Active',
     comingSoon: 'Coming soon',
@@ -84,7 +84,8 @@ export default {
     credits: 'credits',
     open: 'Open material',
     locked: 'Locked',
-    lockedNote: 'Ask the admin for access to open this material.'
+    lockedNote: 'Ask the admin for access to open this material.',
+    viewLeaderboard: 'View leaderboard'
   },
   access: {
     loading: 'Loading…',
@@ -105,6 +106,9 @@ export default {
     quest1: 'Complete 1 full simulation',
     quest2: 'Score above 700 on any paper',
     quest3: 'Finish 3 drill packs',
+    endsIn: 'Ends in {d}d {h}h',
+    pointsBreakdown: 'Test {t} · Quest {q} · Streak {s}',
+    rankOf: 'Out of {n} learners this month',
     playlistTitle: 'Your practice playlist',
     playlistSub: 'AI analyzes your weak spots and builds a personal question set — like a Spotify playlist.',
     playlistCta: 'Open playlist',
@@ -277,12 +281,28 @@ export default {
   leaderboard: {
     title: 'Leaderboard',
     sub: 'See how you rank against other learners this month.',
+    subMaterial: 'Mastery in {name} — average accuracy on full simulations, all time.',
+    tabsGlobal: 'Global',
+    season: 'Season',
     yourRanking: 'Your Ranking',
     rank: 'Rank',
     user: 'Learner',
     score: 'Score',
     you: 'You',
-    keepClimbing: 'Keep climbing — 130 points to #41'
+    keepClimbing: 'Keep climbing — 130 points to #41',
+    emptyGlobal: 'No participants yet this month — be the first to earn points.',
+    emptyMaterial: 'No one has completed a full simulation in this material yet.',
+    onlyYou: 'You are the only participant so far — no other learners yet.',
+    notRanked: 'Not ranked yet',
+    testPoints: 'Test points',
+    questPoints: 'Quest points',
+    streakPoints: 'Streak points',
+    accuracy: 'Accuracy',
+    sims: 'Simulations',
+    completeSimFirst: 'Complete a full simulation to appear here.',
+    loadError: 'Leaderboard is not available right now.',
+    claimed: 'Claimed',
+    claimPoints: 'Claim Points'
   },
   profile: {
     title: 'Profile',
