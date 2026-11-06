@@ -119,6 +119,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   (card positions measured).
 
 ### Changed
+- **The materials hub is the home — global analytics moved out of the
+  per-material dashboard** (6 Nov 2026): after login the user always
+  lands on `/materials`, even with exactly one accessible material
+  (the old single-material auto-enter in `postLoginPath()` is gone).
+  The hub now carries the greeting banner, Points/Streak/Rank tiles,
+  Weekly Quest, and a compact per-material score summary above the
+  material cards. The per-material dashboard keeps only
+  material-specific content: its Performance card, the three action
+  cards (Continue / Live Test / Playlist), and Available Papers.
+  Layout move only — the points/streak/rank/quest numbers and the
+  795/990 score are still the same demo values as before.
 - **Google Sign-In replaces the password login — for everyone**
   (5 Nov 2026): one "Sign in with Google" button for admin and
   learners; the password admin login built earlier the same day was

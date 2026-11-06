@@ -35,12 +35,12 @@ is a genuine product, not a hackathon-only prototype.
 ## What was built (30 Oct 2026)
 
 - Initial scaffold: Nuxt 4 + Vue + TypeScript + Tailwind CSS v4, pnpm. Branches `main` (stable) and `dev` (active development).
-- **Multi-material architecture (pattern 3):** after login the user lands on the materials hub (`/materials`) when they own 2+ materials, or is taken straight into their material when they own exactly one. Inside a material (`/m/:slug`) the full test experience lives: dashboard, papers, performance, leaderboard — all scoped to that material. A switcher in the topbar moves between owned materials; coming-soon materials are shown as upsell.
+- **Multi-material architecture (pattern 3):** after login the user always lands on the materials hub (`/materials`) — the hub is the home and carries the global learner analytics (greeting banner, Points/Streak/Rank tiles, Weekly Quest, compact per-material score summary) above the material cards. Inside a material (`/m/:slug`) only material-specific content lives: its Performance card, papers, playlist, leaderboard — all scoped to that material. A switcher in the topbar moves between owned materials; coming-soon materials are shown as upsell.
 - Materials in the demo: TOEIC Listening & Reading (owned), TOEIC Speaking & Writing (owned), TOEFL iBT (coming soon), IELTS Academic (coming soon).
 - Full test-platform UI on `dev`, visually verified page by page with headless screenshots:
   - Login (split-screen, mock auth via localStorage — any non-empty credentials work)
-  - Materials hub (owned cards with paper/credit counts, coming-soon section)
-  - Per-material dashboard (profile card, Points/Streak/Rank tiles, Performance, Weekly Quest + stacked Continue / Live Test / Playlist cards, Available Papers)
+  - Materials hub (greeting, Points/Streak/Rank, Weekly Quest, per-material score summary, owned cards with paper/credit counts, coming-soon section)
+  - Per-material dashboard (Performance, stacked Continue / Live Test / Playlist cards, Available Papers)
   - Papers list (hero, My/Available tabs, filter chips, search, paper cards)
   - Paper overview (navy hero, Exit, attempt selector, skill cards, TOEIC Score / CEFR toggle)
   - Test interface (instructions modal per part, navy header with Save & Exit + Submit Quiz, progress bar, countdown timer, Notes drawer, question card with radio options, fixed bottom question palette grouped by part, submit confirmation with answered count)
@@ -451,7 +451,7 @@ app/
   utils/
     storage.ts             # Typed localStorage helpers (auth, answers, results, notes)
     scoring.ts             # TOEIC-style predicted score + CEFR mapping
-    navigation.ts          # postLoginPath(): 1 accessible material -> enter it, else hub
+    navigation.ts          # postLoginPath(): always the materials hub (home)
     server-auth.ts         # fetchSessionState / loginWithGoogle / logoutServer / admin user APIs
     admin.ts               # Admin-panel helpers: bank, volumes, reports, vouchers, bankViewId
     ai-assistant.ts        # Audits chat: local analysis + LLM context builder

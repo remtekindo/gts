@@ -76,6 +76,7 @@ export default {
     welcomeBack: 'Selamat datang kembali,',
     title: 'Materi Saya',
     sub: 'Pilih materi untuk lanjut belajar. Progres, soal, dan papan peringkat disimpan terpisah per materi.',
+    scoresTitle: 'Skormu',
     active: 'Aktif',
     comingSoon: 'Segera hadir',
     comingSoonSub: 'Materi baru hadir rutin untuk pelanggan.',

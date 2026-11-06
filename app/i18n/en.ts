@@ -76,6 +76,7 @@ export default {
     welcomeBack: 'Welcome back,',
     title: 'My Materials',
     sub: 'Pick a material to continue learning. Your progress, papers, and leaderboard are kept separately per material.',
+    scoresTitle: 'Your scores',
     active: 'Active',
     comingSoon: 'Coming soon',
     comingSoonSub: 'New materials ship regularly for subscribers.',

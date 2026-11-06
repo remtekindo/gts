@@ -10,10 +10,10 @@ const router = useRouter()
 const route = useRoute()
 
 /** Where to go after auth. Honors ?next=/path (local paths only). */
-function nextPath(session?: SessionState): string {
+function nextPath(): string {
   const n = route.query.next
   if (typeof n === 'string' && n.startsWith('/') && !n.startsWith('//')) return n
-  return postLoginPath(session?.materials)
+  return postLoginPath()
 }
 
 /**
@@ -50,7 +50,7 @@ async function handleCredential(res: { credential: string }): Promise<void> {
   const s = r.session
   setAuth({ username: s.email ?? '', remember: remember.value, role: s.role, name: s.name ?? undefined, picture: s.picture ?? undefined })
   if (s.name) setDisplayName(s.name)
-  router.push(nextPath(s))
+  router.push(nextPath())
 }
 
 function initGoogle(clientId: string): void {
@@ -94,7 +94,7 @@ onMounted(async () => {
       // offer to switch accounts instead of bouncing in a loop.
       signedInAs.value = state
     } else {
-      router.replace(nextPath(state))
+      router.replace(nextPath())
       return
     }
   }

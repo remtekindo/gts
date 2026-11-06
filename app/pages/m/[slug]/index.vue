@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { getMaterialOrFallback, papersForMaterial } from '~/data/mock'
+import { papersForMaterial } from '~/data/mock'
 
 const { t } = useLocale()
 
@@ -7,31 +7,7 @@ definePageMeta({ layout: 'material' })
 
 const route = useRoute()
 const slug = computed(() => route.params.slug as string)
-const material = computed(() => getMaterialOrFallback(slug.value))
 const base = computed(() => `/m/${slug.value}`)
-
-const auth = ref<AuthState | null>(null)
-const displayName = ref('')
-
-onMounted(() => {
-  auth.value = getAuth()
-  displayName.value = getDisplayName()
-})
-
-const username = computed(() => displayName.value || auth.value?.username || 'Guest')
-
-const stats = computed(() => [
-  { label: t('dashboard.points'), value: '1,250', sub: t('dashboard.pointsSub') },
-  { label: t('dashboard.streak'), value: '6 days', sub: t('dashboard.streakSub') },
-  { label: t('dashboard.rank'), value: '#42', sub: t('dashboard.rankSub') }
-])
-
-const quests = computed(() => [
-  { label: t('dashboard.quest1'), done: true },
-  { label: t('dashboard.quest2'), done: true },
-  { label: t('dashboard.quest3'), done: false }
-])
-const questDone = computed(() => quests.value.filter(q => q.done).length)
 
 const papers = computed(() => papersForMaterial(slug.value))
 const availablePapers = computed(() => papers.value.slice(0, 3))
@@ -42,18 +18,6 @@ const continuePaper = computed(() => papers.value[0])
   <div class="grid lg:grid-cols-3 gap-5">
     <!-- Left column -->
     <div class="lg:col-span-2 space-y-5">
-      <!-- Profile card -->
-      <div class="bg-gradient-to-r from-blue-700 to-indigo-800 rounded-2xl p-6 text-white">
-        <p class="text-blue-200 text-sm">{{ t('dashboard.welcomeBack') }}</p>
-        <h1 class="text-2xl font-extrabold mt-0.5">{{ username }}</h1>
-        <p class="text-blue-200 text-sm mt-1">{{ t('dashboard.heroSub', { name: material.name }) }}</p>
-      </div>
-
-      <!-- Stat tiles -->
-      <div class="grid grid-cols-3 gap-4">
-        <StatTile v-for="s in stats" :key="s.label" :label="s.label" :value="s.value" :sub="s.sub" />
-      </div>
-
       <!-- Performance: journey + skills in one section -->
       <div class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 p-5">
         <div class="flex items-center justify-between">
@@ -79,33 +43,7 @@ const continuePaper = computed(() => papers.value[0])
 
     <!-- Right column -->
     <div class="space-y-5">
-      <!-- Quest card -->
-      <div class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 p-5">
-        <div class="flex items-center justify-between">
-          <h2 class="font-bold text-slate-800 dark:text-slate-200">{{ t('dashboard.questTitle') }}</h2>
-          <span class="text-xs font-semibold px-2.5 py-1 rounded-full bg-amber-100 text-amber-700">Ends in 2d 4h</span>
-        </div>
-        <ul class="mt-4 space-y-2.5">
-          <li v-for="q in quests" :key="q.label" class="flex items-center gap-3 text-sm">
-            <span
-              class="w-5 h-5 rounded-full flex items-center justify-center text-[11px] font-bold shrink-0"
-              :class="q.done ? 'bg-green-500 text-white' : 'border-2 border-slate-300 dark:border-slate-600 text-transparent'"
-            >✓</span>
-            <span :class="q.done ? 'text-slate-400 dark:text-slate-500 line-through' : 'text-slate-600 dark:text-slate-300'">{{ q.label }}</span>
-          </li>
-        </ul>
-        <div class="mt-4 flex items-center justify-between">
-          <p class="text-sm text-slate-500 dark:text-slate-400">{{ questDone }}/{{ quests.length }} completed</p>
-          <button class="text-sm font-semibold px-4 py-2 rounded-xl bg-amber-400 text-amber-950 hover:bg-amber-500 transition-colors">
-            Claim Points
-          </button>
-        </div>
-        <div class="mt-3 h-2 rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
-          <div class="h-full bg-amber-400 rounded-full transition-all" :style="{ width: `${(questDone / quests.length) * 100}%` }" />
-        </div>
-      </div>
-
-      <!-- Action cards: stacked under Quest -->
+      <!-- Action cards: stacked -->
       <!-- Continue -->
       <div class="rounded-2xl border border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-950 dark:bg-blue-950 p-5">
         <h2 class="font-bold text-slate-800 dark:text-slate-200">{{ t('dashboard.continueTitle') }}</h2>

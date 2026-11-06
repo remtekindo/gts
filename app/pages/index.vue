@@ -13,7 +13,7 @@ onMounted(async () => {
   signedIn.value = !!getAuth()
   if (signedIn.value) {
     const state = await fetchSessionState()
-    dashboardTo.value = postLoginPath(state.username ? state.materials : undefined)
+    if (state.username) dashboardTo.value = postLoginPath()
   }
 })
 

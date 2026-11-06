@@ -1,15 +1,12 @@
-import { ownedMaterials } from '~/data/mock'
-
 /**
  * Where to send the user right after a successful sign-in (or when
- * visiting `/` while already signed in):
- * - exactly one ACCESSIBLE material -> straight into it (no extra click)
- * - otherwise                       -> the materials hub to pick one
- * The accessible list comes from the server session; without it, fall
- * back to the owned materials (public default).
+ * visiting `/` while already signed in): always the materials hub.
+ * The hub is the home — it carries the global learner analytics
+ * (greeting, Points/Streak/Rank, Weekly Quest, per-material score
+ * summary) above the material cards. The old single-material
+ * auto-enter was removed 6 Nov 2026: it skipped the hub, so a
+ * one-material user never saw the global analytics.
  */
-export function postLoginPath(accessibleSlugs?: string[]): string {
-  const slugs = accessibleSlugs ?? ownedMaterials().map(m => m.slug)
-  if (slugs.length === 1 && slugs[0]) return `/m/${slugs[0]}`
+export function postLoginPath(): string {
   return '/materials'
 }

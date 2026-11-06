@@ -11,6 +11,25 @@ const allowed = ref<Set<string> | null>(null)
 const owned = computed(() => MATERIALS.filter(m => m.status === 'owned'))
 const comingSoon = computed(() => MATERIALS.filter(m => m.status === 'coming-soon'))
 
+const displayName = computed(() => auth.value?.name || auth.value?.username || t('common.guest'))
+
+/** Global learner stats — moved here from the per-material dashboard. */
+const stats = computed(() => [
+  { label: t('dashboard.points'), value: '1,250', sub: t('dashboard.pointsSub') },
+  { label: t('dashboard.streak'), value: '6 days', sub: t('dashboard.streakSub') },
+  { label: t('dashboard.rank'), value: '#42', sub: t('dashboard.rankSub') }
+])
+
+const quests = computed(() => [
+  { label: t('dashboard.quest1'), done: true },
+  { label: t('dashboard.quest2'), done: true },
+  { label: t('dashboard.quest3'), done: false }
+])
+const questDone = computed(() => quests.value.filter(q => q.done).length)
+
+/** Owned materials the user can open — the score summary covers these. */
+const openable = computed(() => owned.value.filter(m => canOpen(m.slug)))
+
 function paperCount(slug: string): number {
   return papersForMaterial(slug).length
 }
@@ -38,13 +57,62 @@ onMounted(async () => {
 
 <template>
   <div class="py-8">
-    <p class="text-sm text-slate-500 dark:text-slate-400">{{ t('hub.welcomeBack') }} {{ auth?.username || t('common.guest') }}</p>
-    <h1 class="mt-1 text-2xl md:text-3xl font-extrabold text-slate-900 dark:text-slate-100">{{ t('hub.title') }}</h1>
-    <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">{{ t('hub.sub') }}</p>
+    <!-- Greeting banner: the hub is the home, global analytics live here -->
+    <div class="bg-gradient-to-r from-blue-700 to-indigo-800 rounded-2xl p-6 text-white">
+      <p class="text-blue-200 text-sm">{{ t('hub.welcomeBack') }}</p>
+      <h1 class="text-2xl font-extrabold mt-0.5">{{ displayName }}</h1>
+      <p class="text-blue-200 text-sm mt-1">{{ t('hub.sub') }}</p>
+    </div>
 
-    <p v-if="allowed === null" class="mt-8 text-sm text-slate-400 dark:text-slate-500">{{ t('access.loading') }}</p>
+    <!-- Global learner stats -->
+    <div class="mt-5 grid grid-cols-3 gap-4">
+      <StatTile v-for="s in stats" :key="s.label" :label="s.label" :value="s.value" :sub="s.sub" />
+    </div>
 
-    <div v-else class="mt-8 grid gap-5 md:grid-cols-2">
+    <!-- Weekly Quest -->
+    <div class="mt-5 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 p-5">
+      <div class="flex items-center justify-between">
+        <h2 class="font-bold text-slate-800 dark:text-slate-200">{{ t('dashboard.questTitle') }}</h2>
+        <span class="text-xs font-semibold px-2.5 py-1 rounded-full bg-amber-100 text-amber-700">Ends in 2d 4h</span>
+      </div>
+      <ul class="mt-4 space-y-2.5">
+        <li v-for="q in quests" :key="q.label" class="flex items-center gap-3 text-sm">
+          <span
+            class="w-5 h-5 rounded-full flex items-center justify-center text-[11px] font-bold shrink-0"
+            :class="q.done ? 'bg-green-500 text-white' : 'border-2 border-slate-300 dark:border-slate-600 text-transparent'"
+          >✓</span>
+          <span :class="q.done ? 'text-slate-400 dark:text-slate-500 line-through' : 'text-slate-600 dark:text-slate-300'">{{ q.label }}</span>
+        </li>
+      </ul>
+      <div class="mt-4 flex items-center justify-between">
+        <p class="text-sm text-slate-500 dark:text-slate-400">{{ questDone }}/{{ quests.length }} completed</p>
+        <button class="text-sm font-semibold px-4 py-2 rounded-xl bg-amber-400 text-amber-950 hover:bg-amber-500 transition-colors">
+          Claim Points
+        </button>
+      </div>
+      <div class="mt-3 h-2 rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
+        <div class="h-full bg-amber-400 rounded-full transition-all" :style="{ width: `${(questDone / quests.length) * 100}%` }" />
+      </div>
+    </div>
+
+    <!-- Per-material score summary (compact chips, not full cards) -->
+    <div v-if="allowed !== null && openable.length" class="mt-8">
+      <h2 class="text-lg font-bold text-slate-900 dark:text-slate-100">{{ t('hub.scoresTitle') }}</h2>
+      <div class="mt-3 flex flex-wrap gap-3">
+        <!-- Score is the same demo overall score the material dashboard
+             showed (795 / 990) — layout move only, no new computation. -->
+        <div v-for="m in openable" :key="m.slug" class="flex items-baseline gap-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 py-2.5">
+          <span class="text-sm font-semibold text-slate-700 dark:text-slate-200">{{ m.name }}</span>
+          <span class="text-sm font-extrabold text-slate-900 dark:text-slate-100">795 <span class="text-xs font-medium text-slate-400 dark:text-slate-500">/ 990</span></span>
+        </div>
+      </div>
+    </div>
+
+    <h2 class="mt-8 text-lg font-bold text-slate-900 dark:text-slate-100">{{ t('hub.title') }}</h2>
+
+    <p v-if="allowed === null" class="mt-4 text-sm text-slate-400 dark:text-slate-500">{{ t('access.loading') }}</p>
+
+    <div v-else class="mt-4 grid gap-5 md:grid-cols-2">
       <template v-for="m in owned" :key="m.slug">
         <NuxtLink
           v-if="canOpen(m.slug)"
