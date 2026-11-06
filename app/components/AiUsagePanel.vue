@@ -27,6 +27,18 @@ const aiRows = ref<AiUsageRow[]>([])
 const aiLoading = ref(true)
 const aiError = ref<string | null>(null)
 
+/* Detail-only scope filter: 'all' (default), 'admin' (internal team),
+ * 'user' (end users). It scopes the totals, per-model table, histogram
+ * and rows below to that side; the Admin-vs-User comparison block
+ * always shows the whole period (server `byActor` ignores the filter). */
+type AiScope = 'all' | 'admin' | 'user'
+const aiScopes: Array<{ id: AiScope, label: string }> = [
+  { id: 'all', label: 'scopeAll' },
+  { id: 'admin', label: 'scopeAdmin' },
+  { id: 'user', label: 'scopeUser' }
+]
+const aiScope = ref<AiScope>('all')
+
 const aiMaxHourly = computed(() => Math.max(...(aiUsage.value?.hourly ?? [0]), 1))
 const aiRateNote = computed(() => {
   const s = aiUsage.value
@@ -75,10 +87,22 @@ function endpointLabel(endpoint: string): string {
   return endpoint
 }
 
+function actorLabel(actor: AiUsageRow['actor']): string {
+  if (actor === 'admin') return t('admin.reports.aiUsage.actorAdmin')
+  if (actor === 'user') return t('admin.reports.aiUsage.actorUser')
+  return '—'
+}
+
+function splitLabel(actor: 'admin' | 'user' | 'unknown'): string {
+  if (actor === 'admin') return t('admin.reports.aiUsage.actorAdmin')
+  if (actor === 'user') return t('admin.reports.aiUsage.actorUser')
+  return t('admin.reports.aiUsage.splitUnknown')
+}
+
 async function loadAiUsage(): Promise<void> {
   aiLoading.value = true
   aiError.value = null
-  const res = await fetchAiUsage(aiPeriod.value, { rows: props.detailed })
+  const res = await fetchAiUsage(aiPeriod.value, { rows: props.detailed, actor: props.detailed && aiScope.value !== 'all' ? aiScope.value : undefined })
   if (res.ok) {
     aiUsage.value = res.summary
     aiRows.value = res.summary.rows ?? []
@@ -93,6 +117,12 @@ async function loadAiUsage(): Promise<void> {
 function setAiPeriod(p: AiUsagePeriod): void {
   if (aiPeriod.value === p) return
   aiPeriod.value = p
+  void loadAiUsage()
+}
+
+function setAiScope(s: AiScope): void {
+  if (aiScope.value === s) return
+  aiScope.value = s
   void loadAiUsage()
 }
 
@@ -130,6 +160,19 @@ onMounted(() => {
       {{ t('admin.dashboard.aiUsage.unavailable') }}
     </div>
     <div v-else-if="aiUsage">
+      <!-- Detail-only scope filter: Admin (internal team) vs User. -->
+      <div v-if="detailed" class="mt-4 flex flex-wrap items-center gap-2">
+        <span class="text-xs font-semibold text-slate-500 dark:text-slate-400">{{ t('admin.reports.aiUsage.scopeLabel') }}</span>
+        <div class="flex gap-1 p-1 rounded-xl bg-slate-100 dark:bg-slate-800 w-fit">
+          <button
+            v-for="s in aiScopes" :key="s.id"
+            class="px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors"
+            :class="aiScope === s.id ? 'bg-white dark:bg-slate-900 shadow text-slate-900 dark:text-white' : 'text-slate-500 dark:text-slate-400'"
+            @click="setAiScope(s.id)"
+          >{{ t(`admin.reports.aiUsage.${s.label}`) }}</button>
+        </div>
+      </div>
+
       <div class="mt-4 grid grid-cols-2 lg:grid-cols-4 gap-3">
         <div class="rounded-xl bg-slate-50 dark:bg-slate-800/60 p-3">
           <p class="text-[11px] font-bold uppercase tracking-wide text-slate-400 dark:text-slate-500">{{ t('admin.dashboard.aiUsage.calls') }}</p>
@@ -158,6 +201,23 @@ onMounted(() => {
         {{ t('admin.dashboard.aiUsage.empty') }}
       </div>
       <div v-else>
+        <!-- Detail-only Admin-vs-User split. byActor always covers the
+             whole period (it ignores the scope filter above), so the
+             two sides are never mixed and stay comparable. -->
+        <template v-if="detailed && aiUsage.byActor.length > 0">
+          <h3 class="mt-5 text-sm font-bold">{{ t('admin.reports.aiUsage.splitTitle') }}</h3>
+          <p class="mt-0.5 text-[11px] text-slate-400 dark:text-slate-500">{{ t('admin.reports.aiUsage.splitCaption') }}</p>
+          <div class="mt-3 grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div v-for="a in aiUsage.byActor" :key="a.actor" class="rounded-xl bg-slate-50 dark:bg-slate-800/60 p-3">
+              <p class="text-[11px] font-bold uppercase tracking-wide text-slate-400 dark:text-slate-500">{{ splitLabel(a.actor) }}</p>
+              <p class="mt-1 text-xl font-extrabold tabular-nums">{{ fmtInt(a.calls) }} <span class="text-xs font-semibold text-slate-400 dark:text-slate-500">{{ t('admin.dashboard.aiUsage.calls').toLowerCase() }}</span></p>
+              <p class="mt-1 text-xs text-slate-500 dark:text-slate-400 tabular-nums">{{ fmtInt(a.totalTokens) }} {{ t('admin.dashboard.aiUsage.tokens').toLowerCase() }} · {{ fmtIdr(a.costIdr) }}</p>
+            </div>
+          </div>
+          <p class="mt-2 text-[11px] text-slate-400 dark:text-slate-500">{{ t('admin.reports.aiUsage.splitNote') }}</p>
+          <p v-if="aiUsage.byActor.some(a => a.actor === 'unknown')" class="mt-1 text-[11px] text-slate-400 dark:text-slate-500">{{ t('admin.reports.aiUsage.splitUnknownNote') }}</p>
+        </template>
+
         <div class="mt-5 overflow-x-auto">
           <table class="w-full text-sm">
             <thead>
@@ -211,6 +271,7 @@ onMounted(() => {
               <tr class="text-left text-xs uppercase tracking-wide text-slate-400 dark:text-slate-500 border-b border-slate-200 dark:border-slate-700">
                 <th class="px-2 py-3 font-semibold">{{ t('admin.reports.aiUsage.colTime') }}</th>
                 <th class="px-2 py-3 font-semibold">{{ t('admin.reports.aiUsage.colEndpoint') }}</th>
+                <th class="px-2 py-3 font-semibold">{{ t('admin.reports.aiUsage.colActor') }}</th>
                 <th class="px-2 py-3 font-semibold">{{ t('admin.reports.aiUsage.colModel') }}</th>
                 <th class="px-2 py-3 font-semibold text-right">{{ t('admin.reports.aiUsage.colPrompt') }}</th>
                 <th class="px-2 py-3 font-semibold text-right">{{ t('admin.reports.aiUsage.colCompletion') }}</th>
@@ -223,6 +284,7 @@ onMounted(() => {
               <tr v-for="r in aiRows" :key="r.id" class="border-b border-slate-100 dark:border-slate-800 last:border-0">
                 <td class="px-2 py-3 whitespace-nowrap text-slate-500 dark:text-slate-400">{{ fmtWib(r.createdAt) }}</td>
                 <td class="px-2 py-3 font-semibold">{{ endpointLabel(r.endpoint) }}</td>
+                <td class="px-2 py-3 font-semibold">{{ actorLabel(r.actor) }}</td>
                 <td class="px-2 py-3 font-mono text-xs break-all">{{ r.model }}</td>
                 <td class="px-2 py-3 text-right tabular-nums">{{ fmtInt(r.promptTokens) }}</td>
                 <td class="px-2 py-3 text-right tabular-nums">{{ fmtInt(r.completionTokens) }}</td>

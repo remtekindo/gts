@@ -523,7 +523,21 @@ export default {
       "llmRateLimited": "Meta AI rate limit reached — showing local analysis instead.",
       "llmMetaError": "Meta API rejected the request — the API key may be invalid or revoked. Check NITRO_MODEL_API_KEY, then restart the dev server.",
       "llmUnavailable": "Meta AI is unavailable right now — showing local analysis instead.",
-      "processing": "AI is processing your audit…"
+      "processing": "AI is processing your audit…",
+      "summaryTitle": "Conclusion",
+      "cardWorthy": "Check question quality",
+      "cardWorthySub": "Judge selected questions fit or not",
+      "pickWorthy": "Pick questions to assess",
+      "worthySearchPh": "Search by stem or id…",
+      "worthyCap": "Max 20 questions per assessment.",
+      "worthySelected": "{n} selected",
+      "worthyAssess": "Assess questions",
+      "worthyEmpty": "No questions match the search.",
+      "worthyTitle": "Question quality check",
+      "verdictsTitle": "Assessment results",
+      "verdict_layak": "Worthy",
+      "verdict_perlu": "Needs fixes",
+      "verdict_tidak": "Not worthy"
     },
     "databases": {
       "heading": "Question databases",
@@ -620,7 +634,19 @@ export default {
         "colTotal": "Total",
         "colCost": "Est. cost",
         "endpointAudit": "Audit chat",
-        "endpointLiveTest": "Live Test"
+        "endpointLiveTest": "Live Test",
+        "scopeLabel": "Usage by",
+        "scopeAll": "All",
+        "scopeAdmin": "Admin",
+        "scopeUser": "User",
+        "colActor": "Actor",
+        "actorAdmin": "Admin",
+        "actorUser": "User",
+        "splitTitle": "Admin vs User",
+        "splitCaption": "Whole selected period — the scope filter above does not change this split.",
+        "splitUnknown": "Unknown",
+        "splitNote": "Live Test calls count as User even when an admin takes the test — the split is by endpoint, not by who clicked.",
+        "splitUnknownNote": "Unknown calls were recorded before actor tracking (no actor stored) — shown separately, never mixed into Admin or User."
       }
     },
     "users": {

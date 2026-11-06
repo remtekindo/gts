@@ -59,6 +59,22 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   reasoning, never 0. Local D1 files migrated (CLI file via wrangler,
   pages-dev file via sqlite3); remote migration is the owner's step
   (`--remote`).
+- **AI usage split: Admin vs User** (6 Nov 2026):
+  `migrations/0005_ai_usage_actor.sql` adds a nullable `actor`
+  column to `ai_usage` ('admin' = internal team, 'user' = end
+  users), backfilled from the endpoint for existing rows
+  (audit-chat → admin, live-test → user). The split is by endpoint,
+  not by identity — an admin taking a Live Test still counts as
+  User, and rows with no actor are shown as "Unknown", never mixed
+  into either side. The Reports "Konsumsi AI" tab gains a scope
+  filter (All / Admin / User) that scopes the summary, per-model
+  table, histogram and rows to one side, plus an Admin-vs-User
+  comparison block that always covers the whole period; the per-call
+  table gains an Actor column. `GET /api/admin/ai-usage` accepts
+  `?actor=admin|user` (invalid values ignored) and always returns a
+  period-wide `byActor` breakdown. The Overview card is unchanged
+  (overall totals). Local D1 files migrated; remote migration is the
+  owner's step (`--remote`).
 - **Audits chat processing state** (5 Nov 2026): while the LLM
   answers (~6 s for a Meta call) the chat shows an "AI sedang
   memproses…" bubble with animated dots and the composer is disabled
@@ -66,6 +82,41 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - **New chat button on Audits** (5 Nov 2026): "+ New chat" in the
   sidebar (desktop) and the History tab (mobile) starts a fresh
   session; past sessions stay in the history list.
+- **Plain-language audit conclusion ("Kesimpulan")** (6 Nov 2026):
+  every audit answer now carries a `summary` field — 2-4 sentences
+  in plain everyday language (what is good, what needs doing, the
+  single most important next step), written by the model in the UI's
+  current locale (Indonesian when unknown) via a new `summary` field
+  in the audit JSON schema. It renders as a highlighted "Kesimpulan"
+  / "Conclusion" block above the technical reply in the chat and at
+  the top of the report detail modal; the technical reply + findings
+  are unchanged below it. The local fallback composes the same
+  conclusion deterministically from the bank numbers, and reports /
+  messages stored before this change show no empty block. The
+  summary adds ~50-100 completion tokens per audit call, recorded in
+  `ai_usage` as usual.
+- **Question worthiness check ("Cek kelayakan soal")** (6 Nov 2026):
+  a fourth Audits card opens a question picker — the admin picks
+  which questions get judged (max 20 per assessment, enforced in
+  the UI) instead of auditing the whole bank at once. The model
+  judges each picked question against five explicit criteria (clear
+  stem, exactly one correct key, plausible distractors, appropriate
+  difficulty, no factual/grammar/typo errors) and returns one
+  verdict per question — 'layak' / 'perlu-perbaikan' /
+  'tidak-layak' with one short reason — shown as green / amber /
+  red badges in the chat message and the report modal, under the
+  same plain-language conclusion. Without the LLM the fallback
+  states only known facts and never invents verdicts. Verdicts are
+  computed live per assessment and stored only in the chat
+  session/report (localStorage) — no D1 migration.
+- **Dashboard reorder: Weekly Quest ↔ Performance** (6 Nov 2026): on
+  the per-material dashboard, Performance moved to the left column
+  under the Points/Streak/Rank tiles and Weekly Quest moved to the
+  right column; the three action cards (Continue, Live Test with AI,
+  Your practice playlist) moved below Weekly Quest in the right
+  column, stacked vertically. Available Papers is now a 3-column
+  grid (was 2). Verified with a headless screenshot
+  (card positions measured).
 
 ### Changed
 - **Google Sign-In replaces the password login — for everyone**
@@ -149,6 +200,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - **Demo-only i18n keys** removed from `app/i18n/en.ts` + `id.ts`
   (demo users, Add user form, status cards, ability map, voucher
   seeds); en/id parity re-verified (620 keys each, no misses).
+- **Spider diagram + skill scores off the dashboard Performance card**
+  (6 Nov 2026): the radar SVG and the Listening/Reading/Grammar/
+  Vocabulary score list are gone from the per-material dashboard —
+  the card now shows only the journey chart, overall score, and CEFR
+  badge. The diagram stays on the Performance detail page
+  (`/m/:slug/performance`), which is its home.
 
 ### Fixed
 - **Auth-guard redirect loop** (5 Nov 2026, found by Playwright):

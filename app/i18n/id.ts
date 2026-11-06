@@ -523,7 +523,21 @@ export default {
       "llmRateLimited": "Batas pemakaian Meta AI tercapai — menampilkan analisis lokal.",
       "llmMetaError": "Meta API menolak permintaan — API key mungkin tidak valid atau sudah dicabut. Periksa NITRO_MODEL_API_KEY, lalu restart dev server.",
       "llmUnavailable": "Meta AI sedang tidak tersedia — menampilkan analisis lokal.",
-      "processing": "AI sedang memproses auditmu…"
+      "processing": "AI sedang memproses auditmu…",
+      "summaryTitle": "Kesimpulan",
+      "cardWorthy": "Cek kelayakan soal",
+      "cardWorthySub": "Nilai layak / tidaknya soal pilihan",
+      "pickWorthy": "Pilih soal untuk dinilai",
+      "worthySearchPh": "Cari berdasarkan soal atau id…",
+      "worthyCap": "Maksimal 20 soal per penilaian.",
+      "worthySelected": "{n} dipilih",
+      "worthyAssess": "Nilai soal",
+      "worthyEmpty": "Tidak ada soal yang cocok dengan pencarian.",
+      "worthyTitle": "Cek kelayakan soal",
+      "verdictsTitle": "Hasil penilaian",
+      "verdict_layak": "Layak",
+      "verdict_perlu": "Perlu perbaikan",
+      "verdict_tidak": "Tidak layak"
     },
     "databases": {
       "heading": "Database soal",
@@ -620,7 +634,19 @@ export default {
         "colTotal": "Total",
         "colCost": "Estimasi biaya",
         "endpointAudit": "Audit chat",
-        "endpointLiveTest": "Live Test"
+        "endpointLiveTest": "Live Test",
+        "scopeLabel": "Penggunaan oleh",
+        "scopeAll": "Semua",
+        "scopeAdmin": "Admin",
+        "scopeUser": "User",
+        "colActor": "Aktor",
+        "actorAdmin": "Admin",
+        "actorUser": "User",
+        "splitTitle": "Admin vs User",
+        "splitCaption": "Seluruh periode yang dipilih — filter di atas tidak mengubah rincian ini.",
+        "splitUnknown": "Tidak diketahui",
+        "splitNote": "Panggilan Live Test dihitung sebagai User walau yang mengerjakan admin — pemisahannya berdasarkan endpoint, bukan siapa yang mengklik.",
+        "splitUnknownNote": "Panggilan Tidak diketahui tercatat sebelum pelacakan aktor (aktor tidak tersimpan) — ditampilkan terpisah, tidak pernah dicampur ke Admin atau User."
       }
     },
     "users": {

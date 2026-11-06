@@ -5,7 +5,9 @@ import {
   answerPrompt, getAudits, getAuditById,
   getChatSessions, saveChatSession, deleteChatSession, newSessionId,
   buildAuditContext, askAuditChat, saveLlmAuditReport,
+  worthinessItems, runWorthiness, buildWorthinessContext, saveWorthinessReport,
   type ChatMsg, type ChatSession, type AuditReport,
+  type WorthyQuestion, type WorthinessVerdict,
 } from '~/utils/ai-assistant'
 
 definePageMeta({ layout: 'admin' })
@@ -27,7 +29,41 @@ const ta = ref<HTMLTextAreaElement | null>(null)
 const showVolumeModal = ref(false)
 const showUserModal = ref(false)
 const showAddVolume = ref(false)
+const showWorthinessModal = ref(false)
 const reportDetail = ref<AuditReport | null>(null)
+
+/* Worthiness picker: admin-picked questions, max 20 per assessment. */
+const WORTHY_MAX = 20
+const worthinessSearch = ref('')
+const worthinessPicked = ref<string[]>([])
+const worthinessList = computed<WorthyQuestion[]>(() => worthinessItems())
+const worthinessFiltered = computed(() => {
+  const q = worthinessSearch.value.trim().toLowerCase()
+  if (!q) return worthinessList.value
+  return worthinessList.value.filter(i => i.id.toLowerCase().includes(q) || i.stem.toLowerCase().includes(q))
+})
+
+function toggleWorthy(id: string): void {
+  const i = worthinessPicked.value.indexOf(id)
+  if (i >= 0) {
+    worthinessPicked.value.splice(i, 1)
+  } else if (worthinessPicked.value.length < WORTHY_MAX) {
+    worthinessPicked.value.push(id)
+  }
+}
+
+/** Badge colors per verdict — green / amber / red. */
+function verdictBadgeClass(v: WorthinessVerdict): string {
+  if (v.verdict === 'layak') return 'bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-200'
+  if (v.verdict === 'perlu-perbaikan') return 'bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-200'
+  return 'bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-200'
+}
+
+function verdictLabel(v: WorthinessVerdict): string {
+  if (v.verdict === 'layak') return t('admin.audits.verdict_layak')
+  if (v.verdict === 'perlu-perbaikan') return t('admin.audits.verdict_perlu')
+  return t('admin.audits.verdict_tidak')
+}
 
 const volumes = ref<Volume[]>([])
 /* Real users (Google sign-in, D1) for the user picker + analysis. */
@@ -96,8 +132,8 @@ async function send(): Promise<void> {
     const history = messages.value.slice(0, -1).slice(-6)
     const llm = await askAuditChat(text, lang(), context, history)
     if (llm.ok && llm.reply) {
-      const reportId = saveLlmAuditReport(llm.title ?? 'Audit chat', llm.reply, llm.findings ?? [])
-      messages.value.push({ from: 'ai', text: llm.reply, reportId, source: 'llm' })
+      const reportId = saveLlmAuditReport(llm.title ?? 'Audit chat', llm.reply, llm.findings ?? [], llm.summary ?? null)
+      messages.value.push({ from: 'ai', text: llm.reply, reportId, source: 'llm', plainSummary: llm.summary ?? null })
     } else {
       const ans = answerPrompt(text, lang(), scopeIds, realUsers.value.map(u => u.email))
       const note = llm.code === 'no-key'
@@ -107,7 +143,7 @@ async function send(): Promise<void> {
           : llm.code === 'meta-error'
             ? t('admin.audits.llmMetaError')
             : t('admin.audits.llmUnavailable')
-      messages.value.push({ from: 'ai', text: ans.reply, reportId: ans.reportId, source: 'local', note })
+      messages.value.push({ from: 'ai', text: ans.reply, reportId: ans.reportId, source: 'local', note, plainSummary: ans.plainSummary ?? null })
     }
   } finally {
     sending.value = false
@@ -170,6 +206,46 @@ function pickUser(username: string): void {
   input.value = `analisa user ${username}`
   autoGrow()
   void send()
+}
+
+/** Worthiness assessment for the admin-picked questions: same
+ * LLM-first pattern as send(), but the context carries the selected
+ * questions in full and the answer carries per-question verdicts. */
+async function sendWorthiness(): Promise<void> {
+  const ids = [...worthinessPicked.value]
+  if (ids.length === 0 || sending.value) return
+  const selected = worthinessList.value.filter(q => ids.includes(q.id))
+  if (selected.length === 0) return
+  showWorthinessModal.value = false
+  worthinessPicked.value = []
+  sending.value = true
+  messages.value.push({ from: 'user', text: `${t('admin.audits.worthyTitle')}: ${ids.join(', ')}` })
+  await nextTick()
+  if (chatBox.value) chatBox.value.scrollTop = chatBox.value.scrollHeight
+  try {
+    const context = buildWorthinessContext(selected)
+    const history = messages.value.slice(0, -1).slice(-6)
+    const llm = await askAuditChat(t('admin.audits.worthyTitle'), lang(), context, history)
+    if (llm.ok && llm.reply) {
+      const reportId = saveWorthinessReport(llm.title ?? t('admin.audits.worthyTitle'), llm.reply, llm.findings ?? [], llm.summary ?? null, llm.verdicts ?? null)
+      messages.value.push({ from: 'ai', text: llm.reply, reportId, source: 'llm', plainSummary: llm.summary ?? null, verdicts: llm.verdicts ?? null })
+    } else {
+      const ans = runWorthiness(lang(), selected)
+      const note = llm.code === 'no-key'
+        ? t('admin.audits.llmNoKey')
+        : llm.code === 'rate-limited'
+          ? t('admin.audits.llmRateLimited')
+          : llm.code === 'meta-error'
+            ? t('admin.audits.llmMetaError')
+            : t('admin.audits.llmUnavailable')
+      messages.value.push({ from: 'ai', text: ans.reply, reportId: ans.reportId, source: 'local', note, plainSummary: ans.plainSummary ?? null, verdicts: null })
+    }
+  } finally {
+    sending.value = false
+  }
+  persist()
+  await nextTick()
+  if (chatBox.value) chatBox.value.scrollTop = chatBox.value.scrollHeight
 }
 
 function viewReport(reportId: string | null | undefined): void {
@@ -251,6 +327,26 @@ onMounted(() => {
                   <span v-if="m.source === 'llm'" class="inline-block text-[11px] font-bold px-2 py-0.5 rounded-full bg-violet-100 text-violet-700 dark:bg-violet-900/50 dark:text-violet-200">Meta AI</span>
                   <span v-else class="inline-block text-[11px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300">{{ t('admin.audits.localBadge') }}</span>
                 </p>
+                <!-- Plain-language conclusion, above the technical
+                     reply. Rendered only when the answer carries one
+                     — old stored messages show nothing here. -->
+                <div v-if="m.plainSummary" class="mb-2.5 rounded-xl bg-violet-50 dark:bg-violet-950/50 border border-violet-200 dark:border-violet-800 px-3.5 py-2.5">
+                  <p class="text-[11px] font-bold uppercase tracking-wide text-violet-700 dark:text-violet-300">{{ t('admin.audits.summaryTitle') }}</p>
+                  <p class="mt-1 text-slate-700 dark:text-slate-200">{{ m.plainSummary }}</p>
+                </div>
+                <!-- Worthiness verdicts, one row per question. Rendered
+                     only when the answer carries them — the local
+                     fallback and old stored messages show nothing. -->
+                <div v-if="m.verdicts && m.verdicts.length" class="mb-2.5 space-y-1.5">
+                  <p class="text-[11px] font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400">{{ t('admin.audits.verdictsTitle') }}</p>
+                  <div v-for="v in m.verdicts" :key="v.id" class="flex items-start gap-2 rounded-xl border border-slate-200 dark:border-slate-700 px-3 py-2">
+                    <span class="shrink-0 text-[11px] font-bold px-2 py-0.5 rounded-full" :class="verdictBadgeClass(v)">{{ verdictLabel(v) }}</span>
+                    <div class="min-w-0">
+                      <p class="font-mono text-xs font-bold">{{ v.id }}</p>
+                      <p class="text-xs text-slate-600 dark:text-slate-300">{{ v.reason }}</p>
+                    </div>
+                  </div>
+                </div>
                 <p class="whitespace-pre-wrap text-slate-700 dark:text-slate-200">{{ m.text }}</p>
                 <p v-if="m.note" class="mt-1.5 text-[11px] text-slate-400 dark:text-slate-500">{{ m.note }}</p>
                 <button
@@ -286,7 +382,7 @@ onMounted(() => {
              both are exactly the same width. -->
         <div class="mt-auto bg-slate-50 dark:bg-slate-950 pt-3 pb-1">
         <div class="max-w-3xl mx-auto">
-        <div class="grid grid-cols-3 gap-2 md:gap-3">
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-3">
           <button
             class="text-left bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 p-3 hover:border-violet-400 dark:hover:border-violet-500 hover:shadow-lg transition-all"
             @click="showVolumeModal = true"
@@ -310,6 +406,14 @@ onMounted(() => {
             <p class="text-xl">👤</p>
             <p class="mt-1.5 font-bold text-xs md:text-sm">{{ t('admin.audits.cardUser') }}</p>
             <p class="mt-0.5 text-[11px] text-slate-500 dark:text-slate-400 hidden sm:block">{{ t('admin.audits.cardUserSub') }}</p>
+          </button>
+          <button
+            class="text-left bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 p-3 hover:border-violet-400 dark:hover:border-violet-500 hover:shadow-lg transition-all"
+            @click="showWorthinessModal = true"
+          >
+            <p class="text-xl">✅</p>
+            <p class="mt-1.5 font-bold text-xs md:text-sm">{{ t('admin.audits.cardWorthy') }}</p>
+            <p class="mt-0.5 text-[11px] text-slate-500 dark:text-slate-400 hidden sm:block">{{ t('admin.audits.cardWorthySub') }}</p>
           </button>
         </div>
         </div>
@@ -458,6 +562,57 @@ onMounted(() => {
       </div>
     </div>
 
+    <!-- Worthiness picker modal: admin picks up to 20 questions
+         from the live bank. Checkbox list with search; further
+         checkboxes disable at the cap. -->
+    <div v-if="showWorthinessModal" class="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4" role="dialog" aria-modal="true">
+      <div class="absolute inset-0 bg-slate-900/70" />
+      <div class="relative bg-white dark:bg-slate-800 w-full sm:rounded-2xl sm:max-w-lg max-h-[85vh] flex flex-col overflow-hidden p-5 rounded-t-2xl shadow-2xl border border-slate-200 dark:border-slate-600">
+        <div class="flex items-start justify-between gap-3">
+          <div>
+            <h2 class="font-bold">{{ t('admin.audits.pickWorthy') }}</h2>
+            <p class="mt-0.5 text-xs text-slate-500 dark:text-slate-400">{{ t('admin.audits.worthyCap') }}</p>
+          </div>
+          <button class="text-slate-400 hover:text-slate-600 px-2 py-1" @click="showWorthinessModal = false" aria-label="Close">✕</button>
+        </div>
+        <input
+          v-model="worthinessSearch"
+          type="search"
+          :placeholder="t('admin.audits.worthySearchPh')"
+          class="mt-3 w-full text-sm bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-3.5 py-2.5 outline-none focus:border-violet-500"
+        />
+        <ul class="mt-3 flex-1 overflow-y-auto min-h-0 space-y-1.5 pr-1">
+          <li v-for="q in worthinessFiltered" :key="q.id">
+            <label
+              class="flex items-start gap-3 px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 cursor-pointer hover:border-violet-400 dark:hover:border-violet-500 transition-colors"
+              :class="worthinessPicked.includes(q.id) ? 'border-violet-400 dark:border-violet-500 bg-violet-50 dark:bg-violet-950/40' : ''"
+            >
+              <input
+                type="checkbox"
+                :checked="worthinessPicked.includes(q.id)"
+                :disabled="!worthinessPicked.includes(q.id) && worthinessPicked.length >= WORTHY_MAX"
+                class="mt-0.5 accent-violet-600"
+                @change="toggleWorthy(q.id)"
+              />
+              <span class="min-w-0">
+                <span class="block text-xs"><span class="font-mono font-bold">{{ q.id }}</span> · {{ q.partLabel }}</span>
+                <span class="block text-sm text-slate-600 dark:text-slate-300 truncate">{{ q.stem }}</span>
+              </span>
+            </label>
+          </li>
+        </ul>
+        <p v-if="worthinessFiltered.length === 0" class="mt-3 text-sm text-slate-400 dark:text-slate-500">{{ t('admin.audits.worthyEmpty') }}</p>
+        <div class="mt-4 flex items-center justify-between gap-3">
+          <p class="text-sm text-slate-500 dark:text-slate-400">{{ t('admin.audits.worthySelected', { n: worthinessPicked.length }) }} / {{ WORTHY_MAX }}</p>
+          <button
+            class="text-sm font-semibold px-4 py-2.5 rounded-xl bg-violet-600 text-white disabled:opacity-40"
+            :disabled="worthinessPicked.length === 0 || sending"
+            @click="sendWorthiness"
+          >{{ t('admin.audits.worthyAssess') }}</button>
+        </div>
+      </div>
+    </div>
+
     <!-- Report detail modal — full height to the bottom of the
          viewport (header fixed, body scrolls), so the report reads
          with as little inner scrolling as possible. -->
@@ -472,7 +627,25 @@ onMounted(() => {
           <button class="text-slate-400 hover:text-slate-600 px-2 py-1" @click="reportDetail = null" aria-label="Close">✕</button>
         </div>
         <div class="mt-3 flex-1 overflow-y-auto min-h-0">
-          <p class="text-sm font-semibold">{{ reportDetail.summary }}</p>
+          <!-- Plain-language conclusion at the top. Rendered only
+               when the report carries one — older reports show the
+               technical summary directly, with no empty block. -->
+          <div v-if="reportDetail.plainSummary" class="rounded-xl bg-violet-50 dark:bg-violet-950/50 border border-violet-200 dark:border-violet-800 px-4 py-3">
+            <p class="text-[11px] font-bold uppercase tracking-wide text-violet-700 dark:text-violet-300">{{ t('admin.audits.summaryTitle') }}</p>
+            <p class="mt-1 text-sm text-slate-700 dark:text-slate-200">{{ reportDetail.plainSummary }}</p>
+          </div>
+          <!-- Worthiness verdicts. Only when the report carries them. -->
+          <div v-if="reportDetail.verdicts && reportDetail.verdicts.length" class="mt-3 space-y-1.5">
+            <p class="text-[11px] font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400">{{ t('admin.audits.verdictsTitle') }}</p>
+            <div v-for="v in reportDetail.verdicts" :key="v.id" class="flex items-start gap-2 rounded-xl border border-slate-200 dark:border-slate-700 px-3 py-2">
+              <span class="shrink-0 text-[11px] font-bold px-2 py-0.5 rounded-full" :class="verdictBadgeClass(v)">{{ verdictLabel(v) }}</span>
+              <div class="min-w-0">
+                <p class="font-mono text-xs font-bold">{{ v.id }}</p>
+                <p class="text-xs text-slate-600 dark:text-slate-300">{{ v.reason }}</p>
+              </div>
+            </div>
+          </div>
+          <p class="text-sm font-semibold" :class="reportDetail.plainSummary ? 'mt-3' : ''">{{ reportDetail.summary }}</p>
           <ul class="mt-3 text-sm space-y-1 text-slate-600 dark:text-slate-300 bg-slate-50 dark:bg-slate-900/60 rounded-xl p-4">
             <li v-for="(d, i) in reportDetail.details" :key="i">{{ d }}</li>
           </ul>

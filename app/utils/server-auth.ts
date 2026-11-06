@@ -145,6 +145,17 @@ export interface AiUsageModelRow {
   costIdr: number
 }
 
+export interface AiUsageActorRow {
+  actor: 'admin' | 'user' | 'unknown'
+  calls: number
+  promptTokens: number
+  completionTokens: number
+  reasoningTokens: number
+  totalTokens: number
+  costUsd: number
+  costIdr: number
+}
+
 export interface AiUsageRow {
   id: number
   endpoint: string
@@ -153,6 +164,8 @@ export interface AiUsageRow {
   completionTokens: number
   /** Hidden reasoning tokens (subset of completionTokens), or null when not recorded. */
   reasoningTokens: number | null
+  /** Who used the tokens: 'admin' (internal team) or 'user' (end users), null when unknown. */
+  actor: 'admin' | 'user' | null
   createdAt: string
 }
 
@@ -166,6 +179,10 @@ export interface AiUsageSummary {
   totalCostIdr: number
   usdIdrRate: number
   byModel: AiUsageModelRow[]
+  /** Admin-vs-User split of the whole period — always period-wide,
+   * ignoring the ?actor scope filter, so the comparison block is
+   * stable while the totals above it follow the selected scope. */
+  byActor: AiUsageActorRow[]
   hourly: number[]
   peakHour: number | null
   rates: { inputUsdPerMtok: number, outputUsdPerMtok: number }
@@ -176,10 +193,12 @@ export interface AiUsageSummary {
 
 export type AiUsagePeriod = 'today' | '7d' | '30d' | 'all'
 
-/** AI usage summary, or an error code ('unavailable' when D1 is not connected). */
-export async function fetchAiUsage(period: AiUsagePeriod, opts?: { rows?: boolean }): Promise<{ ok: true, summary: AiUsageSummary } | { ok: false, code: string }> {
+/** AI usage summary, or an error code ('unavailable' when D1 is not connected).
+ * `actor` scopes the totals + rows to one side ('admin' = internal team,
+ * 'user' = end users); the byActor split in the response stays period-wide. */
+export async function fetchAiUsage(period: AiUsagePeriod, opts?: { rows?: boolean, actor?: 'admin' | 'user' }): Promise<{ ok: true, summary: AiUsageSummary } | { ok: false, code: string }> {
   try {
-    const res = await $fetch<AiUsageSummary>('/api/admin/ai-usage', { query: { period, ...(opts?.rows ? { rows: '1' } : {}) } })
+    const res = await $fetch<AiUsageSummary>('/api/admin/ai-usage', { query: { period, ...(opts?.rows ? { rows: '1' } : {}), ...(opts?.actor ? { actor: opts.actor } : {}) } })
     return { ok: true, summary: res }
   } catch (e) {
     return { ok: false, code: errorCode(e) ?? 'unavailable' }

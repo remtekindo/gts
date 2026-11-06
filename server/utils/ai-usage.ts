@@ -9,7 +9,16 @@
  * hidden reasoning tokens are a SUBSET of completion tokens, never
  * extra — totals and cost still use prompt + completion only. NULL
  * means "not recorded" (older rows, or a response without the
- * breakdown) and is displayed as "—", never as 0. The Overview
+ * breakdown) and is displayed as "—", never as 0.
+ *
+ * Since migration 0005 each row also carries `actor`: 'admin' for
+ * internal-team usage, 'user' for end-user usage. The split is by
+ * ENDPOINT, not by identity — the audit chat is admin-only, so every
+ * audit-chat row is 'admin'; Live Test is the user-facing feature,
+ * so its rows are 'user'. An admin who takes a Live Test still
+ * counts as 'user': no per-user identity is tracked. The migration
+ * backfills existing rows from their endpoint; NULL means "unknown"
+ * and is shown separately, never folded into either side. The Overview
  * "Aktivitas Penggunaan AI" card reads this table — so its numbers
  * are real, never seeded. An empty table honestly means "no usage
  * yet". Recording is best-effort and never throws: a logging failure
@@ -38,6 +47,8 @@ export interface AiUsageRow {
   completionTokens: number
   /** Hidden reasoning tokens (subset of completionTokens), or null when not recorded. */
   reasoningTokens: number | null
+  /** Who used the tokens: 'admin' (internal team) or 'user' (end users), null when unknown. */
+  actor: 'admin' | 'user' | null
   createdAt: string
 }
 
@@ -46,6 +57,21 @@ export interface AiUsageModelBreakdown {
   calls: number
   promptTokens: number
   completionTokens: number
+  costUsd: number
+  costIdr: number
+}
+
+/** Per-actor breakdown. `reasoningTokens` sums only recorded values
+ * (rows with NULL reasoning contribute 0 — the per-row "—" is where
+ * the unknown shows); it is a subset of completionTokens, never
+ * extra, so totals and cost still use prompt + completion only. */
+export interface AiUsageActorBreakdown {
+  actor: 'admin' | 'user' | 'unknown'
+  calls: number
+  promptTokens: number
+  completionTokens: number
+  reasoningTokens: number
+  totalTokens: number
   costUsd: number
   costIdr: number
 }
@@ -60,6 +86,9 @@ export interface AiUsageSummary {
   totalCostIdr: number
   usdIdrRate: number
   byModel: AiUsageModelBreakdown[]
+  /** Admin-vs-User split of the same rows (scopes with no calls are
+   * omitted; 'unknown' is actor NULL, shown separately). */
+  byActor: AiUsageActorBreakdown[]
   /** Calls per hour, index 0-23, in WIB (Asia/Jakarta, UTC+7). */
   hourly: number[]
   /** Busiest WIB hour (0-23), or null when there are no calls. */
@@ -85,18 +114,19 @@ export function reasoningTokensFromUsage(usage: unknown): number | null {
 /** Record one Meta API call. Best-effort: never throws. */
 export async function recordAiUsage(
   db: D1Database | null,
-  entry: { endpoint: string, model: string, promptTokens: number, completionTokens: number, reasoningTokens?: number | null }
+  entry: { endpoint: string, model: string, promptTokens: number, completionTokens: number, reasoningTokens?: number | null, actor?: 'admin' | 'user' | null }
 ): Promise<void> {
   if (!db) return
   try {
     await db.prepare(
-      'INSERT INTO ai_usage (endpoint, model, prompt_tokens, completion_tokens, reasoning_tokens) VALUES (?1, ?2, ?3, ?4, ?5)'
+      'INSERT INTO ai_usage (endpoint, model, prompt_tokens, completion_tokens, reasoning_tokens, actor) VALUES (?1, ?2, ?3, ?4, ?5, ?6)'
     ).bind(
       entry.endpoint,
       entry.model,
       Math.max(0, Math.floor(entry.promptTokens)),
       Math.max(0, Math.floor(entry.completionTokens)),
-      entry.reasoningTokens == null ? null : Math.max(0, Math.floor(entry.reasoningTokens))
+      entry.reasoningTokens == null ? null : Math.max(0, Math.floor(entry.reasoningTokens)),
+      entry.actor === 'admin' || entry.actor === 'user' ? entry.actor : null
     ).run()
   } catch (e) {
     console.warn('[ai-usage] record failed:', (e as Error).message)
@@ -127,7 +157,7 @@ export function periodStartIso(period: string, nowMs = Date.now()): string | nul
 
 /** Raw rows for a period (newest first, capped — the card aggregates client-side data from here). */
 export async function fetchAiUsageRows(db: D1Database, sinceIso: string | null): Promise<AiUsageRow[]> {
-  const base = 'SELECT id, endpoint, model, prompt_tokens, completion_tokens, reasoning_tokens, created_at FROM ai_usage'
+  const base = 'SELECT id, endpoint, model, prompt_tokens, completion_tokens, reasoning_tokens, actor, created_at FROM ai_usage'
   const stmt = sinceIso
     ? db.prepare(`${base} WHERE created_at >= ?1 ORDER BY created_at DESC LIMIT 5000`).bind(sinceIso)
     : db.prepare(`${base} ORDER BY created_at DESC LIMIT 5000`)
@@ -139,6 +169,7 @@ export async function fetchAiUsageRows(db: D1Database, sinceIso: string | null):
     promptTokens: Number(r.prompt_tokens) || 0,
     completionTokens: Number(r.completion_tokens) || 0,
     reasoningTokens: r.reasoning_tokens === null || r.reasoning_tokens === undefined ? null : Number(r.reasoning_tokens),
+    actor: r.actor === 'admin' || r.actor === 'user' ? r.actor : null,
     createdAt: String(r.created_at || '')
   }))
 }
@@ -153,6 +184,7 @@ export function wibHour(utcSqliteTs: string): number {
 /** Pure aggregation over raw rows — no SQL, so it is unit-testable. */
 export function summarizeAiUsage(rows: AiUsageRow[], period: string): AiUsageSummary {
   const byModel = new Map<string, AiUsageModelBreakdown>()
+  const byActor = new Map<'admin' | 'user' | 'unknown', AiUsageActorBreakdown>()
   const hourly = new Array<number>(24).fill(0)
   let totalPrompt = 0
   let totalCompletion = 0
@@ -164,6 +196,13 @@ export function summarizeAiUsage(rows: AiUsageRow[], period: string): AiUsageSum
     cur.promptTokens += r.promptTokens
     cur.completionTokens += r.completionTokens
     byModel.set(r.model, cur)
+    const scope = r.actor ?? 'unknown'
+    const acur = byActor.get(scope) ?? { actor: scope, calls: 0, promptTokens: 0, completionTokens: 0, reasoningTokens: 0, totalTokens: 0, costUsd: 0, costIdr: 0 }
+    acur.calls += 1
+    acur.promptTokens += r.promptTokens
+    acur.completionTokens += r.completionTokens
+    acur.reasoningTokens += r.reasoningTokens ?? 0
+    byActor.set(scope, acur)
     const h = wibHour(r.createdAt)
     if (h >= 0) hourly[h] = (hourly[h] ?? 0) + 1
   }
@@ -171,6 +210,11 @@ export function summarizeAiUsage(rows: AiUsageRow[], period: string): AiUsageSum
     const usd = costUsd(m.promptTokens, m.completionTokens)
     return { ...m, costUsd: usd, costIdr: Math.round(usd * USD_IDR_RATE) }
   }).sort((a, b) => b.calls - a.calls)
+  const actorOrder: Array<'admin' | 'user' | 'unknown'> = ['admin', 'user', 'unknown']
+  const actors = [...byActor.values()].map(a => {
+    const usd = costUsd(a.promptTokens, a.completionTokens)
+    return { ...a, totalTokens: a.promptTokens + a.completionTokens, costUsd: usd, costIdr: Math.round(usd * USD_IDR_RATE) }
+  }).sort((a, b) => actorOrder.indexOf(a.actor) - actorOrder.indexOf(b.actor))
   const totalUsd = costUsd(totalPrompt, totalCompletion)
   let peakHour: number | null = null
   let peakCount = 0
@@ -187,6 +231,7 @@ export function summarizeAiUsage(rows: AiUsageRow[], period: string): AiUsageSum
     totalCostIdr: Math.round(totalUsd * USD_IDR_RATE),
     usdIdrRate: USD_IDR_RATE,
     byModel: models,
+    byActor: actors,
     hourly,
     peakHour
   }

@@ -16,18 +16,46 @@
 import { liveAllQuestions, liveFreeQuestions, getDifficultyOverrides, bankViewId } from './admin'
 import { analyzeAbility } from './adaptive'
 
+export interface WorthinessVerdict {
+  id: string
+  verdict: 'layak' | 'perlu-perbaikan' | 'tidak-layak'
+  reason: string
+}
+
+/** One question as sent to the LLM for a worthiness assessment. */
+export interface WorthyQuestion {
+  id: string
+  /** Display label: "Part 5" for bank items, "Free · Listening" for free-test items. */
+  partLabel: string
+  stem: string
+  options: { letter: string, text: string }[]
+  correctLetter: string
+  explanation: string
+}
+
 export interface AuditReport {
   id: string
-  type: 'audit' | 'duplicates' | 'distribution' | 'unrated' | 'stats' | 'user'
+  type: 'audit' | 'duplicates' | 'distribution' | 'unrated' | 'stats' | 'user' | 'worthiness'
   title: string
   createdAt: string
   summary: string
   details: string[]
+  /** Plain-language conclusion ("Kesimpulan") — from the LLM, or
+   * composed deterministically for the local fallback. Absent on
+   * reports stored before this field existed: the UI renders no
+   * (empty) block for those. */
+  plainSummary?: string | null
+  /** Per-question worthiness verdicts (worthiness reports only).
+   * Null on the local fallback (verdicts need the LLM) and absent
+   * on reports stored before this field existed. */
+  verdicts?: WorthinessVerdict[] | null
 }
 
 export interface AssistantAnswer {
   reply: string
   reportId: string | null
+  plainSummary?: string | null
+  verdicts?: WorthinessVerdict[] | null
 }
 
 type Lang = 'id' | 'en'
@@ -117,6 +145,21 @@ const STR: Record<Lang, Record<string, string>> = {
     userWeak: 'Kelemahan utama: Part {part} ({acc}). Rekomendasi: fokus latihan Part {part} di level {level}.',
     userStrong: 'Kekuatan utama: Part {part} ({acc}).',
     userNotFound: 'User "{name}" tidak ditemukan.',
+    plainBankGood: 'Bank soal berisi {n} soal.',
+    plainNoDupes: 'Tidak ada soal yang dobel.',
+    plainDupes: 'Ada {n} soal yang dobel.',
+    plainUnrated: '{n} soal belum dinilai tingkat kesulitannya.',
+    plainSkew: 'Kunci jawaban belum seimbang, jawaban {k} paling banyak.',
+    plainPaidNoExpl: '{n} soal berbayar tanpa penjelasan.',
+    plainNextDupes: 'Langkah berikutnya yang paling penting: rapikan dulu soal-soal yang dobel.',
+    plainNextRate: 'Langkah berikutnya yang paling penting: nilai dulu soal-soal yang belum dinilai.',
+    plainNextBalance: 'Langkah berikutnya yang paling penting: tambah soal dengan kunci jawaban yang masih sedikit.',
+    plainNextOk: 'Untuk sekarang tidak ada yang mendesak; bank sudah bisa dipakai.',
+    plainUser: 'Kemampuan {name} paling kuat di Part {strong} dan paling lemah di Part {weak}. Langkah berikutnya yang paling penting: fokus latihan Part {weak} di level {level}.',
+    worthyTitle: 'Cek kelayakan soal',
+    plainWorthyPicked: '{n} soal dipilih untuk dinilai.',
+    plainWorthyNoExpl: '{n} soal tanpa penjelasan.',
+    plainWorthyNeedLlm: 'Penilaian layak atau tidaknya butuh Meta AI — di bawah ini ringkasan faktanya saja.',
   },
   en: {
     auditTitle: 'Question bank audit',
@@ -143,6 +186,21 @@ const STR: Record<Lang, Record<string, string>> = {
     userWeak: 'Main weakness: Part {part} ({acc}). Recommendation: focus practice on Part {part} at level {level}.',
     userStrong: 'Main strength: Part {part} ({acc}).',
     userNotFound: 'User "{name}" not found.',
+    plainBankGood: 'The bank holds {n} questions.',
+    plainNoDupes: 'No questions are duplicated.',
+    plainDupes: '{n} questions are duplicated.',
+    plainUnrated: '{n} questions have no difficulty level yet.',
+    plainSkew: 'Answer keys are uneven — {k} is the most common.',
+    plainPaidNoExpl: '{n} paid questions without an explanation.',
+    plainNextDupes: 'Most important next step: clean up the duplicated questions first.',
+    plainNextRate: 'Most important next step: rate the unrated questions first.',
+    plainNextBalance: 'Most important next step: add questions with the answer keys that are still rare.',
+    plainNextOk: 'Nothing is urgent right now; the bank is ready to use.',
+    plainUser: '{name} is strongest in Part {strong} and weakest in Part {weak}. Most important next step: focus practice on Part {weak} at level {level}.',
+    worthyTitle: 'Question quality check',
+    plainWorthyPicked: '{n} questions picked for assessment.',
+    plainWorthyNoExpl: '{n} questions without an explanation.',
+    plainWorthyNeedLlm: 'Worthiness verdicts need Meta AI — here are the facts only.',
   },
 }
 
@@ -180,6 +238,64 @@ function unrated(items: BankItem[]): BankItem[] {
   return items.filter(q => diffs[q.id] === undefined)
 }
 
+interface PlainStats {
+  total: number
+  duplicates: number
+  unrated: number
+  /** Paid questions without an explanation (free-test items have none by design and are excluded). */
+  paidNoExpl: number
+  unbalanced: boolean
+  /** Most common answer key, when unbalanced. */
+  topKey: string
+}
+
+function fullBankStats(items: BankItem[]): PlainStats {
+  const dups = duplicates(items)
+  const un = unrated(items)
+  const dist = keyDist(items)
+  const free = items.filter(q => q.id.startsWith('free-')).length
+  const noExpl = items.filter(q => !q.explanation.trim()).length
+  const vals = Object.values(dist)
+  const max = Math.max(...vals)
+  const min = Math.min(...vals)
+  const topKey = (Object.entries(dist).sort((a, b) => b[1] - a[1])[0] ?? ['A', 0])[0] as string
+  return {
+    total: items.length,
+    duplicates: dups.length,
+    unrated: un.length,
+    paidNoExpl: Math.max(0, noExpl - free),
+    unbalanced: max - min > items.length * 0.15,
+    topKey,
+  }
+}
+
+/**
+ * Plain-language conclusion ("Kesimpulan") for the LOCAL fallback,
+ * composed deterministically from the bank numbers — nothing is
+ * invented, and free-test items missing an explanation are never
+ * presented as a problem (they have none by design). At most four
+ * short sentences: what is good, up to two issues, and the single
+ * most important next step. Priority of next steps: duplicates,
+ * then unrated, then key balance.
+ */
+function buildPlainSummary(lang: Lang, s: PlainStats): string {
+  const parts: string[] = [t(lang, 'plainBankGood', { n: s.total })]
+  if (s.duplicates === 0) parts.push(t(lang, 'plainNoDupes'))
+  const issues: string[] = []
+  if (s.duplicates > 0) issues.push(t(lang, 'plainDupes', { n: s.duplicates }))
+  if (s.unrated > 0) issues.push(t(lang, 'plainUnrated', { n: s.unrated }))
+  if (s.paidNoExpl > 0) issues.push(t(lang, 'plainPaidNoExpl', { n: s.paidNoExpl }))
+  if (s.unbalanced) issues.push(t(lang, 'plainSkew', { k: s.topKey }))
+  // Keep the whole conclusion at 2-4 sentences: when the "good" part
+  // already took two sentences (no duplicates), list one issue.
+  parts.push(...issues.slice(0, s.duplicates === 0 ? 1 : 2))
+  if (s.duplicates > 0) parts.push(t(lang, 'plainNextDupes'))
+  else if (s.unrated > 0) parts.push(t(lang, 'plainNextRate'))
+  else if (s.unbalanced) parts.push(t(lang, 'plainNextBalance'))
+  else parts.push(t(lang, 'plainNextOk'))
+  return parts.join(' ')
+}
+
 function runAudit(lang: Lang, scopeIds?: Set<string>): AssistantAnswer {
   const items = bankItems(scopeIds)
   const dups = duplicates(items)
@@ -207,6 +323,7 @@ function runAudit(lang: Lang, scopeIds?: Set<string>): AssistantAnswer {
   details.unshift(t(lang, 'totalLine', { n: items.length }))
 
   const issues = dups.length + (un.length > 0 ? 1 : 0) + (max - min > items.length * 0.15 ? 1 : 0)
+  const plainSummary = buildPlainSummary(lang, fullBankStats(items))
   const report: AuditReport = {
     id: uid(),
     type: 'audit',
@@ -214,9 +331,10 @@ function runAudit(lang: Lang, scopeIds?: Set<string>): AssistantAnswer {
     createdAt: new Date().toISOString(),
     summary: issues === 0 ? t(lang, 'doneOk') : t(lang, 'doneAudit', { issues }),
     details,
+    plainSummary,
   }
   saveAudit(report)
-  return { reply: report.summary, reportId: report.id }
+  return { reply: report.summary, reportId: report.id, plainSummary }
 }
 
 function runDuplicates(lang: Lang, scopeIds?: Set<string>): AssistantAnswer {
@@ -225,37 +343,43 @@ function runDuplicates(lang: Lang, scopeIds?: Set<string>): AssistantAnswer {
   const details = dups.length === 0
     ? [t(lang, 'noDupes')]
     : [t(lang, 'dupesFound', { n: dups.length }), ...dups.slice(0, 20).map(d => `• ${d.stem}… (${d.ids.join(', ')})`)]
+  const plainSummary = buildPlainSummary(lang, fullBankStats(items))
   const report: AuditReport = {
     id: uid(), type: 'duplicates', title: t(lang, 'dupTitle'),
     createdAt: new Date().toISOString(), summary: details[0] as string, details,
+    plainSummary,
   }
   saveAudit(report)
-  return { reply: report.summary, reportId: report.id }
+  return { reply: report.summary, reportId: report.id, plainSummary }
 }
 
 function runDistribution(lang: Lang, scopeIds?: Set<string>): AssistantAnswer {
   const items = bankItems(scopeIds)
   const dist = keyDist(items)
   const line = t(lang, 'keyDist', { a: dist.A ?? 0, b: dist.B ?? 0, c: dist.C ?? 0, d: dist.D ?? 0 })
+  const plainSummary = buildPlainSummary(lang, fullBankStats(items))
   const report: AuditReport = {
     id: uid(), type: 'distribution', title: t(lang, 'distTitle'),
     createdAt: new Date().toISOString(), summary: line, details: [line, t(lang, 'totalLine', { n: items.length })],
+    plainSummary,
   }
   saveAudit(report)
-  return { reply: line, reportId: report.id }
+  return { reply: line, reportId: report.id, plainSummary }
 }
 
 function runUnrated(lang: Lang, scopeIds?: Set<string>): AssistantAnswer {
   const items = bankItems(scopeIds)
   const un = unrated(items)
   const summary = un.length === 0 ? t(lang, 'unratedNone') : t(lang, 'unratedFound', { n: un.length })
+  const plainSummary = buildPlainSummary(lang, fullBankStats(items))
   const report: AuditReport = {
     id: uid(), type: 'unrated', title: t(lang, 'unratedTitle'),
     createdAt: new Date().toISOString(), summary,
     details: [summary, ...un.slice(0, 20).map(q => `• ${q.id} — ${q.stem.slice(0, 60)}…`)],
+    plainSummary,
   }
   saveAudit(report)
-  return { reply: summary, reportId: report.id }
+  return { reply: summary, reportId: report.id, plainSummary }
 }
 
 function runStats(lang: Lang, scopeIds?: Set<string>): AssistantAnswer {
@@ -263,13 +387,15 @@ function runStats(lang: Lang, scopeIds?: Set<string>): AssistantAnswer {
   const dist = keyDist(items)
   const un = unrated(items)
   const summary = `${t(lang, 'totalLine', { n: items.length })} ${t(lang, 'keyDist', { a: dist.A ?? 0, b: dist.B ?? 0, c: dist.C ?? 0, d: dist.D ?? 0 })}`
+  const plainSummary = buildPlainSummary(lang, fullBankStats(items))
   const report: AuditReport = {
     id: uid(), type: 'stats', title: t(lang, 'statsTitle'),
     createdAt: new Date().toISOString(), summary,
     details: [summary, un.length === 0 ? t(lang, 'unratedNone') : t(lang, 'unratedFound', { n: un.length })],
+    plainSummary,
   }
   saveAudit(report)
-  return { reply: summary, reportId: report.id }
+  return { reply: summary, reportId: report.id, plainSummary }
 }
 
 function runUserAnalysis(lang: Lang, username: string, users: string[] = []): AssistantAnswer {
@@ -280,12 +406,108 @@ function runUserAnalysis(lang: Lang, username: string, users: string[] = []): As
   if (data.lines.length === 0) {
     return { reply: t(lang, 'userNone', { name: username }), reportId: null }
   }
+  const touched = analyzeAbility('toeic-lr', username).filter(p => p.answered > 0)
+  const weak = [...touched].sort((a, b) => (a.accuracy ?? 1) - (b.accuracy ?? 1))[0]!
+  const strong = [...touched].sort((a, b) => (b.accuracy ?? 0) - (a.accuracy ?? 0))[0]!
+  const plainSummary = t(lang, 'plainUser', { name: username, strong: strong.part, weak: weak.part, level: weak.level })
   const report: AuditReport = {
     id: uid(), type: 'user', title: t(lang, 'userTitle', { name: username }),
     createdAt: new Date().toISOString(), summary: data.summary as string, details: [data.summary as string, ...data.lines],
+    plainSummary,
   }
   saveAudit(report)
-  return { reply: data.summary as string, reportId: report.id }
+  return { reply: data.summary as string, reportId: report.id, plainSummary }
+}
+
+/**
+ * Full question data for the worthiness picker and assessment: id,
+ * part label, stem, options, key, explanation. The admin picks which
+ * questions get judged (max 20 per assessment, enforced by the UI).
+ */
+export function worthinessItems(): WorthyQuestion[] {
+  return [
+    ...liveAllQuestions().map(q => ({
+      id: bankViewId(q.materialSlug, q.number),
+      partLabel: `Part ${q.part}`,
+      stem: q.stem.trim(),
+      options: q.options.map(o => ({ letter: o.letter, text: o.text })),
+      correctLetter: q.correctLetter,
+      explanation: q.explanation ?? '',
+    })),
+    ...liveFreeQuestions().map(q => ({
+      id: `free-${q.number}`,
+      partLabel: `Free · ${q.section.charAt(0).toUpperCase() + q.section.slice(1)}`,
+      stem: q.stem.trim(),
+      options: q.options.map(o => ({ letter: o.letter, text: o.text })),
+      correctLetter: q.correctLetter,
+      explanation: '',
+    })),
+  ]
+}
+
+/**
+ * Local fallback for a worthiness assessment: verdicts need the LLM,
+ * so this only states known facts about the selected questions
+ * (count, paid items without an explanation) and says so plainly.
+ * Nothing is invented — no per-question verdict is ever guessed.
+ */
+export function runWorthiness(lang: Lang, selected: WorthyQuestion[]): AssistantAnswer {
+  const noExpl = selected.filter(q => !q.explanation.trim() && !q.id.startsWith('free-')).length
+  const parts = [t(lang, 'plainWorthyPicked', { n: selected.length })]
+  if (noExpl > 0) parts.push(t(lang, 'plainWorthyNoExpl', { n: noExpl }))
+  parts.push(t(lang, 'plainWorthyNeedLlm'))
+  const plainSummary = parts.join(' ')
+  const report: AuditReport = {
+    id: uid(), type: 'worthiness', title: t(lang, 'worthyTitle'),
+    createdAt: new Date().toISOString(), summary: plainSummary,
+    details: selected.map(q => `• ${q.id} — ${q.stem.slice(0, 60)}…`),
+    plainSummary,
+    verdicts: null,
+  }
+  saveAudit(report)
+  return { reply: plainSummary, reportId: report.id, plainSummary, verdicts: null }
+}
+
+/**
+ * Audit context for a worthiness assessment: kind 'worthiness' plus
+ * the selected questions in full. Totals are computed over the
+ * selection (not the whole bank) so the numbers stay honest.
+ */
+export function buildWorthinessContext(selected: WorthyQuestion[]): AuditContext {
+  const dist: Record<string, number> = { A: 0, B: 0, C: 0, D: 0 }
+  for (const q of selected) {
+    if (dist[q.correctLetter] !== undefined) dist[q.correctLetter]! += 1
+  }
+  return {
+    kind: 'worthiness',
+    scope: null,
+    totalQuestions: selected.length,
+    keyDist: dist,
+    duplicates: [],
+    totalDuplicates: 0,
+    totalDuplicateIds: 0,
+    unrated: [],
+    totalUnrated: 0,
+    noExplanation: selected.filter(q => !q.explanation.trim()).length,
+    freeQuestions: selected.filter(q => q.id.startsWith('free-')).length,
+    userLines: [],
+    userSummary: null,
+    worthinessQuestions: selected,
+  }
+}
+
+/** Save an LLM worthiness answer as an audit report. */
+export function saveWorthinessReport(title: string, summary: string, findings: string[], plainSummary: string | null, verdicts: WorthinessVerdict[] | null): string {
+  const report: AuditReport = {
+    id: uid(), type: 'worthiness', title,
+    createdAt: new Date().toISOString(),
+    summary,
+    details: findings.length > 0 ? findings : [summary],
+    plainSummary: plainSummary ?? null,
+    verdicts: verdicts ?? null,
+  }
+  saveAudit(report)
+  return report.id
 }
 
 /**
@@ -318,7 +540,7 @@ function extractUser(raw: string): string | null {
 }
 
 /** Which intent a free-text prompt is, using the same routing as answerPrompt. */
-export type AuditKind = 'audit' | 'duplicates' | 'distribution' | 'unrated' | 'stats' | 'user' | 'help' | 'unknown'
+export type AuditKind = 'audit' | 'duplicates' | 'distribution' | 'unrated' | 'stats' | 'user' | 'worthiness' | 'help' | 'unknown'
 
 export function detectKind(raw: string): AuditKind {
   const s = raw.toLowerCase()
@@ -355,6 +577,10 @@ export interface AuditContext {
   freeQuestions: number
   userLines: string[]
   userSummary: string | null
+  /** Selected questions for a worthiness assessment (kind
+   * 'worthiness' only). Full data — stem, options, key,
+   * explanation — so the LLM can judge each one. */
+  worthinessQuestions?: WorthyQuestion[]
 }
 
 export function buildAuditContext(raw: string, lang: Lang, scopeIds?: Set<string>, users: string[] = []): AuditContext {
@@ -396,13 +622,18 @@ export interface AuditChatResult {
   reply?: string
   findings?: string[]
   title?: string
+  /** Plain-language conclusion from the model; null when absent. */
+  summary?: string | null
+  /** Per-question worthiness verdicts (worthiness scope only);
+   * null when absent — the UI renders no verdict block then. */
+  verdicts?: WorthinessVerdict[] | null
   code?: string
 }
 
 /** Ask the server-side Meta LLM. Any failure is reported by code — the caller falls back to labeled local analysis. */
 export async function askAuditChat(prompt: string, lang: Lang, context: AuditContext, history: ChatMsg[]): Promise<AuditChatResult> {
   try {
-    const res = await $fetch<{ reply: string, findings: string[], title: string }>('/api/admin/audit-chat', {
+    const res = await $fetch<{ reply: string, findings: string[], title: string, summary?: string | null, verdicts?: WorthinessVerdict[] }>('/api/admin/audit-chat', {
       method: 'POST',
       body: {
         prompt,
@@ -411,7 +642,14 @@ export async function askAuditChat(prompt: string, lang: Lang, context: AuditCon
         history: history.slice(-6).map(m => ({ from: m.from, text: m.text }))
       }
     })
-    return { ok: true, reply: res.reply, findings: res.findings ?? [], title: res.title ?? 'Audit chat' }
+    // Verdicts are validated, not trusted blindly: id + reason must
+    // be strings and the verdict one of the three known values.
+    const verdicts = Array.isArray(res.verdicts)
+      ? res.verdicts.filter((v): v is WorthinessVerdict =>
+        !!v && typeof v.id === 'string' && (v.verdict === 'layak' || v.verdict === 'perlu-perbaikan' || v.verdict === 'tidak-layak') && typeof v.reason === 'string'
+      ).slice(0, 20)
+      : null
+    return { ok: true, reply: res.reply, findings: res.findings ?? [], title: res.title ?? 'Audit chat', summary: res.summary ?? null, verdicts: verdicts && verdicts.length > 0 ? verdicts : null }
   } catch (e) {
     const data = (e as { data?: { data?: { code?: string }, code?: string } })?.data
     const code = data?.data?.code || data?.code || 'unavailable'
@@ -420,12 +658,13 @@ export async function askAuditChat(prompt: string, lang: Lang, context: AuditCon
 }
 
 /** Save an LLM answer as an audit report (same History tab as local reports). */
-export function saveLlmAuditReport(title: string, summary: string, findings: string[]): string {
+export function saveLlmAuditReport(title: string, summary: string, findings: string[], plainSummary?: string | null): string {
   const report: AuditReport = {
     id: uid(), type: 'audit', title,
     createdAt: new Date().toISOString(),
     summary,
     details: findings.length > 0 ? findings : [summary],
+    plainSummary: plainSummary ?? null,
   }
   saveAudit(report)
   return report.id
@@ -450,7 +689,7 @@ export function answerPrompt(raw: string, lang: Lang, scopeIds?: Set<string>, us
   // leave the admin with a bare "I don't understand". Answer with the
   // labeled bank summary so the reply is always useful.
   const stats = runStats(lang, scopeIds)
-  return { reply: `${t(lang, 'unknownStats')}\n${stats.reply}`, reportId: stats.reportId }
+  return { reply: `${t(lang, 'unknownStats')}\n${stats.reply}`, reportId: stats.reportId, plainSummary: stats.plainSummary }
 }
 
 /* ------------------------------------------------------------------ */
@@ -461,6 +700,13 @@ export interface ChatMsg {
   from: 'user' | 'ai'
   text: string
   reportId?: string | null
+  /** Plain-language conclusion for this answer. Absent on messages
+   * stored before this field existed — the UI renders no block then. */
+  plainSummary?: string | null
+  /** Per-question worthiness verdicts. Absent on old stored
+   * messages and null on the local fallback (verdicts need the
+   * LLM) — the UI renders no verdict block in both cases. */
+  verdicts?: WorthinessVerdict[] | null
   /** 'llm' = answered by Meta AI; 'local' = labeled local-analysis fallback. Absent on old stored messages. */
   source?: 'llm' | 'local'
   /** Explains a fallback (e.g. no API key configured). Shown under the message. */

@@ -246,12 +246,15 @@ export default defineEventHandler(async (event) => {
     // Log the call (best-effort) so the Overview AI card counts it.
     // Reasoning tokens are recorded too when Meta reports them — they
     // are part of completion, not extra (see server/utils/ai-usage.ts).
+    // actor 'user': Live Test is the user-facing feature, so its
+    // calls are end-user usage even when an admin takes the test.
     await recordAiUsage(getRequestDb(event), {
       endpoint: 'live-test',
       model: MODEL,
       promptTokens: Number(res.usage?.prompt_tokens) || 0,
       completionTokens: Number(res.usage?.completion_tokens) || 0,
-      reasoningTokens: reasoningTokensFromUsage(res.usage)
+      reasoningTokens: reasoningTokensFromUsage(res.usage),
+      actor: 'user'
     })
     const { valid, errors } = validateBatch(res.questions, new Set([...exclude, ...collected.map(q => normalize(q.stem))]))
     lastErrors = errors

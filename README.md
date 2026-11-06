@@ -40,7 +40,7 @@ is a genuine product, not a hackathon-only prototype.
 - Full test-platform UI on `dev`, visually verified page by page with headless screenshots:
   - Login (split-screen, mock auth via localStorage — any non-empty credentials work)
   - Materials hub (owned cards with paper/credit counts, coming-soon section)
-  - Per-material dashboard (profile card, Points/Streak/Rank tiles, Weekly Quest, Performance radar, Performance Journey, Continue card, Available Papers)
+  - Per-material dashboard (profile card, Points/Streak/Rank tiles, Performance, Weekly Quest + stacked Continue / Live Test / Playlist cards, Available Papers)
   - Papers list (hero, My/Available tabs, filter chips, search, paper cards)
   - Paper overview (navy hero, Exit, attempt selector, skill cards, TOEIC Score / CEFR toggle)
   - Test interface (instructions modal per part, navy header with Save & Exit + Submit Quiz, progress bar, countdown timer, Notes drawer, question card with radio options, fixed bottom question palette grouped by part, submit confirmation with answered count)
@@ -148,7 +148,7 @@ login was built the same day and replaced before it ever deployed).
      are needed — this flow uses only the Client ID, no client secret.
   4. Set `NUXT_PUBLIC_GOOGLE_CLIENT_ID` as a Cloudflare Pages
      **variable** (not a secret) and in local `.env`, then redeploy.
-  5. Apply migrations 0002 and 0003 to the remote D1
+  5. Apply migrations 0002–0005 to the remote D1
      (`npx wrangler d1 migrations apply gts-db --remote`).
   6. Set `NITRO_ADMIN_EMAILS` (comma-separated, default
      `remtekindo@gmail.com`) and `NITRO_SESSION_SECRET` (generate with
@@ -206,9 +206,41 @@ login was built the same day and replaced before it ever deployed).
   503 `no-key` and the page falls back to the local algorithmic
   analysis, labeled "Analisis lokal" with the reason shown — it
   never pretends a local answer came from the LLM. Meta errors
-  surface as 502.
+  surface as 502. Every answer also carries a plain-language
+  conclusion ("Kesimpulan" / "Conclusion"): the model writes 2-4
+  sentences in everyday language — what is good, what still needs
+  doing, the single most important next step — in the UI's current
+  locale (Indonesian when unknown), shown above the technical reply
+  in the chat and at the top of the report modal. The local fallback
+  composes the same conclusion deterministically from the bank
+  numbers (duplicates, unrated, key balance; free-test items missing
+  an explanation are never presented as a problem). The summary adds
+  ~50-100 completion tokens per audit call, recorded in `ai_usage`
+  as usual. Reports stored before this change have no conclusion and
+  render no empty block.
+- **Question worthiness check ("Cek kelayakan soal")** (6 Nov 2026):
+  a fourth Audits card opens a question picker — the admin picks
+  which questions get judged (max 20 per assessment, enforced in
+  the UI; bounds the token cost) instead of auditing the whole bank
+  at once. The picked questions are sent in full (id, part, stem,
+  options, key, explanation) and the model judges EACH one against
+  five explicit criteria: (1) stem clear and unambiguous, (2)
+  exactly one correct key, (3) distractors plausible — not obviously
+  wrong and not duplicated, (4) difficulty appropriate for the
+  part/level, (5) no factual, grammar, or typo errors. Verdict per
+  question: 'tidak-layak' when the key is wrong or ambiguous, or
+  the stem is broken; 'perlu-perbaikan' for fixable issues (typo,
+  weak distractor, unclear wording); 'layak' otherwise — one short
+  reason sentence each, shown as green / amber / red badges in the
+  chat message and the report modal, under the same plain-language
+  conclusion (verdict counts + most important fix). Without the LLM
+  the fallback states only known facts (count, paid items without
+  an explanation) and never invents verdicts. Verdicts are computed
+  live per assessment and stored only in the chat session/report
+  (localStorage) — no D1 migration.
 - **AI usage is logged, not estimated from thin air**
   (`migrations/0003_ai_usage.sql`, `migrations/0004_ai_usage_reasoning.sql`,
+  `migrations/0005_ai_usage_actor.sql`,
   `server/utils/ai-usage.ts`): every Meta call (Live Test batches +
   audit chats) writes one row to the `ai_usage` table — model,
   prompt/completion tokens (from Meta's `usage` field), endpoint, UTC
@@ -217,7 +249,15 @@ login was built the same day and replaced before it ever deployed).
   (`usage.completion_tokens_details.reasoning_tokens`): hidden
   reasoning tokens are a SUBSET of completion tokens, never extra —
   totals and cost still use prompt + completion only. NULL means "not
-  recorded" and is shown as "—", never as 0. The Overview card
+  recorded" and is shown as "—", never as 0. Since migration 0005
+  the row also carries `actor` — 'admin' for internal-team usage,
+  'user' for end-user usage — split by endpoint, not by identity:
+  the audit chat is admin-only, so every audit-chat row is Admin;
+  Live Test is the user-facing feature, so its rows are User. An
+  admin who takes a Live Test still counts as User; no per-user
+  identity is tracked. Existing rows were backfilled from their
+  endpoint when the migration ran; NULL actor is "unknown" and is
+  shown separately, never folded into either side. The Overview card
   "Aktivitas Penggunaan AI" reads it via `GET /api/admin/ai-usage`
   (admin-only; 503 when D1 is not connected) with a period selector
   (today / 7 days / 30 days, default / all time): per-model
@@ -230,11 +270,14 @@ login was built the same day and replaced before it ever deployed).
   ever seeded. The card links to a detail tab — Reports → "Konsumsi
   AI" (`GET /api/admin/ai-usage?rows=1` adds the newest 50 per-call
   rows) — with the same summary plus a per-call table (time in WIB,
-  endpoint, model, prompt / completion / reasoning / total tokens,
-  est. cost) and a short explainer for why completion tokens exceed
-  the visible reply: the model returns structured JSON (reply +
-  findings + title) and reasons first (`reasoning_effort: 'low'`), so
-  hidden reasoning tokens count as completion tokens.
+  endpoint, actor, model, prompt / completion / reasoning / total
+  tokens, est. cost), a scope filter (All / Admin / User) that
+  scopes the summary and the rows to one side, an Admin-vs-User
+  comparison block that always covers the whole period, and a short
+  explainer for why completion tokens exceed the visible reply: the
+  model returns structured JSON (reply + findings + title) and
+  reasons first (`reasoning_effort: 'low'`), so hidden reasoning
+  tokens count as completion tokens.
 - **Live Test endpoint is session-gated + rate-limited**
   (`POST /api/live-test/generate`): no session → 401; anonymous
   visitors get 12 batches/hour, signed-in admins 60/hour (per client
@@ -330,10 +373,11 @@ There are two D1 databases, and they must not be confused:
   DB is scratch, the remote DB is not. Note: a fresh pages-dev file
   starts with NO tables (wrangler does not apply migrations to it), so
   login upserts and the ai-usage endpoint fail with "no such table"
-  until the migrations are applied to that file — apply the four
+  until the migrations are applied to that file — apply the five
   `migrations/*.sql` files to it with sqlite3 and record them in its
   `d1_migrations` table (same names as wrangler records: `0001_init.sql`,
-  `0002_users_google.sql`, `0003_ai_usage.sql`, `0004_ai_usage_reasoning.sql`).
+  `0002_users_google.sql`, `0003_ai_usage.sql`, `0004_ai_usage_reasoning.sql`,
+  `0005_ai_usage_actor.sql`).
 
 Remote has no such split — one database, one `migrations apply --remote`.
 
@@ -417,7 +461,7 @@ server/
   utils/auth.ts                 # HMAC session tokens, anon visitor ids, admin allowlist
   utils/google-auth.ts          # Google ID-token verification (JWKS, claims)
   utils/user-store.ts           # D1 users + grants, access resolution
-  utils/ai-usage.ts             # ai_usage log: record/summarize (WIB hours, IDR estimate, reasoning split)
+  utils/ai-usage.ts             # ai_usage log: record/summarize (WIB hours, IDR estimate, reasoning split, actor split)
   utils/catalog.ts              # server-side material/package catalog (grant targets)
   utils/rate-limit.ts           # in-memory fixed-window limiter
   utils/d1.ts                   # getDb(event) for the D1 binding
@@ -429,7 +473,7 @@ server/
   api/admin/users/role.post.ts  # promote/demote (admin-only)
   api/admin/users/grants.post.ts  # replace grants (admin-only)
   api/admin/audit-chat.post.ts  # Audits chat via Meta LLM (admin-only, 30/hr)
-  api/admin/ai-usage.get.ts     # AI usage summary (+ optional ?rows=1 per-call rows) for Overview + Reports (admin-only)
+  api/admin/ai-usage.get.ts     # AI usage summary (+ optional ?rows=1 per-call rows, ?actor=admin|user scope filter, period-wide byActor split) for Overview + Reports (admin-only)
   api/live-test/generate.post.ts  # session-gated, rate-limited Meta generation
   api/health/d1.get.ts          # public D1 probe (tables + question count)
 scripts/
@@ -485,7 +529,7 @@ connection. No demo users remain anywhere.
 | Audits | Volume audit / duplicates / key distribution / unrated | Live bank, computed locally | Yes — local bank |
 | Reports | QC queue | QC reports in localStorage | Empty until a real report exists — no submission path from the test UI yet |
 | Reports | Test results + certificates | Finished tests in this browser (`gts_result_*`) | Yes — local only, per browser |
-| Reports | AI usage detail (Konsumsi AI) | D1 `ai_usage` — same rows as the Overview card, plus a per-call table and a "why 1,500++ tokens" explainer | Yes — D1 |
+| Reports | AI usage detail (Konsumsi AI) | D1 `ai_usage` — same rows as the Overview card, plus a per-call table (with Actor column), an All / Admin / User scope filter, an Admin-vs-User comparison block, and a "why 1,500++ tokens" explainer | Yes — D1 |
 | Users | Real users table + role/grant controls | D1 users + grants | Yes — D1 |
 | Settings | Meta API key card | Browser-stored key (dev convenience) | Dev only — production uses `NITRO_MODEL_API_KEY` |
 
