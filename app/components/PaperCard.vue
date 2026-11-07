@@ -1,24 +1,28 @@
 <script setup lang="ts">
 const { t } = useLocale()
 import type { Paper } from '~/data/mock'
+import type { PaperStatus } from '~/data/mock'
 
-const props = withDefaults(defineProps<{ paper: Paper; base?: string }>(), { base: '' })
+/** Status is passed in by the caller, derived from the user's real
+ * results (see `resolvePaperStatus` in useActivity.ts) — the catalog
+ * in mock.ts carries no status at all. */
+const props = withDefaults(defineProps<{ paper: Paper; status: PaperStatus; base?: string }>(), { base: '' })
 
-const statusStyle: Record<Paper['status'], string> = {
+const statusStyle: Record<PaperStatus, string> = {
   'not-started': 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300',
   'in-progress': 'bg-amber-100 text-amber-700',
   completed: 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-200'
 }
 
-const statusLabel = computed<Record<Paper['status'], string>>(() => ({
+const statusLabel = computed<Record<PaperStatus, string>>(() => ({
   'not-started': t('papers.statusNotStarted'),
   'in-progress': t('papers.statusInProgress'),
   completed: t('papers.statusCompleted')
 }))
 
 const cta = computed(() => {
-  if (props.paper.status === 'completed') return { label: t('papers.viewResult'), to: `${props.base}/papers/${props.paper.id}/result` }
-  if (props.paper.status === 'in-progress') return { label: t('papers.continue'), to: `${props.base}/papers/${props.paper.id}` }
+  if (props.status === 'completed') return { label: t('papers.viewResult'), to: `${props.base}/papers/${props.paper.id}/result` }
+  if (props.status === 'in-progress') return { label: t('papers.continue'), to: `${props.base}/papers/${props.paper.id}` }
   return { label: t('papers.startTest'), to: `${props.base}/papers/${props.paper.id}` }
 })
 </script>
@@ -29,9 +33,9 @@ const cta = computed(() => {
       <span class="text-4xl font-extrabold text-white/90">{{ paper.title.charAt(0) }}</span>
       <span
         class="absolute top-3 right-3 text-[11px] font-semibold px-2.5 py-1 rounded-full"
-        :class="statusStyle[paper.status]"
+        :class="statusStyle[status]"
       >
-        {{ statusLabel[paper.status] }}
+        {{ statusLabel[status] }}
       </span>
     </div>
     <div class="p-4 flex flex-col gap-3 flex-1">

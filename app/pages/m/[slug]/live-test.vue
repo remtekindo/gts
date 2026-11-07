@@ -44,6 +44,13 @@ const idx = ref(0)
 const answers = ref<Record<string, string>>({})
 const history = ref<AnsweredQuestion[]>([])
 
+/** Live Test unlocks only after one finished paper anywhere (see
+ * GET /api/results/activity and the server gate in
+ * POST /api/live-test/generate). Until then the page shows a locked
+ * banner and the Start button stays disabled. */
+const activity = useMaterialActivity(slug.value)
+const isLocked = computed(() => !activity.loading && !activity.hasCompleted)
+
 const current = computed((): AnsweredQuestion | null => batch.value[idx.value] ?? null)
 const answeredInBatch = computed(() => batch.value.filter(q => answers.value[q.qid]).length)
 const allBatchAnswered = computed(() => batch.value.length > 0 && answeredInBatch.value === batch.value.length)
@@ -90,7 +97,10 @@ async function fetchBatch(): Promise<void> {
   } catch (e) {
     const status = (e as { response?: { status?: number }, statusCode?: number }).response?.status
       ?? (e as { statusCode?: number }).statusCode
-    if (status === 401) error.value = t('liveTest.errorAuth')
+    const data = (e as { data?: { data?: { code?: string }, code?: string } }).data
+    const code = data?.data?.code || data?.code
+    if (status === 403 && code === 'no-completed-test') error.value = t('liveTest.errorNoCompleted')
+    else if (status === 401) error.value = t('liveTest.errorAuth')
     else if (status === 429) error.value = t('liveTest.errorRateLimit')
     else if (status === 503) error.value = t('liveTest.errorKey')
     else error.value = t('liveTest.errorGen')
@@ -140,6 +150,25 @@ function playAgain(): void {
 
 <template>
   <div class="max-w-3xl mx-auto">
+    <!-- Locked banner: no finished paper yet. The Start button below
+         stays disabled too; the server refuses generation as well
+         (403 no-completed-test), so the lock cannot be bypassed
+         from the client alone. -->
+    <div
+      v-if="isLocked"
+      class="mb-5 rounded-2xl border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-950/40 p-5"
+      role="alert"
+    >
+      <h2 class="font-bold text-amber-800 dark:text-amber-200">{{ t('liveTest.lockedTitle') }}</h2>
+      <p class="mt-1 text-sm text-amber-700 dark:text-amber-300 leading-relaxed">{{ t('liveTest.lockedText') }}</p>
+      <NuxtLink
+        :to="`${base}/papers`"
+        class="mt-3 inline-block text-sm font-semibold px-4 py-2.5 rounded-xl bg-amber-400 text-amber-950 hover:bg-amber-500 transition-colors"
+      >
+        {{ t('papers.startTest') }}
+      </NuxtLink>
+    </div>
+
     <!-- Setup -->
     <div v-if="phase === 'setup'" class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 p-6 md:p-8">
       <h1 class="text-2xl font-extrabold text-slate-800 dark:text-slate-200">{{ t('liveTest.title') }}</h1>
@@ -168,7 +197,8 @@ function playAgain(): void {
       <p v-if="error" class="mt-5 text-sm text-red-600 dark:text-red-300 bg-red-50 dark:bg-red-950/60 rounded-xl px-3.5 py-2.5">{{ error }}</p>
 
       <button
-        class="mt-6 w-full sm:w-auto text-sm font-semibold px-6 py-3 rounded-xl bg-blue-600 text-white hover:bg-blue-700 transition-colors"
+        :disabled="isLocked"
+        class="mt-6 w-full sm:w-auto text-sm font-semibold px-6 py-3 rounded-xl bg-blue-600 text-white hover:bg-blue-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
         @click="start"
       >
         {{ t('liveTest.start') }}

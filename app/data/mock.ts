@@ -52,7 +52,6 @@ export interface Paper {
   totalQuestions: number
   difficulty: Difficulty
   enrolled: number
-  status: PaperStatus
   creditsRequired: number
 }
 
@@ -463,7 +462,6 @@ export const PAPERS: Paper[] = [
     totalQuestions: 200,
     difficulty: 'Intermediate',
     enrolled: 1284,
-    status: 'in-progress',
     creditsRequired: 2
   },
   {
@@ -476,7 +474,6 @@ export const PAPERS: Paper[] = [
     totalQuestions: 200,
     difficulty: 'Advanced',
     enrolled: 986,
-    status: 'not-started',
     creditsRequired: 2
   },
   {
@@ -489,7 +486,6 @@ export const PAPERS: Paper[] = [
     totalQuestions: 200,
     difficulty: 'Beginner',
     enrolled: 2103,
-    status: 'completed',
     creditsRequired: 2
   },
   {
@@ -502,7 +498,6 @@ export const PAPERS: Paper[] = [
     totalQuestions: 60,
     difficulty: 'Intermediate',
     enrolled: 764,
-    status: 'not-started',
     creditsRequired: 1
   },
   {
@@ -515,7 +510,6 @@ export const PAPERS: Paper[] = [
     totalQuestions: 60,
     difficulty: 'Intermediate',
     enrolled: 692,
-    status: 'not-started',
     creditsRequired: 1
   },
   {
@@ -528,7 +522,6 @@ export const PAPERS: Paper[] = [
     totalQuestions: 20,
     difficulty: 'Intermediate',
     enrolled: 412,
-    status: 'not-started',
     creditsRequired: 1
   },
   {
@@ -541,7 +534,6 @@ export const PAPERS: Paper[] = [
     totalQuestions: 20,
     difficulty: 'Beginner',
     enrolled: 388,
-    status: 'not-started',
     creditsRequired: 1
   }
 ]

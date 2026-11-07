@@ -2,6 +2,14 @@
 definePageMeta({ layout: 'material' })
 
 const { t } = useLocale()
+const route = useRoute()
+const slug = computed(() => route.params.slug as string)
+const base = computed(() => `/m/${slug.value}`)
+
+/** Empty for a new user: no finished paper in this material means no
+ * journey, no score, no radar — just an honest empty state. */
+const activity = useMaterialActivity(slug.value)
+
 const activeTab = ref<'insights' | 'analytics'>('insights')
 const dateRange = ref('30')
 const skillFilter = ref('all')
@@ -43,6 +51,23 @@ function downloadReport(): void {
       <p class="mt-1 text-sm text-blue-200">{{ t('performance.sub') }}</p>
     </div>
 
+    <!-- Loading: activity is still being read — show nothing yet
+         rather than flashing the empty state at a user with results. -->
+    <p v-if="activity.loading" class="mt-5 text-sm text-slate-400 dark:text-slate-500">{{ t('access.loading') }}</p>
+
+    <!-- Empty: no finished paper in this material yet. -->
+    <div v-else-if="!activity.hasCompletedInMaterial" class="mt-5 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 p-8 text-center">
+      <h2 class="text-lg font-extrabold text-slate-800 dark:text-slate-200">{{ t('dashboard.noResultsTitle') }}</h2>
+      <p class="mt-2 text-sm text-slate-500 dark:text-slate-400 leading-relaxed">{{ t('dashboard.noResultsText') }}</p>
+      <NuxtLink
+        :to="`${base}/papers`"
+        class="mt-5 inline-block text-sm font-semibold px-5 py-2.5 rounded-xl bg-blue-600 text-white hover:bg-blue-700 transition-colors"
+      >
+        {{ t('papers.startTest') }}
+      </NuxtLink>
+    </div>
+
+    <template v-else>
     <!-- Filter row -->
     <div class="mt-5 flex flex-wrap gap-3">
       <label class="text-sm flex items-center gap-2">
@@ -154,5 +179,6 @@ function downloadReport(): void {
       </ul>
       <p class="mt-5 text-xs text-slate-400 dark:text-slate-500">{{ t('performance.demoNote') }}</p>
     </div>
+    </template>
   </div>
 </template>

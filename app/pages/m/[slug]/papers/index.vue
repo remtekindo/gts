@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { getMaterialOrFallback, papersForMaterial } from '~/data/mock'
+import type { PaperStatus } from '~/data/mock'
 
 const { t } = useLocale()
 
@@ -11,11 +12,21 @@ const material = computed(() => getMaterialOrFallback(slug.value))
 const base = computed(() => `/m/${slug.value}`)
 const materialPapers = computed(() => papersForMaterial(slug.value))
 
+/** Paper badge status, derived from the user's real results — never
+ * the catalog (see `resolvePaperStatus` in useActivity.ts). */
+const activity = useMaterialActivity(slug.value)
+const paperStatus = computed<Record<string, PaperStatus>>(() => {
+  const map: Record<string, PaperStatus> = {}
+  for (const p of materialPapers.value) map[p.id] = resolvePaperStatus(p.id, activity.completedPaperIds, activity.inProgressPaperIds)
+  return map
+})
+const statusOf = (id: string): PaperStatus => paperStatus.value[id] ?? 'not-started'
+
 const activeTab = ref<'mine' | 'available'>('available')
 const search = ref('')
 const categoryFilter = ref('All')
 
-const myPapers = computed(() => materialPapers.value.filter(p => p.status !== 'not-started'))
+const myPapers = computed(() => materialPapers.value.filter(p => statusOf(p.id) !== 'not-started'))
 
 const filtered = computed(() => {
   const listBase = activeTab.value === 'mine' ? myPapers.value : materialPapers.value
@@ -98,7 +109,7 @@ const chips = computed(() => [
 
       <!-- Grid -->
       <div v-if="filtered.length" class="mt-5 grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        <PaperCard v-for="p in filtered" :key="p.id" :paper="p" :base="base" />
+        <PaperCard v-for="p in filtered" :key="p.id" :paper="p" :status="statusOf(p.id)" :base="base" />
       </div>
       <div v-else class="mt-5 text-center py-16 text-slate-400 dark:text-slate-500 text-sm bg-white dark:bg-slate-900 rounded-2xl border border-dashed border-slate-300 dark:border-slate-600">
         No papers match your filters.

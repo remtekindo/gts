@@ -15,6 +15,12 @@
  *   (`gts_session`, from POST /api/auth/google) or a valid anonymous
  *   visitor id (`gts_sid`, minted by GET /api/auth/session). The Live
  *   Test page fetches the session before generating.
+ * - Completed-test gate (added 2026-11-06): generation is refused
+ *   (403 `no-completed-test`) unless the signed-in user has completed
+ *   at least one finished paper — a row in D1 `test_results` for
+ *   their `sub`. Anonymous visitors are refused too (they can never
+ *   have completed a test). When the server has no D1 binding (plain
+ *   `pnpm dev` only) the gate is skipped; production always has D1.
  * - Rate limit per client IP: 12 batches/hour for anonymous visitors,
  *   60/hour for the admin. Counts are in-memory (per process/isolate);
  *   see server/utils/rate-limit.ts.
@@ -180,7 +186,7 @@ async function callMeta(prompt: string, apiKey: string): Promise<{ questions: Ge
   throw lastErr || new Error('Meta API call failed')
 }
 
-import { getAdminSession, getAnonSid, getClientIp } from '../../utils/auth'
+import { getAdminSession, getAnonSid, getClientIp, getUserSession } from '../../utils/auth'
 import { checkRateLimit } from '../../utils/rate-limit'
 import { recordAiUsage, reasoningTokensFromUsage } from '../../utils/ai-usage'
 import { getRequestDb } from '../../utils/user-store'
@@ -199,6 +205,49 @@ export default defineEventHandler(async (event) => {
       statusMessage: 'A session is required. Open the app and sign in first.',
       data: { code: 'no-session' }
     })
+  }
+
+  // 1b. Completed-test gate: Live Test unlocks only after the user
+  //     has completed one finished paper (any module). "Completed"
+  //     is a row in D1 `test_results` for this user (kind
+  //     'simulation' or 'drill', valid correct/total) — the same
+  //     definition GET /api/results/activity reports. Anonymous
+  //     visitors can never have one, so they are refused too. When
+  //     this server has no D1 binding (plain `pnpm dev` only) the
+  //     gate cannot be checked and is skipped — production always
+  //     has D1. This runs before the rate limit so refused requests
+  //     never consume budget.
+  const userSession = await getUserSession(event)
+  if (!userSession) {
+    throw createError({
+      statusCode: 403,
+      statusMessage: 'Complete one test first to unlock the Live Test.',
+      data: { code: 'no-completed-test' }
+    })
+  }
+  const gateDb = getRequestDb(event)
+  if (gateDb) {
+    try {
+      const row = await gateDb.prepare(
+        `SELECT COUNT(*) AS n FROM test_results WHERE user_sub = ?1
+         AND kind IN ('simulation', 'drill')
+         AND correct IS NOT NULL AND total IS NOT NULL AND total > 0`
+      ).bind(userSession.sub).first<{ n: number }>()
+      if (!row || row.n === 0) {
+        throw createError({
+          statusCode: 403,
+          statusMessage: 'Complete one test first to unlock the Live Test.',
+          data: { code: 'no-completed-test' }
+        })
+      }
+    } catch (e) {
+      if (e && typeof e === 'object' && 'statusCode' in e) throw e
+      throw createError({
+        statusCode: 503,
+        statusMessage: 'Results store tables are missing on this server.',
+        data: { code: 'unavailable' }
+      })
+    }
   }
 
   // 2. Rate limit per client IP so one visitor cannot drain credits.

@@ -17,8 +17,19 @@ const result = ref<TestResult | null>(null)
 const attempt = ref(1)
 const scoreMode = ref<'score' | 'cefr'>('score')
 
+/** "Attempted" from real data — a finished result, or saved answers
+ * for an unfinished attempt — never the old hardcoded catalog status.
+ * The finished check reads the same server-derived ids as the paper
+ * badges, so a test completed on another device counts here too. */
+const activity = useMaterialActivity(slug.value)
+const hasSavedAnswers = ref(false)
+const attempted = computed(() =>
+  !!result.value || hasSavedAnswers.value || activity.completedPaperIds.includes(paper.value.id)
+)
+
 onMounted(() => {
   result.value = getResult(paper.value.id)
+  hasSavedAnswers.value = listInProgressAttempts([paper.value.id]).length > 0
 })
 
 const skillLabel = (skill: string): string =>
@@ -73,7 +84,7 @@ const skills = computed(() => {
           <div>
             <h2 class="text-lg font-bold text-slate-800 dark:text-slate-200">{{ t('overview.readyTitle') }}</h2>
             <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">
-              {{ paper.status === 'not-started' ? t('overview.notStarted') : t('overview.attempted') }}
+              {{ attempted ? t('overview.attempted') : t('overview.notStarted') }}
               {{ t('overview.attemptCosts') }} <strong class="text-slate-700 dark:text-slate-200">{{ paper.creditsRequired }} {{ material.credits[0]?.label ?? "" }} {{ t('overview.credits') }}</strong>
               (balance: <strong class="text-slate-700 dark:text-slate-200">12</strong>).
             </p>

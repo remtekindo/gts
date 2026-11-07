@@ -1,5 +1,8 @@
 <script setup lang="ts">
-const { t } = useLocale()
+import { MATERIALS } from '~/data/mock'
+import { fetchSessionState } from '~/utils/server-auth'
+
+const { t, locale } = useLocale()
 const activeTab = ref<'profile' | 'purchase' | 'enroll'>('profile')
 
 const auth = ref<AuthState | null>(null)
@@ -9,10 +12,64 @@ const savedMsg = ref('')
 
 const avatarPreview = ref<string | null>(null)
 
-onMounted(() => {
+/** Real enrollments: effective materials from the server session
+ * (grants + packages, resolved server-side) with the real grant date
+ * where a grant row exists. No hardcoded rows, no seed history — a
+ * user with no grants sees the empty state. Role-based access (the
+ * bootstrap admin) is not a grant, so its rows carry no date. */
+interface EnrollRow {
+  slug: string
+  name: string
+  date: string
+  status: 'Active'
+}
+const enrollRows = ref<EnrollRow[]>([])
+const enrollLoaded = ref(false)
+
+function formatGrantDate(iso: string): string {
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return '—'
+  return d.toLocaleDateString(locale.value === 'id' ? 'id-ID' : 'en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+}
+
+/** Materials a package grant covers (server default mapping — see
+ * server/utils/catalog.ts): Monthly 1, Quarterly 2, Semester all. */
+function packageSlugs(pkgId: string): string[] {
+  const owned = MATERIALS.filter(m => m.status === 'owned').map(m => m.slug)
+  if (pkgId === 'semesteran') return owned
+  if (pkgId === 'triwulanan') return owned.slice(0, 2)
+  return owned.slice(0, 1)
+}
+
+async function loadEnrollments(): Promise<void> {
+  const state = await fetchSessionState()
+  let grants: { kind: string, target: string, grantedAt: string }[] = []
+  try {
+    const res = await $fetch<{ grants: { kind: string, target: string, grantedAt: string }[] }>('/api/profile/enrollments')
+    grants = res.grants
+  } catch {
+    grants = []
+  }
+  enrollRows.value = state.materials.map((slug) => {
+    const m = MATERIALS.find(x => x.slug === slug)
+    const direct = grants.find(g => g.kind === 'material' && g.target === slug)
+    const viaPackage = direct ? null : grants.find(g => g.kind === 'package' && packageSlugs(g.target).includes(slug))
+    const grant = direct ?? viaPackage
+    return {
+      slug,
+      name: m?.name ?? slug,
+      date: grant ? formatGrantDate(grant.grantedAt) : '—',
+      status: 'Active' as const
+    }
+  })
+  enrollLoaded.value = true
+}
+
+onMounted(async () => {
   auth.value = getAuth()
   name.value = getDisplayName() || auth.value?.username || ''
   email.value = auth.value?.username || ''
+  await loadEnrollments()
 })
 
 function onAvatarChange(e: Event): void {
@@ -25,26 +82,6 @@ function saveProfile(): void {
   savedMsg.value = t('profile.profileSaved')
   setTimeout(() => { savedMsg.value = '' }, 2500)
 }
-
-const staticEnrollHistory = [
-  { paper: 'TOEIC Listening & Reading — Full Simulation 01', date: 'Oct 28, 2026', status: 'In progress' },
-  { paper: 'TOEIC Listening & Reading — Full Simulation 03', date: 'Oct 21, 2026', status: 'Completed' },
-  { paper: 'Reading Drill Pack — Parts 5 to 7', date: 'Oct 15, 2026', status: 'Completed' }
-]
-
-/** Enroll history with the user's free-test attempts prepended (newest first). */
-const enrollHistory = computed(() => {
-  const r = getResult('free-test')
-  if (!r) return staticEnrollHistory
-  return [
-    {
-      paper: t('freeTest.historyName'),
-      date: new Date(r.finishedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-      status: 'Completed'
-    },
-    ...staticEnrollHistory
-  ]
-})
 
 const tabs = computed(() => [
   { id: 'profile', label: t('profile.myProfile') },
@@ -118,29 +155,22 @@ const tabs = computed(() => [
       </div>
     </div>
 
-    <!-- Purchase History -->
+    <!-- Purchase History — real transactions only. There is no
+         purchase system in this build (no checkout, no credit
+         ledger), so the tab is the empty state until a user has
+         actually bought something. No hardcoded balances. -->
     <div v-if="activeTab === 'purchase'" class="mt-5 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 p-6">
-      <h2 class="font-bold text-slate-800 dark:text-slate-200">{{ t('profile.creditBalance') }}</h2>
-      <div class="mt-3 grid grid-cols-2 gap-3">
-        <div class="rounded-xl bg-amber-50 border border-amber-200 p-4">
-          <p class="text-xs font-medium text-amber-700 uppercase tracking-wide">LR Credits</p>
-          <p class="text-2xl font-extrabold text-amber-800">12</p>
-        </div>
-        <div class="rounded-xl bg-blue-50 dark:bg-blue-950 border border-blue-200 p-4">
-          <p class="text-xs font-medium text-blue-700 uppercase tracking-wide">SW Credits</p>
-          <p class="text-2xl font-extrabold text-blue-800">8</p>
-        </div>
-      </div>
-      <div class="mt-4 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-700 p-4 text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
-        {{ t('profile.topupNote') }}
-      </div>
-      <h3 class="mt-5 font-bold text-slate-800 dark:text-slate-200 text-sm">{{ t('profile.recentPurchases') }}</h3>
+      <h3 class="font-bold text-slate-800 dark:text-slate-200 text-sm">{{ t('profile.recentPurchases') }}</h3>
       <p class="mt-2 text-sm text-slate-400 dark:text-slate-500">{{ t('profile.noPurchases') }}</p>
     </div>
 
-    <!-- Enroll History -->
+    <!-- Enroll History — real grants only (see loadEnrollments).
+         Loading first, then the granted materials, or the empty
+         state when the user has no grants. -->
     <div v-if="activeTab === 'enroll'" class="mt-5 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden">
-      <table class="w-full text-sm">
+      <p v-if="!enrollLoaded" class="px-5 py-6 text-sm text-slate-400 dark:text-slate-500">{{ t('access.loading') }}</p>
+      <p v-else-if="enrollRows.length === 0" class="px-5 py-6 text-sm text-slate-400 dark:text-slate-500">{{ t('profile.noEnrollments') }}</p>
+      <table v-else class="w-full text-sm">
         <thead>
           <tr class="text-left text-xs uppercase tracking-wide text-slate-400 dark:text-slate-500 border-b border-slate-200 dark:border-slate-700">
             <th class="px-5 py-3 font-semibold">{{ t('profile.thPaper') }}</th>
@@ -149,15 +179,12 @@ const tabs = computed(() => [
           </tr>
         </thead>
         <tbody class="divide-y divide-slate-100">
-          <tr v-for="row in enrollHistory" :key="row.paper" class="hover:bg-slate-50 dark:hover:bg-slate-800">
-            <td class="px-5 py-3.5 font-medium text-slate-700 dark:text-slate-200">{{ row.paper }}</td>
+          <tr v-for="row in enrollRows" :key="row.slug" class="hover:bg-slate-50 dark:hover:bg-slate-800">
+            <td class="px-5 py-3.5 font-medium text-slate-700 dark:text-slate-200">{{ row.name }}</td>
             <td class="px-5 py-3.5 text-slate-400 dark:text-slate-500 hidden sm:table-cell">{{ row.date }}</td>
             <td class="px-5 py-3.5 text-right">
-              <span
-                class="text-[11px] font-semibold px-2.5 py-1 rounded-full"
-                :class="row.status === 'Completed' ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-200' : 'bg-amber-100 text-amber-700'"
-              >
-                {{ row.status === 'Completed' ? t('papers.statusCompleted') : t('papers.statusInProgress') }}
+              <span class="text-[11px] font-semibold px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-200">
+                {{ t('profile.statusActive') }}
               </span>
             </td>
           </tr>

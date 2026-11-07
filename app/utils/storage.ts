@@ -95,6 +95,49 @@ export function getNote(paperId: string): string {
   return read<string>(`gts_notes_${paperId}`) ?? ''
 }
 
+/** In-progress attempts saved in this browser: `gts_answers_<paperId>_<attempt>`
+ * keys holding at least one answer. Answers are cleared on submit, so a
+ * saved key with answers is a genuinely unfinished attempt. */
+export interface InProgressAttempt {
+  paperId: string
+  attempt: number
+  answered: number
+}
+
+export function listInProgressAttempts(paperIds: string[]): InProgressAttempt[] {
+  const wanted = new Set(paperIds)
+  const found: InProgressAttempt[] = []
+  try {
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i)
+      if (!key?.startsWith('gts_answers_')) continue
+      const rest = key.slice('gts_answers_'.length)
+      const sep = rest.lastIndexOf('_')
+      if (sep <= 0) continue
+      const paperId = rest.slice(0, sep)
+      const attempt = Number(rest.slice(sep + 1))
+      if (!wanted.has(paperId) || !Number.isInteger(attempt) || attempt < 1) continue
+      const answered = Object.keys(loadAnswers(paperId, attempt)).length
+      if (answered > 0) found.push({ paperId, attempt, answered })
+    }
+  } catch {
+    /* storage unavailable — no in-progress attempts to report */
+  }
+  // Paper order first (as listed by the caller), then lowest attempt.
+  found.sort((a, b) => paperIds.indexOf(a.paperId) - paperIds.indexOf(b.paperId) || a.attempt - b.attempt)
+  return found
+}
+
+/** Completed local results among the given papers, in paper order. */
+export function listLocalResults(paperIds: string[]): TestResult[] {
+  const out: TestResult[] = []
+  for (const id of paperIds) {
+    const r = getResult(id)
+    if (r) out.push(r)
+  }
+  return out
+}
+
 export function saveNote(paperId: string, text: string): void {
   write(`gts_notes_${paperId}`, text)
 }

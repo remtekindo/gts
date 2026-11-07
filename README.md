@@ -290,7 +290,13 @@ login was built the same day and replaced before it ever deployed).
   the endpoint returns 503 when no key is configured at all. An
   anonymous visitor id (`gts_sid` cookie, minted by the session
   endpoint) exists only so the limiter can tell repeat visitors apart;
-  it is not an identity.
+  it is not an identity. Completed-test gate (6 Nov 2026): generation
+  is refused (403 `no-completed-test`) unless the signed-in user has
+  completed at least one finished paper — see the empty-states bullet
+  below for the exact definition. Anonymous visitors are refused too
+  (they can never have completed a test). When the server has no D1
+  binding the gate is skipped (plain `pnpm dev` only); production
+  always has D1.
 - **Leaderboard — two tiers, real users only**
   (`migrations/0006_leaderboard_results.sql`,
   `server/utils/leaderboard.ts`, `app/components/LeaderboardBoard.vue`):
@@ -330,8 +336,78 @@ login was built the same day and replaced before it ever deployed).
   honestly instead of inventing competitors. Names are masked
   (first letter + `***` + last letter); emails are never exposed.
   The material dashboard Performance card (795/990, journey chart)
-  is still demo data — it is not part of the leaderboard and has not
-  been rewired yet.
+  still shows those demo values when the user HAS results — it is not
+  part of the leaderboard and has not been rewired to real data yet —
+  but since 6 Nov 2026 it shows an honest empty state instead when
+  the user has no finished paper in that material (see the
+  empty-states bullet below).
+- **New-user empty states — no demo data for a brand-new user**
+  (6 Nov 2026): a user with no purchases and no finished test sees
+  honest empty states instead of invented history. Exact definition —
+  a "completed test" is a finished paper: a row in D1 `test_results`
+  for that user with kind `simulation` or `drill` and a valid
+  correct/total. The free test and live tests are never submitted to
+  D1, so they never count. "Started" is any attempt in the material
+  (a completed result, or saved answers for a paper of that material);
+  "in progress" is saved answers (`gts_answers_<paperId>_<attempt>`)
+  with at least one answer — answers are cleared on submit, so a saved
+  key is a genuinely unfinished attempt.
+  - Profile → Purchase: real transactions only. There is no purchase
+    system in this build (no checkout, no credit ledger), so the tab
+    is the empty state ("No purchases yet") until a user has actually
+    bought something. The hardcoded LR 12 / SW 8 credit balances are
+    deleted.
+  - Profile → Enroll: real grants only. Rows are the effective
+    materials from the server session (`GET /api/auth/session`) with
+    the real grant date from `GET /api/profile/enrollments` (grants
+    table, `granted_at`; a package grant's date applies to the
+    materials it covers) — "—" where no grant row exists (role-based
+    admin access is not a grant). No grants → the empty state. The
+    three hardcoded enrollment rows and the free-test prepend are
+    deleted.
+  - Material dashboard "Continue from where you left off": renders
+    only for a genuinely in-progress attempt in that material
+    (localStorage answers keys); the hardcoded "Full Simulation 01 ·
+    pick up your test" fallback is gone. Resume links to
+    `take?attempt=<n>` with the attempt number found.
+  - "Your practice playlist": active only after the user started a
+    test in that material; otherwise the card stays visible but muted,
+    with its button disabled and one line explaining why.
+  - Live Test: the dashboard button is enabled only after one
+    completed test anywhere; the live-test page shows a locked banner
+    with the Start button disabled, and the server refuses generation
+    (403 `no-completed-test`, see above) — the client button alone is
+    not the gate.
+  - Performance page + dashboard Performance card: empty (no journey,
+    no score, no radar) until the user has a finished paper in that
+    material — an honest empty state with a "take a test" call to
+    action. When results exist the current content still shows its
+    demo values (not rewired to real data yet). The hub "Your scores"
+    chips still show "—" when there is nothing to show.
+  - Paper status badges are derived from the user's real results, never
+    the catalog: `GET /api/results/activity` now also returns
+    `completedPaperIds`, and `resolvePaperStatus()` in
+    `app/composables/useActivity.ts` maps each paper to "Not started"
+    (nothing), "In progress" (saved answers for it), or "Completed"
+    (a finished result for it) — an active attempt beats a finished
+    one, so a user re-taking a completed paper sees "In progress" /
+    "Continue". The badge and the card button ("Start Test" /
+    "Continue" / "View Result") follow the same state on the dashboard
+    and on the papers list page (whose "My Papers" tab now filters on
+    the derived status); the paper detail page's "attempted" line uses
+    the same real data. The hardcoded `status` is removed from
+    `app/data/mock.ts` entirely (the `Paper` type no longer carries
+    one; `PaperCard` takes `status` as a separate prop), so no catalog
+    value can leak into the UI again. The id arrays are seeded from the
+    browser's local snapshot at setup, so badges are right on first
+    paint; the server fetch refines the completed ids.
+  Data sources per gate: `GET /api/results/activity?material=<slug>`
+  (D1 `test_results` counts; 401 without a session, 503 without D1)
+  via `app/composables/useActivity.ts`, which falls back to the
+  browser's local results store when the server store is unreachable
+  (plain `pnpm dev` or D1 down). The Continue card reads localStorage
+  answers keys only — D1 never sees an unfinished attempt. The Enroll
+  tab reads the server session + `GET /api/profile/enrollments`.
 
 Known limitations: the rate limiter keeps its counters in memory, so on
 Cloudflare Pages each isolate has its own budget (correct on the local
