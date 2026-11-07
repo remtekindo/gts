@@ -52,6 +52,131 @@ is a genuine product, not a hackathon-only prototype.
 - **Dark/light theme:** Tailwind v4 class-based dark mode (`@custom-variant dark` in `app/assets/css/main.css`); `useTheme()` composable persists `gts_theme` and toggles the `.dark` class on `<html>`. A sun/moon toggle sits next to the locale switcher. Restored pre-paint by `app/plugins/init.client.ts`.
 - **Free test without login (`/free-test`):** 30 original general-English questions — 15 listening (read-and-respond), 10 reading, 5 writing (best-sentence choice, auto-gradable). Timer, palette grouped by section, submit confirmation. Submitting saves answers to localStorage and redirects to `/auth?next=/free-test/result`; the result page shows a login gate for guests and a per-section + total score breakdown after auth, then clears the pending answers. Answer options are pre-shuffled in the bank (fixed seed, no runtime randomness); the submit button sits in the top bar next to the timer; the result includes a full per-question review with correct answers marked; each attempt is recorded in Profile → Enroll History. The auth page honors `?next=` (local paths only) after sign-in.
 
+## What was built (7 Nov 2026) — v2 redesign (branch `v2`)
+
+A total rebuild of the user-facing information architecture, after a
+read-only UX audit measured the old one: 23 routes, 5 material tabs +
+11 topbar controls, a fresh dashboard with 21 visible actions, a
+result page with 44 actions and a dead end (no next-test call to
+action), 5 taps from landing to the first question, 5 taps from a
+score back to the next test, and 20 jargon terms (Papers, Full
+Simulation, Drill Pack, Attempt, Playlist, Quest, CEFR, …). The app
+had grown feature by feature and nothing had ever been removed. The
+rebuild keeps every server endpoint and every rule (sequential
+unlock, live-test gate, leaderboard, performance) exactly as it was —
+it is a navigation/presentation rebuild, not a backend change. No new
+D1 migration.
+
+- **New IA — 3 primary destinations, the same on the desktop top bar
+  and the mobile bottom tab bar:** **Tes** (home after login),
+  **Skor Saya**, **Profil**. The admin panel is unchanged (7-item
+  sidebar, admin-only).
+- **Tes home:** greeting with the user's real name; last score + CEFR
+  if any; ONE big primary card — the next test in sequence (paper
+  name + the REAL question count from the paper data) — with "Lihat
+  semua tes" and "Ganti materi" links. The Live Test card renders
+  ONLY when unlocked, otherwise one small hint line, never a big dead
+  card. The Latihan Saya card renders ONLY when unlocked. No
+  points/streak/rank/quest widgets here — they live under Skor Saya.
+- **Skor Saya** (`/m/:slug/skor`): the Performance content (journey,
+  overall score + CEFR, radar/bars, attempt history) + a Peringkat
+  (leaderboard) section inside the same page (Global monthly +
+  per-material tabs) + Misi Mingguan + Beruntun display. One page
+  with sections, not separate top-level tabs.
+- **Profil:** real Google name + email from the server session (the
+  old page showed "Your Name" with a blank email for Google users);
+  "Riwayat Materi" (real grants — rename of Enroll History); settings
+  (language ID/EN, theme, sign out); admin link for admins only. The
+  **Purchase History tab is deleted entirely** — no purchase system
+  exists in this build; it returns only when payments exist.
+- **Material switching:** ONE active material at a time. The picker
+  stays at `/materials`, reached via "Ganti materi" on the Tes home
+  and from Profil. No material-switcher dropdown in the top nav. The
+  top bar shows the active material name in full, never truncated on
+  mobile. After login the user lands on their last material
+  (`gts_last_material` in localStorage), or the picker when there is
+  none yet.
+- **Free test (`/free-test`): the score is visible IMMEDIATELY after
+  finishing — no sign-in wall.** Under the score, guests see "Simpan
+  skormu — login dengan Google"; signing in only saves the score.
+  This supersedes the 30 Oct bullet above, which described the old
+  flow (submit → `/auth?next=/free-test/result` → login gate).
+- **Result page:** directly under the score, TWO primary calls to
+  action — "Tes Berikutnya" (next unlocked test in sequence; "Lihat
+  Semua Tes" when none is unlocked) and "Latihan Kelemahan Saya"
+  (playlist — hidden while locked, never a disabled button). The
+  per-question review, part tabs, and palette stay, but the calls to
+  action sit above them, unmissable. The score/CEFR toggle lives here
+  now (it moved off the paper detail page).
+- **Take page:** the instructions modal is gone — the take page starts
+  directly at Q1. Instructions are shown inline on the paper detail
+  page instead. The detail page has ONE Start button; attempt
+  selection defaults to the next unlocked attempt (the 3 attempt
+  buttons + sequential locks are unchanged).
+- **Language: the default locale is now Indonesian (`id`).** The EN/ID
+  toggle stays. All new labels are written in Indonesian first,
+  English second.
+- **Plain words, applied consistently in `id.ts` + `en.ts`:**
+
+  | Before | Indonesian | English |
+  |---|---|---|
+  | Papers | Tes | Test |
+  | Full Simulation | Simulasi | Simulation |
+  | Drill Pack | Latihan | Practice |
+  | Attempt | Percobaan | Attempt |
+  | Predicted Score | Skor | Score |
+  | Playlist | Latihan Saya | My Practice |
+  | Quest | Misi Mingguan | Weekly Mission |
+  | Streak | Beruntun | Streak |
+  | Leaderboard | Peringkat | Rankings |
+  | Material | Materi | Material |
+  | Enroll | Terdaftar | Enrolled |
+
+  "My Papers" and "Available Papers" cease to exist. CEFR stays as a
+  secondary label ("Level CEFR") with a plain explanation.
+- **Fake numbers deleted, not hidden:** the topbar "LR · 12" chip is
+  gone entirely (no credit system exists) along with the "This attempt
+  costs 2 LR credits (balance: 12)" line on the paper detail page;
+  the "1,284 enrolled" counts are gone (no source); paper cards show
+  the REAL question count from the paper data (21 for TOEIC LR, 6 for
+  TOEIC SW) with the real timer — never the old "200 questions /
+  120 min" catalog claim. The "Demo build." footer line is gone.
+  Where a limitation is real it is labeled plainly instead
+  (free-test listening: "tanpa audio"); TTS is still not built
+  (backlog).
+- **Redirect map (no dead links):**
+
+  | Old route | New destination |
+  |---|---|
+  | `/m/:slug` | Tes home |
+  | `/m/:slug/papers` | "Semua Tes" list |
+  | `/m/:slug/performance` | Skor Saya |
+  | `/m/:slug/leaderboard` | Skor Saya (`?section=peringkat`) |
+  | `/leaderboard` | active material's Skor Saya (`?section=peringkat`), else `/materials` |
+  | `/m/:slug/live-test` | reachable from the Tes home Live Test card (not in top nav) |
+  | `/m/:slug/playlist` | reachable from the Tes home / result CTA (not in top nav) |
+
+- **Files:** new `app/components/MainNav.vue` (single nav for both
+  layouts; desktop top bar + mobile bottom tab bar); deleted
+  `app/components/TopBar.vue` + `app/components/MaterialTopBar.vue`;
+  new `app/pages/m/[slug]/skor.vue`; rewritten Tes home, Semua Tes
+  list, paper detail, take (modal removed), result, materials picker
+  (stats/quest/score chips removed), profile, and free-test result;
+  `app/data/mock.ts` no longer carries `credits` / `creditsRequired` /
+  `enrolled` / `totalQuestions`; default locale `id` in
+  `app/composables/useLocale.ts` + `app/plugins/init.client.ts`;
+  i18n parity EN/ID 657/657 (line-start key extraction).
+- **Verified:** `vue-tsc` exit 0 (0 errors); `pnpm build` exit 0;
+  Playwright against `wrangler pages dev` on a real local D1
+  (migrations 0001–0008, dummy Meta key): **68/68 checks passed** —
+  fresh guest takes the free test and sees the score without login;
+  fresh user sees ONE "Mulai Tes" CTA and reaches Q1 in 2 taps;
+  completer's result page shows both CTAs and both work; mobile
+  390px bottom tab bar with all 3 destinations, no horizontal
+  overflow; desktop top bar with exactly the 3 destinations +
+  material name + language/theme/avatar. Test users deleted
+  afterwards; local D1 back to 0 rows.
+
 ## What is NOT built yet
 
 - Real backend (auth, database, API) — Cloudflare groundwork done 5 Nov 2026 (Pages + D1 binding + schema); **Google Sign-In for everyone + D1 user store with admin/grants done 5 Nov 2026** (see [Auth](#auth)); question bank + results migration pending
@@ -72,6 +197,7 @@ is a genuine product, not a hackathon-only prototype.
 
 - `main` — stable
 - `dev` — active development; all work lands here first
+- `v2` — the v2 redesign (7 Nov 2026); merges to `dev` after verification
 
 ## Run locally
 

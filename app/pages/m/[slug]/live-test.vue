@@ -374,7 +374,7 @@ function playAgain(): void {
             :to="base"
             class="text-sm font-semibold px-6 py-3 rounded-xl border border-slate-300 dark:border-slate-600 hover:border-blue-400 hover:text-blue-600 transition-colors"
           >
-            {{ t('liveTest.backDashboard') }}
+            {{ t('liveTest.backTes') }}
           </NuxtLink>
         </div>
       </div>

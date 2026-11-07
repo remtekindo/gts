@@ -1,16 +1,25 @@
 <script setup lang="ts">
 import { MATERIALS } from '~/data/mock'
-import { fetchSessionState } from '~/utils/server-auth'
+import { fetchSessionState, logoutServer } from '~/utils/server-auth'
+import { useTheme } from '~/composables/useTheme'
 
-const { t, locale } = useLocale()
-const activeTab = ref<'profile' | 'purchase' | 'enroll'>('profile')
+const { t, locale, setLocale } = useLocale()
+const { theme, setTheme } = useTheme()
+const router = useRouter()
 
-const auth = ref<AuthState | null>(null)
+/**
+ * Profil in v2: the account is what the server session says it is —
+ * real Google name + email (the old page showed "Your Name" with a
+ * blank email for Google users, because it read a localStorage mirror
+ * that was never filled). No Purchase tab: there is no purchase
+ * system in this build, so the tab returns only when payments exist.
+ * Settings (language, theme, sign out) live here, plus the admin
+ * link for admins and a "Ganti materi" link back to the picker.
+ */
 const name = ref('')
 const email = ref('')
-const savedMsg = ref('')
-
-const avatarPreview = ref<string | null>(null)
+const picture = ref<string | null>(null)
+const isAdmin = ref(false)
 
 /** Real enrollments: effective materials from the server session
  * (grants + packages, resolved server-side) with the real grant date
@@ -65,115 +74,47 @@ async function loadEnrollments(): Promise<void> {
   enrollLoaded.value = true
 }
 
+async function signOut(): Promise<void> {
+  await logoutServer()
+  clearAuth()
+  router.push('/auth')
+}
+
 onMounted(async () => {
-  auth.value = getAuth()
-  name.value = getDisplayName() || auth.value?.username || ''
-  email.value = auth.value?.username || ''
+  const state = await fetchSessionState()
+  if (!state.username) { router.replace('/auth'); return }
+  name.value = state.name ?? state.email ?? ''
+  email.value = state.email ?? ''
+  picture.value = state.picture
+  isAdmin.value = state.admin
   await loadEnrollments()
 })
-
-function onAvatarChange(e: Event): void {
-  const file = (e.target as HTMLInputElement).files?.[0]
-  if (file) avatarPreview.value = URL.createObjectURL(file)
-}
-
-function saveProfile(): void {
-  setDisplayName(name.value.trim())
-  savedMsg.value = t('profile.profileSaved')
-  setTimeout(() => { savedMsg.value = '' }, 2500)
-}
-
-const tabs = computed(() => [
-  { id: 'profile', label: t('profile.myProfile') },
-  { id: 'purchase', label: t('profile.purchaseHistory') },
-  { id: 'enroll', label: t('profile.enrollHistory') }
-] as const)
 </script>
 
 <template>
   <div class="max-w-3xl mx-auto">
-    <!-- Avatar card -->
+    <!-- Account: real Google identity from the server session. -->
     <div class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 p-6 flex items-center gap-5">
       <div class="w-20 h-20 rounded-full bg-slate-200 overflow-hidden flex items-center justify-center shrink-0">
-        <img v-if="avatarPreview || auth?.picture" :src="avatarPreview || auth?.picture || ''" alt="Avatar" class="w-full h-full object-cover" />
+        <img v-if="picture" :src="picture" alt="Avatar" class="w-full h-full object-cover" />
         <span v-else class="text-2xl font-extrabold text-slate-400 dark:text-slate-500">{{ (name || 'G').slice(0, 1).toUpperCase() }}</span>
       </div>
-      <div>
-        <h1 class="text-xl font-extrabold text-slate-800 dark:text-slate-200">{{ name || t('profile.yourName') }}</h1>
-        <p class="text-sm text-slate-400 dark:text-slate-500">{{ email }}</p>
-        <label class="mt-2 inline-block text-xs font-semibold px-3.5 py-2 rounded-xl border border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:border-blue-400 hover:text-blue-600 cursor-pointer transition-colors">
-          {{ t('profile.changeAvatar') }}
-          <input type="file" accept="image/*" class="hidden" @change="onAvatarChange" />
-        </label>
+      <div class="min-w-0">
+        <h1 class="text-xl font-extrabold text-slate-800 dark:text-slate-200 truncate">{{ name || email }}</h1>
+        <p class="text-sm text-slate-400 dark:text-slate-500 truncate">{{ email }}</p>
+        <p class="mt-1 text-xs text-slate-400 dark:text-slate-500">{{ t('profile.emailNote') }}</p>
       </div>
     </div>
 
-    <!-- Tabs -->
-    <div class="mt-5 flex gap-2 border-b border-slate-200 dark:border-slate-700 overflow-x-auto no-scrollbar">
-      <button
-        v-for="t in tabs"
-        :key="t.id"
-        class="relative shrink-0 px-4 py-3 text-sm font-semibold"
-        :class="activeTab === t.id ? 'text-blue-600' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700'"
-        @click="activeTab = t.id"
-      >
-        {{ t.label }}
-        <span v-if="activeTab === t.id" class="absolute bottom-0 left-3 right-3 h-0.5 rounded-full bg-blue-600" />
-      </button>
-    </div>
-
-    <!-- My Profile -->
-    <div v-if="activeTab === 'profile'" class="mt-5 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 p-6 space-y-4">
-      <div>
-        <label for="profile-email" class="block text-sm font-medium text-slate-600 dark:text-slate-300 mb-1.5">{{ t('profile.email') }}</label>
-        <input
-          id="profile-email"
-          v-model="email"
-          type="email"
-          disabled
-          class="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 px-3.5 py-2.5 text-sm text-slate-400 dark:text-slate-500 cursor-not-allowed"
-        />
-        <p class="mt-1 text-xs text-slate-400 dark:text-slate-500">Email cannot be changed.</p>
-      </div>
-      <div>
-        <label for="profile-name" class="block text-sm font-medium text-slate-600 dark:text-slate-300 mb-1.5">{{ t('profile.displayName') }}</label>
-        <input
-          id="profile-name"
-          v-model="name"
-          type="text"
-          class="w-full rounded-xl border border-slate-300 dark:border-slate-600 px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-        />
-      </div>
-      <div class="flex items-center gap-3">
-        <button
-          class="text-sm font-semibold px-5 py-2.5 rounded-xl bg-blue-600 text-white hover:bg-blue-700 transition-colors"
-          @click="saveProfile"
-        >
-          Save
-        </button>
-        <p v-if="savedMsg" class="text-sm text-green-600 font-medium">{{ savedMsg }}</p>
-      </div>
-    </div>
-
-    <!-- Purchase History — real transactions only. There is no
-         purchase system in this build (no checkout, no credit
-         ledger), so the tab is the empty state until a user has
-         actually bought something. No hardcoded balances. -->
-    <div v-if="activeTab === 'purchase'" class="mt-5 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 p-6">
-      <h3 class="font-bold text-slate-800 dark:text-slate-200 text-sm">{{ t('profile.recentPurchases') }}</h3>
-      <p class="mt-2 text-sm text-slate-400 dark:text-slate-500">{{ t('profile.noPurchases') }}</p>
-    </div>
-
-    <!-- Enroll History — real grants only (see loadEnrollments).
-         Loading first, then the granted materials, or the empty
-         state when the user has no grants. -->
-    <div v-if="activeTab === 'enroll'" class="mt-5 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden">
+    <!-- Riwayat Materi — real grants only (see loadEnrollments). -->
+    <h2 class="mt-8 text-lg font-bold text-slate-900 dark:text-slate-100">{{ t('profile.materialHistory') }}</h2>
+    <div class="mt-3 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden">
       <p v-if="!enrollLoaded" class="px-5 py-6 text-sm text-slate-400 dark:text-slate-500">{{ t('access.loading') }}</p>
       <p v-else-if="enrollRows.length === 0" class="px-5 py-6 text-sm text-slate-400 dark:text-slate-500">{{ t('profile.noEnrollments') }}</p>
       <table v-else class="w-full text-sm">
         <thead>
           <tr class="text-left text-xs uppercase tracking-wide text-slate-400 dark:text-slate-500 border-b border-slate-200 dark:border-slate-700">
-            <th class="px-5 py-3 font-semibold">{{ t('profile.thPaper') }}</th>
+            <th class="px-5 py-3 font-semibold">{{ t('profile.thMaterial') }}</th>
             <th class="px-5 py-3 font-semibold hidden sm:table-cell">{{ t('profile.thDate') }}</th>
             <th class="px-5 py-3 font-semibold text-right">{{ t('profile.thStatus') }}</th>
           </tr>
@@ -190,6 +131,78 @@ const tabs = computed(() => [
           </tr>
         </tbody>
       </table>
+    </div>
+
+    <!-- Settings -->
+    <h2 class="mt-8 text-lg font-bold text-slate-900 dark:text-slate-100">{{ t('profile.settingsTitle') }}</h2>
+    <div class="mt-3 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 p-6 space-y-5">
+      <div class="flex items-center justify-between gap-3">
+        <span class="text-sm font-medium text-slate-600 dark:text-slate-300">{{ t('profile.language') }}</span>
+        <div class="flex items-center rounded-full border border-slate-300 dark:border-slate-600 overflow-hidden text-xs font-semibold" role="group" aria-label="Language">
+          <button
+            type="button"
+            class="px-3 py-1.5 transition-colors"
+            :class="locale === 'id' ? 'bg-blue-600 text-white' : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-100'"
+            :aria-pressed="locale === 'id'"
+            @click="setLocale('id')"
+          >
+            ID
+          </button>
+          <button
+            type="button"
+            class="px-3 py-1.5 transition-colors"
+            :class="locale === 'en' ? 'bg-blue-600 text-white' : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-100'"
+            :aria-pressed="locale === 'en'"
+            @click="setLocale('en')"
+          >
+            EN
+          </button>
+        </div>
+      </div>
+      <div class="flex items-center justify-between gap-3">
+        <span class="text-sm font-medium text-slate-600 dark:text-slate-300">{{ t('profile.theme') }}</span>
+        <div class="flex items-center rounded-full border border-slate-300 dark:border-slate-600 overflow-hidden text-xs font-semibold" role="group" aria-label="Theme">
+          <button
+            type="button"
+            class="px-3 py-1.5 transition-colors"
+            :class="theme === 'light' ? 'bg-blue-600 text-white' : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-100'"
+            :aria-pressed="theme === 'light'"
+            @click="setTheme('light')"
+          >
+            {{ t('profile.light') }}
+          </button>
+          <button
+            type="button"
+            class="px-3 py-1.5 transition-colors"
+            :class="theme === 'dark' ? 'bg-blue-600 text-white' : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-100'"
+            :aria-pressed="theme === 'dark'"
+            @click="setTheme('dark')"
+          >
+            {{ t('profile.dark') }}
+          </button>
+        </div>
+      </div>
+      <div class="flex flex-wrap items-center gap-3 pt-1">
+        <NuxtLink
+          v-if="isAdmin"
+          to="/admin"
+          class="text-sm font-semibold px-5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-600 hover:border-blue-400 hover:text-blue-600 transition-colors"
+        >
+          {{ t('profile.adminPanel') }}
+        </NuxtLink>
+        <NuxtLink
+          to="/materials"
+          class="text-sm font-semibold px-5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-600 hover:border-blue-400 hover:text-blue-600 transition-colors"
+        >
+          {{ t('nav.changeMaterial') }}
+        </NuxtLink>
+        <button
+          class="text-sm font-semibold px-5 py-2.5 rounded-xl bg-red-600 text-white hover:bg-red-700 transition-colors"
+          @click="signOut"
+        >
+          {{ t('nav.signOut') }}
+        </button>
+      </div>
     </div>
   </div>
 </template>

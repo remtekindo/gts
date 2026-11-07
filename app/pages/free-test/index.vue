@@ -65,7 +65,7 @@ function doSubmit(): void {
   flushTime(idx.value)
   saveFreeAnswers(answers.value)
   saveFreeTimings(timeSpent.value)
-  router.push('/auth?next=/free-test/result')
+  router.push('/free-test/result')
 }
 
 function onExpire(): void {

@@ -36,15 +36,11 @@ const paperLock = computed<Record<string, { locked: boolean, unlockAfterName: st
 })
 const lockOf = (id: string) => paperLock.value[id] ?? { locked: false, unlockAfterName: null }
 
-const activeTab = ref<'mine' | 'available'>('available')
 const search = ref('')
 const categoryFilter = ref('All')
 
-const myPapers = computed(() => materialPapers.value.filter(p => statusOf(p.id) !== 'not-started'))
-
 const filtered = computed(() => {
-  const listBase = activeTab.value === 'mine' ? myPapers.value : materialPapers.value
-  return listBase.filter(p => {
+  return materialPapers.value.filter(p => {
     const matchesSearch = p.title.toLowerCase().includes(search.value.toLowerCase())
     const matchesCategory = categoryFilter.value === 'All' || p.category === categoryFilter.value
     return matchesSearch && matchesCategory
@@ -74,30 +70,9 @@ const chips = computed(() => [
     </div>
 
     <div class="max-w-6xl mx-auto px-4 py-6">
-      <!-- Tabs -->
-      <div class="flex gap-2 border-b border-slate-200 dark:border-slate-700">
-        <button
-          class="relative px-4 py-3 text-sm font-semibold"
-          :class="activeTab === 'mine' ? 'text-blue-600' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700'"
-          @click="activeTab = 'mine'"
-        >
-          {{ t('papers.myPapers') }}
-          <span class="ml-1.5 text-xs px-2 py-0.5 rounded-full" :class="activeTab === 'mine' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-200' : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400'">{{ myPapers.length }}</span>
-          <span v-if="activeTab === 'mine'" class="absolute bottom-0 left-3 right-3 h-0.5 rounded-full bg-blue-600" />
-        </button>
-        <button
-          class="relative px-4 py-3 text-sm font-semibold"
-          :class="activeTab === 'available' ? 'text-blue-600' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700'"
-          @click="activeTab = 'available'"
-        >
-          {{ t('papers.available') }}
-          <span class="ml-1.5 text-xs px-2 py-0.5 rounded-full" :class="activeTab === 'available' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-200' : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400'">{{ materialPapers.length }}</span>
-          <span v-if="activeTab === 'available'" class="absolute bottom-0 left-3 right-3 h-0.5 rounded-full bg-blue-600" />
-        </button>
-      </div>
-
-      <!-- Filters -->
-      <div class="mt-5 flex flex-wrap items-center gap-2">
+      <!-- Filters: one list, no "My Papers (0)" tab that looks broken
+           for a user who owns the material. -->
+      <div class="flex flex-wrap items-center gap-2">
         <button
           v-for="chip in chips"
           :key="chip.value"
@@ -126,7 +101,7 @@ const chips = computed(() => [
         <PaperCard v-for="p in filtered" :key="p.id" :paper="p" :status="statusOf(p.id)" :locked="lockOf(p.id).locked" :unlock-after="lockOf(p.id).unlockAfterName ?? ''" :base="base" />
       </div>
       <div v-else class="mt-5 text-center py-16 text-slate-400 dark:text-slate-500 text-sm bg-white dark:bg-slate-900 rounded-2xl border border-dashed border-slate-300 dark:border-slate-600">
-        No papers match your filters.
+        No tests match your filters.
       </div>
     </div>
   </div>

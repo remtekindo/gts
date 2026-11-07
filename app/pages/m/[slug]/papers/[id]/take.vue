@@ -86,23 +86,14 @@ function flushTime(forIdx: number): void {
 // Moving to another question banks the time spent on the previous one.
 watch(idx, (_n, old) => { flushTime(old) })
 
-const showInstructions = ref(true)
-const openPart = ref<number | null>(1)
 const notesOpen = ref(false)
 const noteDraft = ref('')
 const confirmSubmit = ref(false)
 const confirmExit = ref(false)
 
-// Don't count the seconds spent reading the instructions against Q1.
-watch(showInstructions, v => { if (!v) enterStamp = Date.now() })
-
 const totalSeconds = computed(() => paper.value.durationMinutes * 60)
 const answeredCount = computed(() => Object.keys(answers.value).length)
 const progressPct = computed(() => Math.round((answeredCount.value / questions.value.length) * 100))
-
-function skillLabel(skill: string): string {
-  return { listening: 'Listening', reading: 'Reading', speaking: 'Speaking', writing: 'Writing' }[skill] ?? skill
-}
 
 onMounted(async () => {
   // Server session is the source of truth (see layouts/default.vue):
@@ -270,18 +261,6 @@ function saveNotes(): void {
           <div class="flex items-center gap-2 ml-auto">
             <button
               class="w-9 h-9 rounded-full border border-slate-300 dark:border-white/30 flex items-center justify-center text-slate-600 dark:text-slate-200 hover:border-blue-400 dark:hover:border-white/60 hover:text-blue-600 dark:hover:text-white transition-colors"
-              :title="t('take.instruction')"
-              :aria-label="t('take.instruction')"
-              @click="showInstructions = true"
-            >
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                <circle cx="12" cy="12" r="9" />
-                <path stroke-linecap="round" d="M12 11v5" />
-                <path stroke-linecap="round" d="M12 8h.01" />
-              </svg>
-            </button>
-            <button
-              class="w-9 h-9 rounded-full border border-slate-300 dark:border-white/30 flex items-center justify-center text-slate-600 dark:text-slate-200 hover:border-blue-400 dark:hover:border-white/60 hover:text-blue-600 dark:hover:text-white transition-colors"
               :title="t('take.notes')"
               :aria-label="t('take.notes')"
               @click="notesOpen = true"
@@ -372,46 +351,6 @@ function saveNotes(): void {
       </div>
     </div>
 
-    <!-- Instructions modal -->
-    <Teleport to="body">
-      <div v-if="showInstructions" class="fixed inset-0 z-50 flex items-center justify-center p-4">
-        <div class="absolute inset-0 bg-slate-900/60" />
-        <div class="relative bg-white dark:bg-slate-900 rounded-2xl shadow-xl w-full max-w-2xl max-h-[85vh] flex flex-col">
-          <div class="px-6 py-5 border-b border-slate-200 dark:border-slate-700">
-            <h2 class="text-lg font-extrabold text-slate-800 dark:text-slate-200">{{ t('take.instructionsTitle') }}</h2>
-            <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">{{ paper.title }} · {{ paper.durationMinutes }} {{ t('overview.minutes') }} · {{ questions.length }} {{ t('take.demoQuestions') }}</p>
-          </div>
-          <div class="overflow-y-auto px-6 py-4 space-y-2 flex-1">
-            <div v-for="p in materialParts" :key="p.part" class="border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden">
-              <button
-                class="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-slate-50 dark:hover:bg-slate-800"
-                @click="openPart = openPart === p.part ? null : p.part"
-              >
-                <span class="text-sm font-semibold text-slate-700 dark:text-slate-200">
-                  Part {{ p.part }} — {{ p.label }}
-                  <span class="ml-2 text-xs font-medium text-slate-400 dark:text-slate-500">{{ skillLabel(p.skill) }}</span>
-                </span>
-                <span class="text-slate-400 dark:text-slate-500 transition-transform" :class="openPart === p.part ? 'rotate-180' : ''">▾</span>
-              </button>
-              <div v-if="openPart === p.part" class="px-4 pb-4 text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
-                {{ p.description }}
-                <p v-if="p.skill === 'listening' || p.skill === 'speaking'" class="mt-2 text-xs text-amber-700 bg-amber-50 rounded-lg px-3 py-2">
-                  Demo note: listening audio is a placeholder in this build — read the transcript in each question.
-                </p>
-              </div>
-            </div>
-          </div>
-          <div class="px-6 py-4 border-t border-slate-200 dark:border-slate-700 flex justify-end">
-            <button
-              class="text-sm font-semibold px-6 py-3 rounded-xl bg-blue-600 text-white hover:bg-blue-700 transition-colors"
-              @click="showInstructions = false"
-            >
-              {{ t('take.closeStart') }}
-            </button>
-          </div>
-        </div>
-      </div>
-    </Teleport>
 
     <NotesDrawer v-model:open="notesOpen" v-model:model-value="noteDraft" @save="saveNotes" />
 

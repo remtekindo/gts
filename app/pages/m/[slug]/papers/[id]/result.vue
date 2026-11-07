@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { getPaperOrFallback, partsForMaterial, questionsForMaterial } from '~/data/mock'
-import type { Question } from '~/data/mock'
+import { getPaperOrFallback, papersForMaterial, partsForMaterial, questionsForMaterial } from '~/data/mock'
+import type { Paper, Question } from '~/data/mock'
+import { resolvePaperLock } from '~/utils/unlock'
 
 const { t } = useLocale()
 
@@ -19,6 +20,11 @@ const paper = computed(() => getPaperOrFallback(paperId.value))
 const result = ref<TestResult | null>(null)
 const activePart = ref(1)
 
+/** Score display mode — the toggle moved here from the paper detail
+ * page in the v2 rebuild, so the detail page never asks anything
+ * before Start. */
+const scoreMode = ref<'score' | 'cefr'>('score')
+
 onMounted(() => {
   result.value = getResult(paper.value.id)
   if (!result.value) router.replace(`${base.value}/papers/${paper.value.id}`)
@@ -27,6 +33,26 @@ onMounted(() => {
 const materialQuestions = computed(() => questionsForMaterial(slug.value))
 const materialParts = computed(() => partsForMaterial(slug.value))
 const partQuestions = computed(() => materialQuestions.value.filter(q => q.part === activePart.value))
+
+/**
+ * The next step, directly under the score — no dead end. "Tes
+ * Berikutnya" is the first unlocked paper after this one in catalog
+ * order that the user has not finished yet; when there is none, the
+ * button becomes "Lihat Semua Tes". "Latihan Kelemahan Saya" opens
+ * the playlist — and is hidden entirely while the playlist is still
+ * locked (no disabled button).
+ */
+const activity = useMaterialActivity(slug.value)
+const nextPaper = computed(() => {
+  const list = papersForMaterial(slug.value)
+  const idx = list.findIndex(p => p.id === paper.value.id)
+  for (let i = idx + 1; i < list.length; i++) {
+    const p = list[i] as Paper
+    const lock = resolvePaperLock(p, list, activity.completedPaperIds)
+    if (!lock.locked && !activity.completedPaperIds.includes(p.id)) return p
+  }
+  return null
+})
 
 const statusMap = computed<Record<number, MarkStatus>>(() => {
   const map: Record<number, MarkStatus> = {}
@@ -64,8 +90,8 @@ function optionClass(q: Question, letter: string): string {
 
 function markPill(q: Question): { text: string; cls: string } | null {
   const userPick = result.value?.answers[q.number]
-  if (!userPick) return { text: 'Not answered', cls: 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400' }
-  if (userPick === q.correctLetter) return { text: 'Correct', cls: 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-200' }
+  if (!userPick) return { text: t('result.notAnswered'), cls: 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400' }
+  if (userPick === q.correctLetter) return { text: t('result.correct'), cls: 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-200' }
   return { text: t('result.wrong'), cls: 'bg-red-100 text-red-700' }
 }
 </script>
@@ -90,15 +116,61 @@ function markPill(q: Question): { text: string; cls: string } | null {
         </div>
         <h1 class="mt-4 text-2xl font-extrabold">{{ t('result.title') }}</h1>
         <p class="mt-1 text-sm text-slate-300">{{ paper.title }}</p>
-        <div v-if="result" class="mt-4">
-          <ScorePills :score="result.score" :cefr="result.cefr" :correct="result.correct" :total="result.total" />
-        </div>
       </div>
     </div>
 
     <div v-if="result" class="max-w-6xl mx-auto px-4 py-6 pb-40">
+      <!-- Score + display toggle -->
+      <div class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 p-5">
+        <ScorePills :score="result.score" :cefr="result.cefr" :correct="result.correct" :total="result.total" :mode="scoreMode" />
+        <div class="mt-4 flex items-center gap-3">
+          <span class="text-sm font-medium text-slate-500 dark:text-slate-400">{{ t('result.scoreAs') }}</span>
+          <div class="inline-flex rounded-xl border border-slate-300 dark:border-slate-600 overflow-hidden text-sm font-semibold">
+            <button
+              class="px-4 py-2 transition-colors"
+              :class="scoreMode === 'score' ? 'bg-slate-800 text-white' : 'bg-white dark:bg-slate-900 text-slate-500 dark:text-slate-400 hover:text-slate-700'"
+              @click="scoreMode = 'score'"
+            >
+              {{ t('result.scoreTab') }}
+            </button>
+            <button
+              class="px-4 py-2 transition-colors"
+              :class="scoreMode === 'cefr' ? 'bg-slate-800 text-white' : 'bg-white dark:bg-slate-900 text-slate-500 dark:text-slate-400 hover:text-slate-700'"
+              @click="scoreMode = 'cefr'"
+            >
+              {{ t('result.cefrTab') }}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Next step — directly under the score, unmissable. -->
+      <div class="mt-4 flex flex-wrap gap-3">
+        <NuxtLink
+          v-if="nextPaper"
+          :to="`${base}/papers/${nextPaper.id}`"
+          class="text-sm font-semibold px-6 py-3 rounded-xl bg-blue-600 text-white hover:bg-blue-700 transition-colors"
+        >
+          {{ t('result.nextTest') }} →
+        </NuxtLink>
+        <NuxtLink
+          v-else
+          :to="`${base}/papers`"
+          class="text-sm font-semibold px-6 py-3 rounded-xl bg-blue-600 text-white hover:bg-blue-700 transition-colors"
+        >
+          {{ t('result.viewAllTests') }} →
+        </NuxtLink>
+        <NuxtLink
+          v-if="!activity.loading && activity.hasStarted"
+          :to="`${base}/playlist`"
+          class="text-sm font-semibold px-6 py-3 rounded-xl bg-violet-600 text-white hover:bg-violet-700 transition-colors"
+        >
+          {{ t('result.practiceWeakness') }}
+        </NuxtLink>
+      </div>
+
       <!-- Part tabs -->
-      <div class="flex gap-2 overflow-x-auto no-scrollbar pb-1">
+      <div class="mt-6 flex gap-2 overflow-x-auto no-scrollbar pb-1">
         <button
           v-for="p in materialParts"
           :key="p.part"

@@ -24,7 +24,6 @@ export interface Material {
   /** Short badge shown on the material card, e.g. 'EN'. */
   badge: string
   status: MaterialStatus
-  credits: { label: string; balance: number }[]
 }
 
 export interface Question {
@@ -48,11 +47,9 @@ export interface Paper {
   title: string
   category: 'Full Simulation' | 'Drill Pack'
   skillsLabel: string
+  /** Time limit for the attempt, in minutes. */
   durationMinutes: number
-  totalQuestions: number
   difficulty: Difficulty
-  enrolled: number
-  creditsRequired: number
 }
 
 export interface PartInfo {
@@ -71,7 +68,6 @@ export const MATERIALS: Material[] = [
     description: 'Full simulations and drill packs for TOEIC Listening & Reading, with instant predicted scores and per-part breakdowns.',
     badge: 'EN',
     status: 'owned',
-    credits: [{ label: 'LR', balance: 12 }]
   },
   {
     slug: 'toeic-sw',
@@ -80,7 +76,6 @@ export const MATERIALS: Material[] = [
     description: 'Speaking response drills and writing tasks with sample answers and self-check rubrics.',
     badge: 'EN',
     status: 'owned',
-    credits: [{ label: 'SW', balance: 8 }]
   },
   {
     slug: 'toefl-ibt',
@@ -89,7 +84,6 @@ export const MATERIALS: Material[] = [
     description: 'Reading, Listening, Speaking, and Writing simulations for TOEFL iBT.',
     badge: 'EN',
     status: 'coming-soon',
-    credits: []
   },
   {
     slug: 'ielts-academic',
@@ -98,7 +92,6 @@ export const MATERIALS: Material[] = [
     description: 'Academic Reading, Listening, Writing, and Speaking practice for IELTS.',
     badge: 'EN',
     status: 'coming-soon',
-    credits: []
   }
 ]
 
@@ -126,7 +119,7 @@ export const PARTS: PartInfo[] = [
   { materialSlug: 'toeic-sw', part: 2, skill: 'writing', label: 'Sentence Choice', description: 'Choose the best sentence for each writing task.' }
 ]
 
-const AUDIO_NOTE = 'Audio placeholder — no recording in this demo build.'
+const AUDIO_NOTE = 'No audio — no recording yet.'
 
 type QuestionSeed = Omit<Question, 'materialSlug'>
 
@@ -455,86 +448,65 @@ export const PAPERS: Paper[] = [
   {
     id: 'toeic-lr-sim-01',
     materialSlug: 'toeic-lr',
-    title: 'TOEIC Listening & Reading — Full Simulation 01',
+    title: 'TOEIC Listening & Reading — Simulasi 01',
     category: 'Full Simulation',
     skillsLabel: 'Listening & Reading',
     durationMinutes: 120,
-    totalQuestions: 200,
     difficulty: 'Intermediate',
-    enrolled: 1284,
-    creditsRequired: 2
   },
   {
     id: 'toeic-lr-sim-02',
     materialSlug: 'toeic-lr',
-    title: 'TOEIC Listening & Reading — Full Simulation 02',
+    title: 'TOEIC Listening & Reading — Simulasi 02',
     category: 'Full Simulation',
     skillsLabel: 'Listening & Reading',
     durationMinutes: 120,
-    totalQuestions: 200,
     difficulty: 'Advanced',
-    enrolled: 986,
-    creditsRequired: 2
   },
   {
     id: 'toeic-lr-sim-03',
     materialSlug: 'toeic-lr',
-    title: 'TOEIC Listening & Reading — Full Simulation 03',
+    title: 'TOEIC Listening & Reading — Simulasi 03',
     category: 'Full Simulation',
     skillsLabel: 'Listening & Reading',
     durationMinutes: 120,
-    totalQuestions: 200,
     difficulty: 'Beginner',
-    enrolled: 2103,
-    creditsRequired: 2
   },
   {
     id: 'toeic-reading-drill',
     materialSlug: 'toeic-lr',
-    title: 'Reading Drill Pack — Parts 5 to 7',
+    title: 'Latihan Reading — Part 5–7',
     category: 'Drill Pack',
     skillsLabel: 'Reading',
     durationMinutes: 45,
-    totalQuestions: 60,
     difficulty: 'Intermediate',
-    enrolled: 764,
-    creditsRequired: 1
   },
   {
     id: 'toeic-listening-drill',
     materialSlug: 'toeic-lr',
-    title: 'Listening Drill Pack — Parts 1 to 4',
+    title: 'Latihan Listening — Part 1–4',
     category: 'Drill Pack',
     skillsLabel: 'Listening',
     durationMinutes: 45,
-    totalQuestions: 60,
     difficulty: 'Intermediate',
-    enrolled: 692,
-    creditsRequired: 1
   },
   {
     id: 'toeic-sw-drill-01',
     materialSlug: 'toeic-sw',
-    title: 'TOEIC Speaking & Writing — Response Drill 01',
+    title: 'TOEIC Speaking & Writing — Latihan Respons 01',
     category: 'Drill Pack',
     skillsLabel: 'Speaking & Writing',
     durationMinutes: 30,
-    totalQuestions: 20,
     difficulty: 'Intermediate',
-    enrolled: 412,
-    creditsRequired: 1
   },
   {
     id: 'toeic-sw-drill-02',
     materialSlug: 'toeic-sw',
-    title: 'TOEIC Speaking & Writing — Response Drill 02',
+    title: 'TOEIC Speaking & Writing — Latihan Respons 02',
     category: 'Drill Pack',
     skillsLabel: 'Speaking & Writing',
     durationMinutes: 30,
-    totalQuestions: 20,
     difficulty: 'Beginner',
-    enrolled: 388,
-    creditsRequired: 1
   }
 ]
 
@@ -555,6 +527,17 @@ export function getPaperOrFallback(id: string): Paper {
 
 export function papersForMaterial(slug: string): Paper[] {
   return PAPERS.filter(p => p.materialSlug === slug)
+}
+
+/**
+ * Questions the user will actually answer for this paper: the bank
+ * holds one question set per material, so every paper in a material
+ * renders that material's set. The catalog used to promise 200
+ * questions per simulation while the test had 21 — cards now show
+ * this count, never a hardcoded number.
+ */
+export function realQuestionCount(paper: Paper): number {
+  return questionsForMaterial(paper.materialSlug).length
 }
 
 /* ------------------------------------------------------------------ */
@@ -689,6 +672,3 @@ export const FREE_TEST_QUESTIONS: FreeQuestion[] = FREE_SEEDS.map((q, i) => ({
   options: q.options,
   correctLetter: q.correctLetter
 }))
-
-/** Demo-only: the take interface renders the material's mock question set for every paper. */
-export const DEMO_NOTE = 'Demo build: every paper renders its material’s mock question set.'

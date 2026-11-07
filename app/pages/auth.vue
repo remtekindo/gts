@@ -144,7 +144,7 @@ onMounted(async () => {
           </li>
         </ul>
       </div>
-      <p class="text-xs text-blue-300">© 2026 GTS — Global Testing System. Demo build.</p>
+      <p class="text-xs text-blue-300">© 2026 GTS — Global Testing System.</p>
     </div>
 
     <!-- Sign-in card -->

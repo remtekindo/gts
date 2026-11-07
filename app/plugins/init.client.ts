@@ -3,7 +3,7 @@ import type { Theme } from '~/composables/useTheme'
 
 /** Restore persisted locale + theme before first paint. */
 export default defineNuxtPlugin(() => {
-  const locale = useState<Locale>('gts-locale', () => 'en')
+  const locale = useState<Locale>('gts-locale', () => 'id')
   const theme = useState<Theme>('gts-theme', () => 'light')
   try {
     const savedLocale = localStorage.getItem('gts_locale')

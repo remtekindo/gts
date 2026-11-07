@@ -155,6 +155,28 @@ export function setDisplayName(name: string): void {
   write('gts_display_name', name)
 }
 
+/**
+ * Last material the user opened (`/m/<slug>`). The Tes home is the
+ * post-login landing, so this is where "continue" goes; the picker
+ * (`/materials`) is reached explicitly via "Ganti materi". One
+ * active material at a time — there is no multi-material home.
+ */
+export function getLastMaterial(): string | null {
+  try {
+    return localStorage.getItem('gts_last_material')
+  } catch {
+    return null
+  }
+}
+
+export function setLastMaterial(slug: string): void {
+  try {
+    localStorage.setItem('gts_last_material', slug)
+  } catch {
+    /* storage unavailable */
+  }
+}
+
 /* Free-test (no login) pending answers, gated behind auth at result time. */
 export function saveFreeAnswers(answers: AnswerMap): void {
   write('gts_free_answers', answers)

@@ -8,20 +8,18 @@ const { t } = useLocale()
 
 interface SectionScore { id: string; correct: number; total: number }
 
-const authed = ref(false)
 const answers = ref<AnswerMap | null>(null)
 const sectionScores = ref<SectionScore[]>([])
 const totalCorrect = ref(0)
+/** Signed-in guests get their score saved; everyone else sees the
+ * score right away with a "Simpan skormu" prompt instead of a wall. */
+const signedIn = ref(false)
 
 const sectionLabel = (id: string): string =>
   ({ listening: t('freeTest.secListening'), reading: t('freeTest.secReading'), writing: t('freeTest.secWriting') })[id] ?? id
 
 onMounted(() => {
-  if (!getAuth()) {
-    authed.value = false
-    return
-  }
-  authed.value = true
+  signedIn.value = !!getAuth()
   const pending = loadFreeAnswers()
   if (!pending) return
   answers.value = pending
@@ -32,20 +30,24 @@ onMounted(() => {
   })
   sectionScores.value = scores
   totalCorrect.value = scores.reduce((sum, s) => sum + s.correct, 0)
-  // Record the free test in the user's class history (profile -> Enroll History).
-  const prev = getResult('free-test')
-  saveResult({
-    paperId: 'free-test',
-    attempt: (prev?.attempt ?? 0) + 1,
-    score: Math.round((totalCorrect.value / FREE_TEST_QUESTIONS.length) * 100),
-    cefr: '',
-    correct: totalCorrect.value,
-    total: FREE_TEST_QUESTIONS.length,
-    answers: pending,
-    finishedAt: new Date().toISOString(),
-    username: getAuth()?.username ?? 'guest',
-    timings: loadFreeTimings() ?? {}
-  })
+  // Signed in: record the free test in the user's local history.
+  // Guest: the score is shown anyway — nothing is recorded until
+  // they sign in via the "Simpan skormu" prompt below.
+  if (signedIn.value) {
+    const prev = getResult('free-test')
+    saveResult({
+      paperId: 'free-test',
+      attempt: (prev?.attempt ?? 0) + 1,
+      score: Math.round((totalCorrect.value / FREE_TEST_QUESTIONS.length) * 100),
+      cefr: '',
+      correct: totalCorrect.value,
+      total: FREE_TEST_QUESTIONS.length,
+      answers: pending,
+      finishedAt: new Date().toISOString(),
+      username: getAuth()?.username ?? 'guest',
+      timings: loadFreeTimings() ?? {}
+    })
+  }
   clearFreeAnswers()
 })
 
@@ -81,24 +83,9 @@ const isCorrect = (n: number): boolean => {
     </header>
 
     <main class="flex-1">
-      <!-- Login gate: result is locked until the user signs in -->
-      <div v-if="!authed" class="max-w-md mx-auto px-4 py-20 text-center">
-        <div class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 p-8">
-          <span class="text-4xl">🔒</span>
-          <h1 class="mt-4 text-2xl font-extrabold text-slate-900 dark:text-slate-100">{{ t('freeTest.gateTitle') }}</h1>
-          <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">{{ t('freeTest.gateSub') }}</p>
-          <NuxtLink
-            to="/auth?next=/free-test/result"
-            class="mt-6 inline-block text-sm font-semibold px-8 py-3.5 rounded-xl bg-blue-600 text-white hover:bg-blue-700 transition-colors"
-          >
-            {{ t('freeTest.gateBtn') }}
-          </NuxtLink>
-        </div>
-      </div>
-
-      <!-- No pending answers -->
-      <div v-else-if="answers === null" class="max-w-md mx-auto px-4 py-20 text-center">
-        <p class="text-sm text-slate-500 dark:text-slate-400">{{ t('freeTest.signInToContinue') }}</p>
+      <!-- No pending answers (direct visit with no test taken) -->
+      <div v-if="answers === null" class="max-w-md mx-auto px-4 py-20 text-center">
+        <p class="text-sm text-slate-500 dark:text-slate-400">{{ t('freeTest.noResult') }}</p>
         <NuxtLink to="/free-test" class="mt-4 inline-block text-sm font-semibold text-blue-600 hover:text-blue-700">
           {{ t('freeTest.startBtn') }} →
         </NuxtLink>
@@ -115,6 +102,18 @@ const isCorrect = (n: number): boolean => {
           <p class="text-xs font-bold uppercase tracking-widest text-blue-200">{{ t('freeTest.totalScore') }}</p>
           <p class="mt-2 text-6xl font-extrabold tabular-nums">{{ totalCorrect }}<span class="text-2xl text-blue-200">/{{ FREE_TEST_QUESTIONS.length }}</span></p>
           <p class="mt-2 text-sm text-blue-200">{{ pct }}% {{ t('result.correct') }}</p>
+        </div>
+
+        <!-- Score is visible immediately; signing in only saves it. -->
+        <div v-if="!signedIn" class="mt-4 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 p-5 text-center">
+          <h2 class="font-bold text-slate-800 dark:text-slate-200">{{ t('freeTest.saveTitle') }}</h2>
+          <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">{{ t('freeTest.saveSub') }}</p>
+          <NuxtLink
+            to="/auth?next=/free-test/result"
+            class="mt-4 inline-block text-sm font-semibold px-6 py-3 rounded-xl bg-blue-600 text-white hover:bg-blue-700 transition-colors"
+          >
+            {{ t('freeTest.saveBtn') }}
+          </NuxtLink>
         </div>
 
         <div class="mt-6 grid md:grid-cols-3 gap-3">

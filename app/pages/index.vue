@@ -80,7 +80,7 @@ const steps = computed(() => [
             :to="dashboardTo"
             class="text-sm font-semibold px-5 py-2.5 rounded-xl bg-blue-600 text-white hover:bg-blue-700 transition-colors whitespace-nowrap"
           >
-            {{ t('nav.openDashboard') }}
+            {{ t('nav.openTes') }}
           </NuxtLink>
           <NuxtLink
             v-else
@@ -212,7 +212,7 @@ const steps = computed(() => [
           :to="signedIn ? dashboardTo : '/free-test'"
           class="mt-6 inline-block text-sm font-semibold px-7 py-3.5 rounded-xl bg-white text-blue-700 hover:bg-blue-50 transition-colors"
         >
-          {{ signedIn ? t('nav.openDashboard') : t('landing.ctaBtn') }}
+          {{ signedIn ? t('nav.openTes') : t('landing.ctaBtn') }}
         </NuxtLink>
       </div>
     </section>

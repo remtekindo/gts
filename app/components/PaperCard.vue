@@ -2,6 +2,7 @@
 const { t } = useLocale()
 import type { Paper } from '~/data/mock'
 import type { PaperStatus } from '~/data/mock'
+import { realQuestionCount } from '~/data/mock'
 
 /** Status is passed in by the caller, derived from the user's real
  * results (see `resolvePaperStatus` in useActivity.ts) — the catalog
@@ -61,15 +62,11 @@ const cta = computed(() => {
         </div>
         <div class="flex items-center gap-1.5">
           <dt class="sr-only">Questions</dt>
-          <dd>{{ paper.totalQuestions }} {{ t('papers.questions') }}</dd>
+          <dd>{{ realQuestionCount(paper) }} {{ t('papers.questions') }}</dd>
         </div>
         <div class="flex items-center gap-1.5">
           <dt class="sr-only">Difficulty</dt>
           <dd>{{ paper.difficulty === 'Beginner' ? t('papers.diffBeginner') : paper.difficulty === 'Intermediate' ? t('papers.diffIntermediate') : t('papers.diffAdvanced') }}</dd>
-        </div>
-        <div class="flex items-center gap-1.5">
-          <dt class="sr-only">Enrolled</dt>
-          <dd>{{ paper.enrolled.toLocaleString('en-US') }} {{ t('papers.enrolled') }}</dd>
         </div>
       </dl>
       <NuxtLink

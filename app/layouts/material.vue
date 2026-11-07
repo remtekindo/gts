@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { getMaterialOrFallback } from '~/data/mock'
 import { fetchSessionState } from '~/utils/server-auth'
+import { setLastMaterial } from '~/utils/storage'
 
 const { t } = useLocale()
 
@@ -25,13 +26,16 @@ onMounted(async () => {
   const state = await fetchSessionState()
   if (!state.username) { router.replace('/auth'); return }
   allowed.value = state.admin || state.materials.includes(route.params.slug as string)
+  // This is now the active material — post-login "continue" and the
+  // Profil tab bar point back here.
+  setLastMaterial(route.params.slug as string)
 })
 </script>
 
 <template>
   <div class="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-200 flex flex-col">
-    <MaterialTopBar :material="material" />
-    <main class="max-w-6xl mx-auto px-4 py-6 w-full flex-1">
+    <MainNav :material-slug="route.params.slug as string" :material-name="material.name" />
+    <main class="max-w-6xl mx-auto px-4 pt-6 pb-24 md:pb-6 w-full flex-1">
       <div v-if="allowed === false" class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 p-8 text-center">
         <p class="text-3xl">🔒</p>
         <h1 class="mt-2 text-xl font-extrabold">{{ t('access.lockedTitle', { name: material.name }) }}</h1>

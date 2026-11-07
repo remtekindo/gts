@@ -1,7 +1,7 @@
 import { translate, type Locale } from '~/i18n'
 
 export function useLocale() {
-  const locale = useState<Locale>('gts-locale', () => 'en')
+  const locale = useState<Locale>('gts-locale', () => 'id')
 
   const t = (key: string, params?: Record<string, string | number>): string =>
     translate(locale.value, key, params)

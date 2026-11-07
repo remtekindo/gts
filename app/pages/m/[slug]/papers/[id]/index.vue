@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { getMaterialOrFallback, getPaperOrFallback, papersForMaterial, partsForMaterial } from '~/data/mock'
+import { getPaperOrFallback, papersForMaterial, partsForMaterial, realQuestionCount } from '~/data/mock'
 import { MAX_ATTEMPTS, isAttemptLocked, resolvePaperLock, shortPaperName } from '~/utils/unlock'
 
 const { t } = useLocale()
@@ -10,12 +10,10 @@ import type { TestResult } from '~/utils/storage'
 const route = useRoute()
 const slug = computed(() => route.params.slug as string)
 const base = computed(() => `/m/${slug.value}`)
-const material = computed(() => getMaterialOrFallback(slug.value))
 const paperId = computed(() => route.params.id as string)
 const paper = computed(() => getPaperOrFallback(paperId.value))
 
 const result = ref<TestResult | null>(null)
-const scoreMode = ref<'score' | 'cefr'>('score')
 
 /** "Attempted" from real data — a finished result, or saved answers
  * for an unfinished attempt — never the old hardcoded catalog status.
@@ -77,6 +75,18 @@ const skills = computed(() => {
     done: !!result.value
   }))
 })
+
+/** Instructions live HERE, inline — the take page no longer opens an
+ * instructions modal first (one less tap before Q1). Listening
+ * parts carry the plain "no audio" note. */
+const materialParts = computed(() => partsForMaterial(slug.value))
+const difficultyLabel = computed(() =>
+  paper.value.difficulty === 'Beginner'
+    ? t('papers.diffBeginner')
+    : paper.value.difficulty === 'Intermediate'
+      ? t('papers.diffIntermediate')
+      : t('papers.diffAdvanced')
+)
 </script>
 
 <template>
@@ -97,25 +107,25 @@ const skills = computed(() => {
             ✕ {{ t('overview.exit') }}
           </NuxtLink>
         </div>
-        <p class="mt-4 text-[11px] font-semibold uppercase tracking-widest text-blue-300">{{ paper.category }}</p>
+        <p class="mt-4 text-[11px] font-semibold uppercase tracking-widest text-blue-300">{{ paper.category === 'Full Simulation' ? t('papers.fullSim') : t('papers.drillPack') }}</p>
         <h1 class="mt-1 text-2xl md:text-3xl font-extrabold">{{ paper.title }}</h1>
         <p class="mt-2 text-sm text-slate-300">
-          {{ paper.durationMinutes }} minutes · {{ paper.totalQuestions }} questions · {{ paper.difficulty }} ·
-          {{ paper.enrolled.toLocaleString('en-US') }} enrolled
+          {{ paper.durationMinutes }} {{ t('overview.minutes') }} · {{ realQuestionCount(paper) }} {{ t('overview.questions') }} · {{ difficultyLabel }}
         </p>
       </div>
     </div>
 
     <div class="max-w-6xl mx-auto px-4 pb-10">
-      <!-- Ready to try card -->
+      <!-- Ready to try card: ONE Start button. The attempt buttons
+           default to the next unlocked attempt; no credit line (no
+           credit system exists) and no score-mode toggle (that choice
+           moved to the result page). -->
       <div class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm p-6 -mt-6 relative">
         <div class="flex flex-wrap items-center gap-4 justify-between">
           <div>
             <h2 class="text-lg font-bold text-slate-800 dark:text-slate-200">{{ t('overview.readyTitle') }}</h2>
             <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">
               {{ attempted ? t('overview.attempted') : t('overview.notStarted') }}
-              {{ t('overview.attemptCosts') }} <strong class="text-slate-700 dark:text-slate-200">{{ paper.creditsRequired }} {{ material.credits[0]?.label ?? "" }} {{ t('overview.credits') }}</strong>
-              (balance: <strong class="text-slate-700 dark:text-slate-200">12</strong>).
             </p>
           </div>
           <div class="flex flex-wrap items-center gap-3">
@@ -155,28 +165,25 @@ const skills = computed(() => {
         </div>
       </div>
 
-      <!-- Score / CEFR toggle -->
-      <div class="mt-6 flex items-center gap-3">
-        <span class="text-sm font-medium text-slate-500 dark:text-slate-400">Show scores as:</span>
-        <div class="inline-flex rounded-xl border border-slate-300 dark:border-slate-600 overflow-hidden text-sm font-semibold">
-          <button
-            class="px-4 py-2 transition-colors"
-            :class="scoreMode === 'score' ? 'bg-slate-800 text-white' : 'bg-white dark:bg-slate-900 text-slate-500 dark:text-slate-400 hover:text-slate-700'"
-            @click="scoreMode = 'score'"
-          >
-            {{ t('overview.scoreTab') }}
-          </button>
-          <button
-            class="px-4 py-2 transition-colors"
-            :class="scoreMode === 'cefr' ? 'bg-slate-800 text-white' : 'bg-white dark:bg-slate-900 text-slate-500 dark:text-slate-400 hover:text-slate-700'"
-            @click="scoreMode = 'cefr'"
-          >
-            {{ t('overview.cefrTab') }}
-          </button>
-        </div>
+      <!-- Instructions, inline: what each part asks, before Start. -->
+      <div class="mt-6 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 p-6">
+        <h2 class="font-bold text-slate-800 dark:text-slate-200">{{ t('overview.instructionsTitle') }}</h2>
+        <ul class="mt-3 space-y-3">
+          <li v-for="p in materialParts" :key="p.part" class="text-sm">
+            <p class="font-semibold text-slate-700 dark:text-slate-200">
+              Part {{ p.part }} — {{ p.label }}
+              <span class="ml-2 text-xs font-medium text-slate-400 dark:text-slate-500">{{ skillLabel(p.skill) }}</span>
+            </p>
+            <p class="mt-0.5 text-slate-500 dark:text-slate-400 leading-relaxed">{{ p.description }}</p>
+            <p v-if="p.skill === 'listening' || p.skill === 'speaking'" class="mt-1.5 text-xs text-amber-700 bg-amber-50 dark:bg-amber-950/40 rounded-lg px-3 py-2">
+              {{ t('overview.noAudioNote') }}
+            </p>
+          </li>
+        </ul>
       </div>
 
-      <!-- Per-skill cards -->
+      <!-- Per-skill cards: last result's score AND CEFR, both shown —
+           no toggle to answer before Start. -->
       <div class="mt-4 grid md:grid-cols-2 gap-4">
         <div v-for="s in skills" :key="s.name" class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 p-5">
           <div class="flex items-start justify-between">
@@ -193,10 +200,19 @@ const skills = computed(() => {
           </div>
           <dl class="mt-3 text-sm text-slate-500 dark:text-slate-400 space-y-1">
             <div class="flex justify-between items-center">
-              <dt>{{ scoreMode === 'score' ? t('overview.predictedScore') : t('overview.cefrTab') }}</dt>
+              <dt>{{ t('overview.predictedScore') }}</dt>
               <dd>
                 <span v-if="result" class="inline-block text-sm font-bold px-3 py-1 rounded-full bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-200">
-                  {{ scoreMode === 'score' ? result.score : result.cefr }}
+                  {{ result.score }}
+                </span>
+                <span v-else class="text-slate-300 font-bold">—</span>
+              </dd>
+            </div>
+            <div class="flex justify-between items-center">
+              <dt>Level CEFR</dt>
+              <dd>
+                <span v-if="result" class="inline-block text-sm font-bold px-3 py-1 rounded-full bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-200">
+                  {{ result.cefr }}
                 </span>
                 <span v-else class="text-slate-300 font-bold">—</span>
               </dd>
@@ -207,14 +223,14 @@ const skills = computed(() => {
             :to="`${base}/papers/${paper.id}/result`"
             class="mt-4 inline-block text-sm font-semibold px-4 py-2.5 rounded-xl border border-blue-600 text-blue-600 hover:bg-blue-50 transition-colors"
           >
-            View Result
+            {{ t('overview.viewResult') }}
           </NuxtLink>
           <button
             v-else
             disabled
             class="mt-4 text-sm font-semibold px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-300 cursor-not-allowed"
           >
-            View Result
+            {{ t('overview.viewResult') }}
           </button>
         </div>
       </div>
