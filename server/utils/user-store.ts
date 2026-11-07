@@ -201,6 +201,20 @@ export async function setGrants(db: D1Database, sub: string, grants: UserGrants,
   return true
 }
 
+/** Grant material access to a user, skipping grants they already
+ * have (the grants table has a UNIQUE(user_sub, kind, target), so
+ * INSERT OR IGNORE is the dedupe). Used by order approval:
+ * approving an order opens exactly the materials in the order. */
+export async function grantMaterials(db: D1Database, sub: string, materials: string[], grantedBy: string | null): Promise<void> {
+  const row = await getUserRow(db, sub)
+  if (!row) return
+  for (const slug of [...new Set(materials)].filter(isKnownMaterial)) {
+    await db.prepare(
+      "INSERT OR IGNORE INTO grants (user_sub, kind, target, granted_by) VALUES (?1, 'material', ?2, ?3)"
+    ).bind(sub, slug, grantedBy).run()
+  }
+}
+
 /** D1 binding for this request, or null (plain `pnpm dev` has none). */
 export function getRequestDb(event: H3Event): D1Database | null {
   return getDb(event)

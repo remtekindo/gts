@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { MATERIALS } from '~/data/mock'
 import { fetchSessionState, logoutServer } from '~/utils/server-auth'
+import { formatPriceIdr } from '~/utils/pricing'
 import { useTheme } from '~/composables/useTheme'
 
 const { t, locale, setLocale } = useLocale()
@@ -11,10 +12,12 @@ const router = useRouter()
  * Profil in v2: the account is what the server session says it is —
  * real Google name + email (the old page showed "Your Name" with a
  * blank email for Google users, because it read a localStorage mirror
- * that was never filled). No Purchase tab: there is no purchase
- * system in this build, so the tab returns only when payments exist.
- * Settings (language, theme, sign out) live here, plus the admin
- * link for admins and a "Ganti materi" link back to the picker.
+ * that was never filled). Settings (language, theme, sign out) live
+ * here, plus the admin link for admins and a "Ganti materi" link
+ * back to the picker. "Pesanan Saya" lists the user's real orders
+ * from GET /api/orders/mine (package → checkout → approve flow);
+ * an order stays "Menunggu pembayaran" until an admin approves it,
+ * and only then do its materials open.
  */
 const name = ref('')
 const email = ref('')
@@ -74,6 +77,51 @@ async function loadEnrollments(): Promise<void> {
   enrollLoaded.value = true
 }
 
+/** Real orders from GET /api/orders/mine — no fake rows, honest
+ * empty state when the user has never ordered. */
+interface OrderRow {
+  id: string
+  package: string
+  materials: string[]
+  price: number
+  durationMonths: number
+  status: 'pending_payment' | 'proof_uploaded' | 'active' | 'cancelled' | 'expired'
+  createdAt: string
+}
+const orderRows = ref<OrderRow[]>([])
+const ordersLoaded = ref(false)
+
+function packageName(id: string): string {
+  if (id === 'bulanan') return t('landing.planMonthly')
+  if (id === 'triwulanan') return t('landing.planQuarterly')
+  return t('landing.planSemiannual')
+}
+
+function orderStatusLabel(status: OrderRow['status']): string {
+  if (status === 'active') return t('profile.statusActive')
+  if (status === 'cancelled') return t('profile.statusCancelled')
+  if (status === 'expired') return t('profile.statusExpired')
+  if (status === 'proof_uploaded') return t('profile.statusProof')
+  return t('profile.statusPending')
+}
+
+function orderStatusClass(status: OrderRow['status']): string {
+  if (status === 'active') return 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-200'
+  if (status === 'cancelled' || status === 'expired') return 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400'
+  if (status === 'proof_uploaded') return 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-200'
+  return 'bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-200'
+}
+
+async function loadOrders(): Promise<void> {
+  try {
+    const res = await $fetch<{ orders: OrderRow[] }>('/api/orders/mine')
+    orderRows.value = res.orders
+  } catch {
+    orderRows.value = []
+  }
+  ordersLoaded.value = true
+}
+
 async function signOut(): Promise<void> {
   await logoutServer()
   clearAuth()
@@ -88,6 +136,7 @@ onMounted(async () => {
   picture.value = state.picture
   isAdmin.value = state.admin
   await loadEnrollments()
+  await loadOrders()
 })
 </script>
 
@@ -126,6 +175,45 @@ onMounted(async () => {
             <td class="px-5 py-3.5 text-right">
               <span class="text-[11px] font-semibold px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-200">
                 {{ t('profile.statusActive') }}
+              </span>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Pesanan Saya — real orders only (see loadOrders). -->
+    <h2 class="mt-8 text-lg font-bold text-slate-900 dark:text-slate-100">{{ t('profile.myOrders') }}</h2>
+    <div class="mt-3 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden">
+      <p v-if="!ordersLoaded" class="px-5 py-6 text-sm text-slate-400 dark:text-slate-500">{{ t('access.loading') }}</p>
+      <p v-else-if="orderRows.length === 0" class="px-5 py-6 text-sm text-slate-400 dark:text-slate-500">{{ t('profile.noOrders') }}</p>
+      <table v-else class="w-full text-sm">
+        <thead>
+          <tr class="text-left text-xs uppercase tracking-wide text-slate-400 dark:text-slate-500 border-b border-slate-200 dark:border-slate-700">
+            <th class="px-5 py-3 font-semibold">{{ t('profile.thPackage') }}</th>
+            <th class="px-5 py-3 font-semibold hidden sm:table-cell">{{ t('profile.thDate') }}</th>
+            <th class="px-5 py-3 font-semibold text-right">{{ t('profile.thPrice') }}</th>
+            <th class="px-5 py-3 font-semibold text-right">{{ t('profile.thStatus') }}</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100">
+          <tr v-for="row in orderRows" :key="row.id" class="hover:bg-slate-50 dark:hover:bg-slate-800">
+            <td class="px-5 py-3.5">
+              <p class="font-medium text-slate-700 dark:text-slate-200">{{ packageName(row.package) }}</p>
+              <p class="text-xs text-slate-400 dark:text-slate-500">{{ row.materials.map(s => MATERIALS.find(m => m.slug === s)?.name ?? s).join(', ') }}</p>
+              <NuxtLink
+                v-if="row.status === 'pending_payment' || row.status === 'proof_uploaded'"
+                :to="`/checkout?order=${row.id}`"
+                class="mt-1 inline-block text-xs font-semibold text-blue-600 dark:text-blue-300 hover:underline"
+              >
+                {{ t('profile.continuePayment') }}
+              </NuxtLink>
+            </td>
+            <td class="px-5 py-3.5 text-slate-400 dark:text-slate-500 hidden sm:table-cell">{{ formatGrantDate(row.createdAt) }}</td>
+            <td class="px-5 py-3.5 text-right font-semibold text-slate-700 dark:text-slate-200 whitespace-nowrap">{{ formatPriceIdr(row.price) }}</td>
+            <td class="px-5 py-3.5 text-right">
+              <span class="text-[11px] font-semibold px-2.5 py-1 rounded-full whitespace-nowrap" :class="orderStatusClass(row.status)">
+                {{ orderStatusLabel(row.status) }}
               </span>
             </td>
           </tr>

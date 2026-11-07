@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { MATERIALS } from '~/data/mock'
+import { PACKAGES, formatPriceIdr, type PackageId } from '~/utils/pricing'
 import { postLoginPath } from '~/utils/navigation'
 
 definePageMeta({ layout: false })
@@ -20,32 +21,41 @@ onMounted(async () => {
 const owned = computed(() => MATERIALS.filter(m => m.status === 'owned'))
 const comingSoon = computed(() => MATERIALS.filter(m => m.status === 'coming-soon'))
 
+/**
+ * Pricing cards read the shared price table (app/utils/pricing.ts)
+ * — the same table the server uses to price orders, so the price
+ * shown here can never drift from the price charged. Each card
+ * goes to /checkout?package=<id>: a guest reaches the checkout
+ * page with no login wall, and only the Checkout button there
+ * asks them to sign in. The old strikethrough "anchor" prices are
+ * gone — they were invented discounts, not real prices.
+ */
 const plans = computed(() => [
   {
+    id: 'bulanan' as PackageId,
     name: t('landing.planMonthly'),
-    price: 'Rp75rb',
-    anchor: 'Rp100rb',
+    price: formatPriceIdr(PACKAGES[0]!.priceIdr),
     per: t('landing.perMonth'),
     features: [t('landing.featM1'), t('landing.featM2'), t('landing.featM3'), t('landing.featM4')],
-    cta: t('landing.ctaTrial'),
+    cta: t('landing.choosePackage'),
     highlight: false
   },
   {
+    id: 'triwulanan' as PackageId,
     name: t('landing.planQuarterly'),
-    price: 'Rp199rb',
-    anchor: 'Rp300rb',
+    price: formatPriceIdr(PACKAGES[1]!.priceIdr),
     per: t('landing.per3'),
     features: [t('landing.featQ1'), t('landing.featQ2'), t('landing.featQ3')],
-    cta: t('landing.ctaQuarterly'),
+    cta: t('landing.choosePackage'),
     highlight: true
   },
   {
+    id: 'semesteran' as PackageId,
     name: t('landing.planSemiannual'),
-    price: 'Rp349rb',
-    anchor: 'Rp600rb',
+    price: formatPriceIdr(PACKAGES[2]!.priceIdr),
     per: t('landing.per6'),
     features: [t('landing.featS1'), t('landing.featS2'), t('landing.featS3')],
-    cta: t('landing.ctaSemiannual'),
+    cta: t('landing.choosePackage'),
     highlight: false
   }
 ])
@@ -183,7 +193,6 @@ const steps = computed(() => [
         >
           <h3 class="font-bold text-slate-900 dark:text-slate-100">{{ plan.name }}</h3>
           <p class="mt-3">
-            <span class="text-sm text-slate-400 dark:text-slate-500 line-through mr-2">{{ plan.anchor }}</span>
             <span class="text-3xl font-extrabold text-slate-900 dark:text-slate-100">{{ plan.price }}</span>
             <span class="text-sm text-slate-500 dark:text-slate-400">{{ plan.per }}</span>
           </p>
@@ -193,7 +202,7 @@ const steps = computed(() => [
             </li>
           </ul>
           <NuxtLink
-            to="/auth"
+            :to="`/checkout?package=${plan.id}`"
             class="mt-6 text-center text-sm font-semibold px-5 py-3 rounded-xl transition-colors"
             :class="plan.highlight ? 'bg-blue-600 text-white hover:bg-blue-700' : 'border border-slate-300 dark:border-slate-600 hover:border-blue-400 hover:text-blue-600'"
           >

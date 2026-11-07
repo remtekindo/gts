@@ -1,0 +1,29 @@
+/**
+ * App settings (D1) — small key/value store for admin-configured
+ * values. Currently only the merchant QRIS image (`qris_image`,
+ * base64 data URL, set on Admin → Finance). The QRIS image is
+ * public by nature (a merchant QR is meant to be scanned), so the
+ * read endpoint needs no auth.
+ */
+import type { D1Database } from './d1'
+
+export async function getSetting(db: D1Database | null, key: string): Promise<string | null> {
+  if (!db) return null
+  try {
+    const row = await db.prepare('SELECT value FROM settings WHERE key = ?1').bind(key).first<{ value: string }>()
+    return row?.value ?? null
+  } catch {
+    return null
+  }
+}
+
+export async function setSetting(db: D1Database, key: string, value: string): Promise<void> {
+  await db.prepare(
+    `INSERT INTO settings (key, value) VALUES (?1, ?2)
+     ON CONFLICT(key) DO UPDATE SET value = excluded.value`
+  ).bind(key, value).run()
+}
+
+export async function deleteSetting(db: D1Database, key: string): Promise<void> {
+  await db.prepare('DELETE FROM settings WHERE key = ?1').bind(key).run()
+}

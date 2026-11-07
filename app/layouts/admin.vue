@@ -18,6 +18,7 @@ const nav = computed(() => [
   { label: t('admin.nav.audits'), to: '/admin/audits' },
   { label: t('admin.nav.reports'), to: '/admin/reports' },
   { label: t('admin.nav.users'), to: '/admin/users' },
+  { label: t('admin.nav.finance'), to: '/admin/finance' },
   { label: t('admin.nav.settings'), to: '/admin/settings' },
 ])
 

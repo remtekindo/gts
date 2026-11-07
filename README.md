@@ -177,12 +177,139 @@ D1 migration.
   material name + language/theme/avatar. Test users deleted
   afterwards; local D1 back to 0 rows.
 
+## What was built (8 Nov 2026) — package → checkout → login-gated orders (branch `v2`)
+
+The hole this closes: until now a new user was handed materials from
+the start (admin grants) and the landing pricing cards led nowhere —
+the package was never chosen by the buyer. Now the flow is: the user
+picks a package first, goes to a checkout page as a guest, and ONLY
+the Checkout button asks them to sign in. Materials are determined
+by the chosen package, never handed out up front.
+
+- **Packages — one shared price table** (`app/utils/pricing.ts`,
+  imported by the landing page, the checkout page, AND the server):
+  Bulanan Rp75.000 → 1 material, 1 bulan; Triwulanan Rp199.000 → 2
+  materials, 3 bulan; Semesteran Rp349.000 → all materials, 6 bulan.
+  The old strikethrough "anchor" prices on the landing cards are
+  gone — they were invented discounts, not real prices.
+- **Checkout page** (`app/pages/checkout.vue`, top-level route,
+  guest-accessible — it does NOT use the default layout, which
+  redirects guests to /auth): order summary (package, duration,
+  price, materials), material picker (Bulanan picks exactly 1,
+  Triwulanan exactly 2, Semesteran shows all materials with no
+  picker; only owned materials are pickable), draft in localStorage
+  `gts_checkout_draft` AND in the URL query so it survives the login
+  round-trip. With no/invalid `?package=` the page shows all 3
+  packages to pick first instead of redirecting away.
+- **The login gate is only the Checkout button — and it is a modal,
+  not a redirect.** Pressing it opens "Masuk untuk melanjutkan"
+  with one "Masuk dengan Google" button (the existing GIS popup
+  flow; Google is only used to save the order). On success the modal
+  closes and the order is created automatically from the preserved
+  draft. Closing the modal leaves the user on the checkout page with
+  the draft intact — no login is forced.
+- **QRIS payment (no gateway — static merchant QR + manual proof).**
+  After the order exists the page shows the QRIS screen: the amount,
+  a live 1-hour countdown (`expires_at` = created + 3600s, stored
+  as ISO UTC so the countdown parses correctly), the order id, and
+  the merchant QR image. The QR comes from the admin's QRIS setting
+  (`settings` table, key `qris_image`, served by public
+  `GET /api/settings/qris` — a merchant QR is public by nature);
+  when none is configured the page shows an honest placeholder
+  ("Kode QRIS belum diatur — hubungi admin"), never a fake QR.
+  Below it: "Unggah bukti bayar" (a normal file dialog,
+  `accept="image/*"`, compressed client-side to max 1200px JPEG 0.8
+  before upload) and a "Batalkan pesanan" link. Uploading the proof
+  (`POST /api/orders/:id/proof`, owner only, order must be
+  `pending_payment` and not expired, proof ≤ ~500 KB after
+  compression) stores it base64 in `orders.proof_image` +
+  `proof_uploaded_at` and flips the order to `proof_uploaded`;
+  the page then shows Rey's words verbatim: "Terima kasih sudah
+  melakukan pembayaran, akan segera diverifikasi admin." Re-upload
+  is allowed (replaces the proof) until the admin verifies.
+- **Orders (D1, migration `0009_orders.sql`):** `orders` table
+  (`id`, `user_sub`, `package`, `materials` JSON, `price`,
+  `currency`, `duration_months`, `status` pending_payment/
+  proof_uploaded/active/cancelled, `created_at`, `expires_at`,
+  `activated_at`, `proof_image`, `proof_uploaded_at`; indexes on
+  `user_sub` and `status`) plus a `settings` table (`key`, `value`)
+  for the merchant QRIS image. Endpoints: `POST /api/orders`
+  (auth; validates package + material count + slugs; price computed
+  server-side from the shared table — any client-sent price is
+  ignored; creates `pending_payment` with a 1-hour window),
+  `GET /api/orders/mine` (own orders, newest first),
+  `POST /api/orders/:id/proof` (owner only; proof upload),
+  `POST /api/orders/:id/cancel` (owner only),
+  `GET /api/admin/orders` (admin-only, all orders with user
+  email/name + proof), `POST /api/admin/orders/approve`
+  (admin-only, pending/proof → active + `activated_at` + material
+  grants via `grantMaterials` — existing grants are kept, never
+  duplicated), `POST /api/admin/orders/cancel` (admin-only,
+  pending/proof → cancelled, no grants),
+  `GET /api/settings/qris` (public QRIS image) and
+  `POST /api/admin/settings/qris` (admin-only, set/clear it).
+  Access rule unchanged: materials unlock via grants only, so an
+  order's materials stay Locked until approved.
+- **Profil → "Pesanan Saya":** the user's real orders from
+  `GET /api/orders/mine` (package, materials, price, status, date)
+  with an honest empty state ("Belum ada pesanan."); pending and
+  proof-uploaded rows link back to `/checkout?order=<id>` to
+  continue paying. The v2 "no purchase system exists" note is
+  superseded — one now exists.
+- **Order statuses:** `pending_payment` → `proof_uploaded` →
+  `active` | `cancelled`, plus `expired` — COMPUTED on read (a
+  `pending_payment` order past `expires_at`), never stored, no cron.
+  Proof upload to an expired order is refused 400 ("Waktu
+  pembayaran habis"). An expired order stays in history; the buyer
+  starts a new order from checkout (Profil rows for pending orders
+  link back to `/checkout?order=<id>` to continue paying).
+- **Admin → "Finance"** (`app/pages/admin/finance.vue` + sidebar
+  item, admin-only, server-enforced) replaces the earlier
+  `/admin/orders` page, with exactly two tabs: "Pembayaran
+  Terpending" (orders `pending_payment` / `proof_uploaded` /
+  `expired`, badged "Menunggu bayar" / "Bukti diunggah" /
+  "Kedaluwarsa"; each row shows user, package, materials, price,
+  order time, live countdown or "Kedaluwarsa", and the proof
+  thumbnail — click for the full-size view) and "Pembayaran Lunas"
+  (`active` orders with activation date). "Verifikasi & Aktifkan"
+  flips the order to `active` and creates the material grants
+  (server-side, deduped; when the order has no proof yet the admin
+  is asked to `confirm()` first); "Batalkan" cancels a
+  pending/proof order with no grants. The page also has a
+  "Pengaturan QRIS" section where the admin uploads the merchant
+  QRIS image (stored base64, `POST /api/admin/settings/qris`).
+- **Explicitly NOT built:** payment gateway integration
+  (Midtrans/Xendit/Stripe/Play Billing — undecided) is the NEXT
+  step, not built; grant-expiry enforcement is backlog
+  (`duration_months` is recorded but grants do not expire yet).
+- **Verified:** `vue-tsc` exit 0 (0 errors); `pnpm build` exit 0;
+  Playwright against `wrangler pages dev` on a real local D1
+  (migrations 0001–0009, dummy Meta key): guest lands on pricing →
+  "Pilih Paket" opens `/checkout` with no login wall; the Checkout
+  button opens the LOGIN MODAL (no redirect to /auth) with the
+  Google button, and closing it keeps the draft on the checkout
+  page; after login the QRIS screen shows the amount, a running
+  countdown, and the real merchant QR image (configured via Admin →
+  Finance first); uploading a proof shows the thank-you message and
+  D1 status `proof_uploaded`; Admin → Finance Terpending shows the
+  order with its proof thumbnail, Lunas is empty; verifying creates
+  the grants in D1 and moves the order to the Lunas tab; an expired
+  order (past `expires_at` set directly in D1) refuses proof upload
+  with 400; with no QRIS configured the checkout shows the honest
+  placeholder; a tampered client price (Rp1.000) is stored at the
+  real server price; a wrong material count is rejected 400;
+  unauthenticated POST is 401; non-admin approve is 403; Profil
+  "Pesanan Saya" shows the real order (empty state for a user with
+  none). i18n parity EN/ID (line-start key extraction). Test users
+  deleted afterwards; local D1 back to 0 rows.
+
 ## What is NOT built yet
 
 - Real backend (auth, database, API) — Cloudflare groundwork done 5 Nov 2026 (Pages + D1 binding + schema); **Google Sign-In for everyone + D1 user store with admin/grants done 5 Nov 2026** (see [Auth](#auth)); question bank + results migration pending
 - Real question bank (AI-generated, human-reviewed) — planned Nov 2026
 - Real TTS audio for listening — planned Nov 2026
-- Play Billing subscriptions — planned Nov 2026
+- Payment gateway integration (Midtrans/Xendit/Stripe/Play Billing — undecided) — the NEXT step after the orders flow (8 Nov 2026); orders exist and wait in `pending_payment` until an admin approves them, but no online payment is wired up yet
+- Grant-expiry enforcement — `duration_months` is recorded on every order, but grants do not expire yet (backlog)
 - TOEFL / IELTS papers — after v1
 - AI writing grading — v2
 
@@ -274,7 +401,7 @@ login was built the same day and replaced before it ever deployed).
      are needed — this flow uses only the Client ID, no client secret.
   4. Set `NUXT_PUBLIC_GOOGLE_CLIENT_ID` as a Cloudflare Pages
      **variable** (not a secret) and in local `.env`, then redeploy.
-  5. Apply migrations 0002–0007 to the remote D1
+  5. Apply migrations 0002–0009 to the remote D1
      (`npx wrangler d1 migrations apply gts-db --remote`).
   6. Set `NITRO_ADMIN_EMAILS` (comma-separated, default
      `remtekindo@gmail.com`) and `NITRO_SESSION_SECRET` (generate with
