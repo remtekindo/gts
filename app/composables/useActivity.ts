@@ -17,6 +17,7 @@
 import { MATERIALS, papersForMaterial } from '~/data/mock'
 import type { PaperStatus } from '~/data/mock'
 import { listInProgressAttempts, listLocalResults } from '~/utils/storage'
+import { completedAttemptsFromLocal } from '~/utils/unlock'
 
 /**
  * Per-paper status from the user's REAL data (never the catalog).
@@ -62,6 +63,10 @@ export interface MaterialActivity {
   /** Finished paper ids in this material (D1, or local fallback) —
    * the paper-card badge source. */
   completedPaperIds: string[]
+  /** Finished attempt numbers per paper id in this material (D1, or
+   * local fallback) — the sequential-unlock source: which attempts
+   * are completed, not just which papers. */
+  completedAttempts: Record<string, number[]>
   /** Paper ids with saved answers in this material (browser only) —
    * the paper-card badge source. */
   inProgressPaperIds: string[]
@@ -73,6 +78,7 @@ interface ActivityResponse {
   hasCompleted: boolean
   hasCompletedInMaterial: boolean
   completedPaperIds: string[]
+  completedAttempts: Record<string, number[]>
 }
 
 export function useMaterialActivity(slug: string) {
@@ -86,6 +92,7 @@ export function useMaterialActivity(slug: string) {
     hasStarted: false,
     inProgress: null,
     completedPaperIds: [],
+    completedAttempts: {},
     inProgressPaperIds: []
   })
 
@@ -116,6 +123,7 @@ export function useMaterialActivity(slug: string) {
       localTotal,
       inProgress,
       localCompletedIds: listLocalResults(paperIds).map(r => r.paperId),
+      localCompletedAttempts: completedAttemptsFromLocal(listLocalResults(paperIds)),
       inProgressPaperIds: [...new Set(raw.map(a => a.paperId))]
     }
   }
@@ -126,6 +134,7 @@ export function useMaterialActivity(slug: string) {
   // refines the completed ids (e.g. tests finished on another device).
   const initial = localSnapshot()
   state.completedPaperIds = initial.localCompletedIds
+  state.completedAttempts = initial.localCompletedAttempts
   state.inProgressPaperIds = initial.inProgressPaperIds
 
   async function load(): Promise<void> {
@@ -143,6 +152,7 @@ export function useMaterialActivity(slug: string) {
       state.hasCompleted = server.hasCompleted
       state.hasCompletedInMaterial = server.hasCompletedInMaterial
       state.completedPaperIds = server.completedPaperIds ?? []
+      state.completedAttempts = server.completedAttempts ?? {}
     } else {
       // No server store: the browser's local results are the only
       // record of finished tests.
@@ -152,6 +162,7 @@ export function useMaterialActivity(slug: string) {
       state.hasCompleted = snap.localTotal > 0
       state.hasCompletedInMaterial = snap.localCompleted > 0
       state.completedPaperIds = snap.localCompletedIds
+      state.completedAttempts = snap.localCompletedAttempts
     }
     // In-progress attempts exist only in this browser, never in D1.
     state.inProgressPaperIds = snap.inProgressPaperIds

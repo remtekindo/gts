@@ -24,6 +24,11 @@ export interface TestResult {
   username?: string
   /** Seconds spent per question number — feeds the adaptive engine. */
   timings?: Record<number, number>
+  /** Per-part tally computed at submit time from the bank questions —
+   * { "<part>": {correct, total} }. Absent on results saved before
+   * per-part tallies existed; the Performance radar stays empty for
+   * those instead of guessing. */
+  parts?: Record<number, { correct: number, total: number }>
 }
 
 function read<T>(key: string): T | null {

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { papersForMaterial } from '~/data/mock'
 import type { PaperStatus } from '~/data/mock'
+import { resolvePaperLock, shortPaperName } from '~/utils/unlock'
 
 const { t } = useLocale()
 
@@ -20,6 +21,13 @@ const availablePapers = computed(() => papers.value.slice(0, 3))
  * a finished paper exists in this material. */
 const activity = useMaterialActivity(slug.value)
 
+/** Real performance in this material (see README § "Performance from
+ * real data"): best Full Simulation → score + CEFR, one journey point
+ * per completed attempt, skills from the most recent simulation's
+ * per-part breakdown. Falls back to the browser's local results when
+ * the server store is unreachable. */
+const perf = useMaterialPerformance(slug.value)
+
 /** Paper badge status, derived from the user's real results — never
  * the catalog (see `resolvePaperStatus` in useActivity.ts). The id
  * arrays are seeded from the browser's local snapshot at setup, so
@@ -30,6 +38,19 @@ const paperStatus = computed<Record<string, PaperStatus>>(() => {
   for (const p of papers.value) map[p.id] = resolvePaperStatus(p.id, activity.completedPaperIds, activity.inProgressPaperIds)
   return map
 })
+
+/** Sequential unlock per paper (see app/utils/unlock.ts) — same
+ * rule as the papers list page. Only the PaperCard usage below
+ * reads this; the Performance card above is untouched. */
+const paperLock = computed<Record<string, { locked: boolean, unlockAfterName: string | null }>>(() => {
+  const map: Record<string, { locked: boolean, unlockAfterName: string | null }> = {}
+  for (const p of papers.value) {
+    const lock = resolvePaperLock(p, papers.value, activity.completedPaperIds)
+    map[p.id] = { locked: lock.locked, unlockAfterName: lock.unlockAfter ? shortPaperName(lock.unlockAfter.title) : null }
+  }
+  return map
+})
+const lockOf = (id: string) => paperLock.value[id] ?? { locked: false, unlockAfterName: null }
 </script>
 
 <template>
@@ -42,11 +63,11 @@ const paperStatus = computed<Record<string, PaperStatus>>(() => {
           <h2 class="font-bold text-slate-800 dark:text-slate-200">{{ t('dashboard.performance') }}</h2>
           <NuxtLink :to="`${base}/performance`" class="text-sm font-medium text-blue-600 hover:text-blue-700">{{ t('dashboard.seeAnalytics') }}</NuxtLink>
         </div>
-        <!-- Loading: activity is still being read — show nothing yet
+        <!-- Loading: performance is still being read — show nothing yet
              rather than flashing the empty state at a user with results. -->
-        <p v-if="activity.loading" class="mt-5 text-sm text-slate-400 dark:text-slate-500">{{ t('access.loading') }}</p>
+        <p v-if="perf.loading" class="mt-5 text-sm text-slate-400 dark:text-slate-500">{{ t('access.loading') }}</p>
         <!-- Empty: no finished paper in this material yet. -->
-        <div v-else-if="!activity.hasCompletedInMaterial" class="mt-5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-700 p-5 text-center">
+        <div v-else-if="perf.attempts.length === 0" class="mt-5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-700 p-5 text-center">
           <p class="font-bold text-slate-800 dark:text-slate-200">{{ t('dashboard.noResultsTitle') }}</p>
           <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">{{ t('dashboard.noResultsText') }}</p>
           <NuxtLink
@@ -58,18 +79,20 @@ const paperStatus = computed<Record<string, PaperStatus>>(() => {
         </div>
         <template v-else>
           <p class="mt-3 text-xs font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">{{ t('dashboard.journey') }}</p>
-          <svg viewBox="0 0 300 120" class="w-full h-28 mt-2" role="img" aria-label="Score trend (demo placeholder)">
-            <path d="M0,90 L40,75 L80,80 L120,60 L160,65 L200,45 L240,50 L280,30 L300,35 L300,120 L0,120 Z" fill="rgba(37,99,235,0.1)" />
-            <polyline points="0,90 40,75 80,80 120,60 160,65 200,45 240,50 280,30 300,35" fill="none" stroke="#2563eb" stroke-width="2.5" stroke-linecap="round" />
-            <circle cx="280" cy="30" r="4" fill="#2563eb" />
-          </svg>
-          <div class="mt-3 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-700 p-4 flex items-center justify-between">
+          <JourneyChart :attempts="perf.attempts" class="mt-2" />
+          <!-- Best Full Simulation → overall score + CEFR. Drills only:
+               a journey but no score — a Full Simulation is required. -->
+          <div v-if="perf.bestSim" class="mt-3 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-700 p-4 flex items-center justify-between">
             <div>
               <p class="text-xs text-slate-400 dark:text-slate-500 uppercase tracking-wide font-medium">Overall Score</p>
-              <p class="text-2xl font-extrabold text-slate-800 dark:text-slate-200">795 <span class="text-sm font-medium text-slate-400 dark:text-slate-500">/ 990</span></p>
+              <p class="text-2xl font-extrabold text-slate-800 dark:text-slate-200">{{ perf.bestSim.score }} <span class="text-sm font-medium text-slate-400 dark:text-slate-500">/ 990</span></p>
+              <p class="mt-0.5 text-[11px] text-slate-400 dark:text-slate-500">{{ t('dashboard.scoreEstimate') }}</p>
             </div>
-            <span class="text-xs font-bold px-3 py-1.5 rounded-full bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-200">CEFR · B2</span>
+            <span class="text-xs font-bold px-3 py-1.5 rounded-full bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-200">CEFR · {{ perf.bestSim.cefr }}</span>
           </div>
+          <p v-else class="mt-3 text-sm text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/40 rounded-xl px-3 py-2">
+            {{ t('dashboard.noSimScore') }}
+          </p>
         </template>
       </div>
 
@@ -160,7 +183,7 @@ const paperStatus = computed<Record<string, PaperStatus>>(() => {
         <NuxtLink :to="`${base}/papers`" class="text-sm font-medium text-blue-600 hover:text-blue-700">{{ t('dashboard.viewAll') }}</NuxtLink>
       </div>
       <div class="grid sm:grid-cols-3 gap-4">
-        <PaperCard v-for="p in availablePapers" :key="p.id" :paper="p" :status="paperStatus[p.id] ?? 'not-started'" :base="base" />
+        <PaperCard v-for="p in availablePapers" :key="p.id" :paper="p" :status="paperStatus[p.id] ?? 'not-started'" :locked="lockOf(p.id).locked" :unlock-after="lockOf(p.id).unlockAfterName ?? ''" :base="base" />
       </div>
     </div>
   </div>

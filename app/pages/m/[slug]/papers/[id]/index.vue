@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { getMaterialOrFallback, getPaperOrFallback, partsForMaterial } from '~/data/mock'
+import { getMaterialOrFallback, getPaperOrFallback, papersForMaterial, partsForMaterial } from '~/data/mock'
+import { MAX_ATTEMPTS, isAttemptLocked, resolvePaperLock, shortPaperName } from '~/utils/unlock'
 
 const { t } = useLocale()
 
@@ -14,7 +15,6 @@ const paperId = computed(() => route.params.id as string)
 const paper = computed(() => getPaperOrFallback(paperId.value))
 
 const result = ref<TestResult | null>(null)
-const attempt = ref(1)
 const scoreMode = ref<'score' | 'cefr'>('score')
 
 /** "Attempted" from real data — a finished result, or saved answers
@@ -23,6 +23,35 @@ const scoreMode = ref<'score' | 'cefr'>('score')
  * badges, so a test completed on another device counts here too. */
 const activity = useMaterialActivity(slug.value)
 const hasSavedAnswers = ref(false)
+
+/** Sequential unlocking (see app/utils/unlock.ts): this paper opens
+ * only after the previous Full Simulation is completed; attempt N
+ * opens only after attempt N − 1. The activity state is seeded from
+ * the browser's local snapshot at setup, so the locks are right on
+ * first paint; the server fetch refines them. */
+const materialPapers = computed(() => papersForMaterial(slug.value))
+const paperLock = computed(() => resolvePaperLock(paper.value, materialPapers.value, activity.completedPaperIds))
+const paperLockName = computed(() => paperLock.value.unlockAfter ? shortPaperName(paperLock.value.unlockAfter.title) : '')
+const completedAttempts = computed(() => activity.completedAttempts[paper.value.id] ?? [])
+const attemptLocked = (n: number): boolean => isAttemptLocked(n, completedAttempts.value)
+/** First locked attempt, if any — the next one to unlock. */
+const nextLockedAttempt = computed<number | null>(() => {
+  for (let n = 1; n <= MAX_ATTEMPTS; n++) {
+    if (attemptLocked(n)) return n
+  }
+  return null
+})
+/** Default selection: the first unlocked attempt the user has not
+ * finished yet (their next attempt); attempt 1 when everything is
+ * finished (a retake). Never a locked attempt. */
+function defaultAttempt(): number {
+  for (let n = 1; n <= MAX_ATTEMPTS; n++) {
+    if (!attemptLocked(n) && !completedAttempts.value.includes(n)) return n
+  }
+  return 1
+}
+const attempt = ref(defaultAttempt())
+const startDisabled = computed(() => paperLock.value.locked || attemptLocked(attempt.value))
 const attempted = computed(() =>
   !!result.value || hasSavedAnswers.value || activity.completedPaperIds.includes(paper.value.id)
 )
@@ -92,21 +121,36 @@ const skills = computed(() => {
           <div class="flex flex-wrap items-center gap-3">
             <div class="flex items-center gap-1.5" role="group" :aria-label="t('overview.attempt')">
               <button
-                v-for="n in 3"
+                v-for="n in MAX_ATTEMPTS"
                 :key="n"
-                class="text-xs font-semibold px-3 py-1.5 rounded-full border transition-colors"
+                :disabled="paperLock.locked || attemptLocked(n)"
+                class="text-xs font-semibold px-3 py-1.5 rounded-full border transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                 :class="attempt === n ? 'bg-blue-600 border-blue-600 text-white' : 'border-slate-300 dark:border-slate-600 text-slate-500 dark:text-slate-400 hover:border-blue-400'"
                 @click="attempt = n"
               >
                 {{ t('overview.attempt') }} {{ n }}
               </button>
             </div>
+            <p v-if="paperLock.locked" class="w-full text-sm text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/40 rounded-xl px-3 py-2">
+              {{ t('papers.lockedReason', { name: paperLockName }) }}
+            </p>
+            <p v-else-if="nextLockedAttempt" class="w-full text-sm text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/40 rounded-xl px-3 py-2">
+              {{ t('overview.attemptLockedReason', { prev: nextLockedAttempt - 1, next: nextLockedAttempt }) }}
+            </p>
             <NuxtLink
+              v-if="!startDisabled"
               :to="`${base}/papers/${paper.id}/take?attempt=${attempt}`"
               class="w-full sm:w-auto text-center text-sm font-semibold px-6 py-3 rounded-xl bg-blue-600 text-white hover:bg-blue-700 transition-colors"
             >
               {{ t('overview.startTest') }}
             </NuxtLink>
+            <button
+              v-else
+              disabled
+              class="w-full sm:w-auto text-center text-sm font-semibold px-6 py-3 rounded-xl bg-blue-600 text-white opacity-40 cursor-not-allowed"
+            >
+              {{ t('overview.startTest') }}
+            </button>
           </div>
         </div>
       </div>

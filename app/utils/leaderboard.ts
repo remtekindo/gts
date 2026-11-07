@@ -112,6 +112,13 @@ export interface SubmitResultInput {
   total: number
   score: number
   finishedAt: string
+  /** The attempt the row was submitted for (1–3, migration 0008).
+   * Required for the sequential unlock — the server refuses a
+   * locked attempt with 403 `attempt-locked`. */
+  attempt?: number
+  /** Per-part tally from the take page (migration 0007 `breakdown`).
+   * Optional — older callers simply store NULL. */
+  parts?: Record<number, { correct: number, total: number }>
 }
 
 /** Best-effort server copy of a completed paper. Never throws and

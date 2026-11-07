@@ -5,8 +5,12 @@ import type { PaperStatus } from '~/data/mock'
 
 /** Status is passed in by the caller, derived from the user's real
  * results (see `resolvePaperStatus` in useActivity.ts) — the catalog
- * in mock.ts carries no status at all. */
-const props = withDefaults(defineProps<{ paper: Paper; status: PaperStatus; base?: string }>(), { base: '' })
+ * in mock.ts carries no status at all. `locked` is the sequential
+ * unlock (see app/utils/unlock.ts): a locked simulation stays
+ * VISIBLE with a lock badge + reason + disabled button, never hidden.
+ * `unlockAfter` is the short display name of the simulation that
+ * must be completed first ("Full Simulation 01"). */
+const props = withDefaults(defineProps<{ paper: Paper, status: PaperStatus, base?: string, locked?: boolean, unlockAfter?: string }>(), { base: '', locked: false, unlockAfter: '' })
 
 const statusStyle: Record<PaperStatus, string> = {
   'not-started': 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300',
@@ -32,6 +36,13 @@ const cta = computed(() => {
     <div class="h-28 bg-gradient-to-br from-blue-600 to-indigo-800 flex items-center justify-center relative">
       <span class="text-4xl font-extrabold text-white/90">{{ paper.title.charAt(0) }}</span>
       <span
+        v-if="locked"
+        class="absolute top-3 right-3 text-[11px] font-semibold px-2.5 py-1 rounded-full bg-slate-800/80 text-white"
+      >
+        🔒 {{ t('papers.locked') }}
+      </span>
+      <span
+        v-else
         class="absolute top-3 right-3 text-[11px] font-semibold px-2.5 py-1 rounded-full"
         :class="statusStyle[status]"
       >
@@ -62,11 +73,23 @@ const cta = computed(() => {
         </div>
       </dl>
       <NuxtLink
+        v-if="!locked"
         :to="cta.to"
         class="mt-auto w-full text-center text-sm font-semibold px-4 py-2.5 rounded-xl bg-blue-600 text-white hover:bg-blue-700 transition-colors"
       >
         {{ cta.label }}
       </NuxtLink>
+      <div v-else class="mt-auto">
+        <p class="text-xs text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/40 rounded-xl px-3 py-2">
+          {{ t('papers.lockedReason', { name: unlockAfter }) }}
+        </p>
+        <button
+          disabled
+          class="mt-2 w-full text-center text-sm font-semibold px-4 py-2.5 rounded-xl bg-blue-600 text-white opacity-40 cursor-not-allowed"
+        >
+          {{ t('papers.startTest') }}
+        </button>
+      </div>
     </div>
   </div>
 </template>

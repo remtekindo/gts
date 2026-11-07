@@ -25,6 +25,37 @@ export const FREE_MATERIAL_SLUGS: string[] = []
 
 export const PACKAGE_IDS = ['bulanan', 'triwulanan', 'semesteran']
 
+/** Papers per material, in catalog order (id + kind only).
+ * Mirrors app/data/mock.ts `PAPERS` — keep in sync when a paper is
+ * added, removed, or reordered: the sequential-unlock rules
+ * (server/utils/unlock.ts) read the Full Simulation order from here,
+ * so a drift would unlock the wrong paper server-side while the
+ * client shows another. Drill packs are listed too (they are always
+ * open), so an unknown paper id can be rejected instead of trusted. */
+export const PAPERS_BY_MATERIAL: Record<string, Array<{ id: string, kind: 'simulation' | 'drill' }>> = {
+  'toeic-lr': [
+    { id: 'toeic-lr-sim-01', kind: 'simulation' },
+    { id: 'toeic-lr-sim-02', kind: 'simulation' },
+    { id: 'toeic-lr-sim-03', kind: 'simulation' },
+    { id: 'toeic-reading-drill', kind: 'drill' },
+    { id: 'toeic-listening-drill', kind: 'drill' }
+  ],
+  'toeic-sw': [
+    { id: 'toeic-sw-drill-01', kind: 'drill' },
+    { id: 'toeic-sw-drill-02', kind: 'drill' }
+  ]
+}
+
+/** The paper catalog entry for one paper id, or undefined when the
+ * id is not in any material (a forged or stale id). */
+export function getPaperEntry(paperId: string): { id: string, kind: 'simulation' | 'drill', materialSlug: string } | undefined {
+  for (const [materialSlug, papers] of Object.entries(PAPERS_BY_MATERIAL)) {
+    const p = papers.find(x => x.id === paperId)
+    if (p) return { ...p, materialSlug }
+  }
+  return undefined
+}
+
 export function isKnownMaterial(slug: string): boolean {
   return OWNED_MATERIAL_SLUGS.includes(slug)
 }

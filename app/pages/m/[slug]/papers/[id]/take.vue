@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { getMaterialOrFallback, getPaperOrFallback, partsForMaterial, questionsForMaterial } from '~/data/mock'
+import { getMaterialOrFallback, getPaperOrFallback, papersForMaterial, partsForMaterial, questionsForMaterial } from '~/data/mock'
 import type { Question } from '~/data/mock'
 import type { AnswerMap } from '~/utils/storage'
 import { fetchSessionState } from '~/utils/server-auth'
@@ -37,6 +37,39 @@ const idx = ref(0)
 const current = computed((): Question => questions.value[idx.value] ?? questions.value[0] as Question)
 const answers = ref<AnswerMap>({})
 const submitted = ref(false)
+
+/** Sequential-unlock gate: the take page refuses a locked paper or
+ * attempt (403 on submit is the server enforcement; this is the UI
+ * side — a direct take URL shows the lock instead of the test).
+ * `gateLoading` stays true until the check resolves, so the test
+ * never flashes for a locked attempt. */
+const gateLoading = ref(true)
+const lockState = ref<{ code: 'paper-locked' | 'attempt-locked', unlockAfterName: string | null } | null>(null)
+
+async function checkLock(): Promise<void> {
+  let completedPaperIds: string[] = []
+  let completedAttempts: Record<string, number[]> = {}
+  try {
+    const server = await $fetch<{ completedPaperIds: string[], completedAttempts: Record<string, number[]> }>('/api/results/activity', { query: { material: slug.value } })
+    completedPaperIds = server.completedPaperIds ?? []
+    completedAttempts = server.completedAttempts ?? {}
+  } catch {
+    // No server store (plain `pnpm dev`): the browser's local
+    // results are the only record of finished tests.
+    const ids = papersForMaterial(slug.value).map(p => p.id)
+    const local = listLocalResults(ids)
+    completedPaperIds = local.map(r => r.paperId)
+    completedAttempts = completedAttemptsFromLocal(local)
+  }
+  const pl = resolvePaperLock(paper.value, papersForMaterial(slug.value), completedPaperIds)
+  if (pl.locked) {
+    lockState.value = { code: 'paper-locked', unlockAfterName: pl.unlockAfter ? shortPaperName(pl.unlockAfter.title) : null }
+    return
+  }
+  if (isAttemptLocked(attempt.value, completedAttempts[paper.value.id] ?? [])) {
+    lockState.value = { code: 'attempt-locked', unlockAfterName: null }
+  }
+}
 
 /** Seconds spent per question number — feeds the adaptive engine. */
 const timeSpent = ref<Record<number, number>>({})
@@ -79,6 +112,9 @@ onMounted(async () => {
     router.replace('/auth')
     return
   }
+  await checkLock()
+  gateLoading.value = false
+  if (lockState.value) return
   answers.value = loadAnswers(paper.value.id, attempt.value)
   noteDraft.value = getNote(paper.value.id)
 })
@@ -109,8 +145,16 @@ function prev(): void {
 function gradeAndSave(): void {
   flushTime(idx.value)
   let correct = 0
+  // Per-part tally from the bank questions — the Performance page
+  // derives skill accuracy from this (migration 0007 `breakdown`).
+  const parts: Record<number, { correct: number, total: number }> = {}
   for (const q of questions.value) {
-    if (answers.value[q.number] === q.correctLetter) correct += 1
+    const ok = answers.value[q.number] === q.correctLetter
+    if (ok) correct += 1
+    const row = parts[q.part] ?? { correct: 0, total: 0 }
+    row.total += 1
+    if (ok) row.correct += 1
+    parts[q.part] = row
   }
   const score = predictedScore(correct, questions.value.length)
   const finishedAt = new Date().toISOString()
@@ -124,7 +168,8 @@ function gradeAndSave(): void {
     answers: answers.value,
     finishedAt,
     username: getAuth()?.username ?? 'guest',
-    timings: timeSpent.value
+    timings: timeSpent.value,
+    parts
   })
   clearAnswers(paper.value.id, attempt.value)
   // Server copy for the leaderboard — best-effort and non-blocking:
@@ -138,7 +183,9 @@ function gradeAndSave(): void {
     correct,
     total: questions.value.length,
     score,
-    finishedAt
+    finishedAt,
+    attempt: attempt.value,
+    parts
   })
 }
 
@@ -166,7 +213,29 @@ function saveNotes(): void {
 </script>
 
 <template>
-  <div class="min-h-screen bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 pb-36">
+  <!-- Locked paper / attempt: the gate refused the take — show the
+       lock reason instead of the test, never the questions. -->
+  <div v-if="!gateLoading && lockState" class="min-h-screen bg-slate-100 dark:bg-slate-800 flex items-center justify-center px-4">
+    <div class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm p-6 md:p-8 max-w-lg w-full text-center">
+      <p class="text-4xl">🔒</p>
+      <h1 class="mt-3 text-xl font-extrabold text-slate-800 dark:text-slate-200">{{ t('take.lockedTitle') }}</h1>
+      <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">
+        {{ lockState.code === 'paper-locked'
+          ? t('papers.lockedReason', { name: lockState.unlockAfterName ?? '' })
+          : t('overview.attemptLockedReason', { prev: attempt - 1, next: attempt }) }}
+      </p>
+      <NuxtLink
+        :to="`${base}/papers/${paper.id}`"
+        class="mt-5 inline-block text-sm font-semibold px-6 py-3 rounded-xl bg-blue-600 text-white hover:bg-blue-700 transition-colors"
+      >
+        {{ t('take.backToPaper') }}
+      </NuxtLink>
+    </div>
+  </div>
+  <div v-else-if="gateLoading" class="min-h-screen bg-slate-100 dark:bg-slate-800 flex items-center justify-center px-4">
+    <p class="text-sm text-slate-400 dark:text-slate-500">{{ t('access.loading') }}</p>
+  </div>
+  <div v-else class="min-h-screen bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 pb-36">
     <!-- Dark navy header -->
     <header class="bg-slate-900 text-white sticky top-0 z-40">
       <div class="max-w-6xl mx-auto px-4 h-16 flex items-center">

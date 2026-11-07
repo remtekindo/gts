@@ -148,7 +148,7 @@ login was built the same day and replaced before it ever deployed).
      are needed — this flow uses only the Client ID, no client secret.
   4. Set `NUXT_PUBLIC_GOOGLE_CLIENT_ID` as a Cloudflare Pages
      **variable** (not a secret) and in local `.env`, then redeploy.
-  5. Apply migrations 0002–0006 to the remote D1
+  5. Apply migrations 0002–0007 to the remote D1
      (`npx wrangler d1 migrations apply gts-db --remote`).
   6. Set `NITRO_ADMIN_EMAILS` (comma-separated, default
      `remtekindo@gmail.com`) and `NITRO_SESSION_SECRET` (generate with
@@ -335,12 +335,10 @@ login was built the same day and replaced before it ever deployed).
   when the current user is the only participant the page says so
   honestly instead of inventing competitors. Names are masked
   (first letter + `***` + last letter); emails are never exposed.
-  The material dashboard Performance card (795/990, journey chart)
-  still shows those demo values when the user HAS results — it is not
-  part of the leaderboard and has not been rewired to real data yet —
-  but since 6 Nov 2026 it shows an honest empty state instead when
-  the user has no finished paper in that material (see the
-  empty-states bullet below).
+  The material dashboard Performance card and the Performance page
+  are wired to the same real results since 7 Nov 2026 (see the
+  "Performance from real data" bullet below) — no demo 795/990
+  anywhere.
 - **New-user empty states — no demo data for a brand-new user**
   (6 Nov 2026): a user with no purchases and no finished test sees
   honest empty states instead of invented history. Exact definition —
@@ -374,15 +372,16 @@ login was built the same day and replaced before it ever deployed).
     test in that material; otherwise the card stays visible but muted,
     with its button disabled and one line explaining why.
   - Live Test: the dashboard button is enabled only after one
-    completed test anywhere; the live-test page shows a locked banner
-    with the Start button disabled, and the server refuses generation
-    (403 `no-completed-test`, see above) — the client button alone is
-    not the gate.
+    completed test anywhere; on the live-test page itself the locked
+    banner appears only when the user presses "Start live test" while
+    still locked (never on page load — the button stays enabled until
+    then), and the server refuses generation (403 `no-completed-test`,
+    see above) — the client button alone is not the gate.
   - Performance page + dashboard Performance card: empty (no journey,
     no score, no radar) until the user has a finished paper in that
     material — an honest empty state with a "take a test" call to
-    action. When results exist the current content still shows its
-    demo values (not rewired to real data yet). The hub "Your scores"
+    action. With results, both read the user's real attempts (see the
+    "Performance from real data" bullet below). The hub "Your scores"
     chips still show "—" when there is nothing to show.
   - Paper status badges are derived from the user's real results, never
     the catalog: `GET /api/results/activity` now also returns
@@ -401,6 +400,48 @@ login was built the same day and replaced before it ever deployed).
     value can leak into the UI again. The id arrays are seeded from the
     browser's local snapshot at setup, so badges are right on first
     paint; the server fetch refines the completed ids.
+- **Performance from real data — no demo 795/990** (7 Nov 2026):
+  the dashboard Performance card and the Performance page now read
+  the user's own attempts from D1 via new `GET /api/performance
+  ?material=<slug>` (401 without a session, 400 unknown material,
+  403 without material access, 503 without D1), falling back to the
+  browser's local results store in plain `pnpm dev` via
+  `app/composables/usePerformance.ts`. Rules, all from real data:
+  - Overall score = the BEST Full Simulation in that material only
+    (highest accuracy; a tie goes to the most recent). Accuracy maps
+    linearly to the TOEIC LR scale, `round5(10 + accuracy × 980)`,
+    and is labeled "estimasi" in the UI — real ETS scoring is not
+    linear. CEFR follows the official ETS total bands (A1 120–220,
+    A2 225–545, B1 550–780, B2 785–940, C1 945–990); below 120 the
+    CEFR shows "—" (below A1, never an invented level).
+  - Journey chart = one point per completed attempt (simulation +
+    drill), chronological, each point the attempt's accuracy mapped
+    with the same formula; one attempt is one dot. Shared component
+    `app/components/JourneyChart.vue` (card + page).
+  - Radar + skill list (detail page only) = per-part accuracy of the
+    MOST RECENT Full Simulation that has per-part data: Listening =
+    avg(Parts 1–4), Reading = avg(Parts 5–7), Grammar = Part 5,
+    Vocabulary = avg(Parts 6–7), each as accuracy %. The take page
+    tallies each question's part at submit time and sends it as
+    `parts`; `POST /api/results/submit` validates it strictly
+    (integer part keys 1–20, 0 ≤ correct ≤ total, parts add up to the
+    paper total — anything else is a 400) and stores it as JSON in
+    the new nullable `breakdown` column (migration
+    `0007_performance_breakdown.sql`). Rows submitted before it have
+    NULL there and show an honest empty radar/skills, never demo
+    values. The part → skill mapping is the TOEIC LR one, so other
+    materials (e.g. TOEIC SW) show no skill breakdown rather than a
+    mislabeled number; the Speed radar axis and the Time Management
+    bar are dropped — there is no per-part source for either.
+  - Drills only: the journey shows the drill points, but the overall
+    score area says "Take a Full Simulation to see your overall
+    score." with no CEFR — the same rule as the per-material
+    leaderboard board. Free tests and live tests are never submitted,
+    so they never count. The score/CEFR mapping lives in
+    `server/utils/performance.ts` (single source of truth;
+    `app/utils/performance.ts` mirrors it for the local fallback and
+    `app/utils/scoring.ts` uses the same formulas, so the result page
+    and the Performance page can never disagree about one attempt).
   Data sources per gate: `GET /api/results/activity?material=<slug>`
   (D1 `test_results` counts; 401 without a session, 503 without D1)
   via `app/composables/useActivity.ts`, which falls back to the
@@ -408,6 +449,46 @@ login was built the same day and replaced before it ever deployed).
   (plain `pnpm dev` or D1 down). The Continue card reads localStorage
   answers keys only — D1 never sees an unfinished attempt. The Enroll
   tab reads the server session + `GET /api/profile/enrollments`.
+- **Sequential unlocking — simulations, then attempts** (7 Nov 2026):
+  papers and attempts open in order, never all at once. Paper level
+  (Full Simulations only, catalog order): Sim 01 is always open; Sim
+  02 opens only after Sim 01 has a completed result, Sim 03 only
+  after Sim 02, and so on — a drill completion never unlocks a
+  simulation, and drill packs are always open. Attempt level (within
+  one paper): Attempt 01 is always open; Attempt 02 opens only after
+  Attempt 01 is completed, Attempt 03 only after Attempt 02. Locked
+  simulation cards stay visible with a 🔒 Locked badge, a reason
+  line ("Complete Full Simulation 01 to unlock"), and a disabled
+  Start button; on the paper detail page the locked attempt buttons
+  are disabled with a reason line, and Start Test is disabled while
+  the paper or the selected attempt is locked — the default selection
+  is the first unlocked attempt the user has not finished yet (their
+  next attempt), or Attempt 1 when everything is finished. The rules
+  are enforced server-side, not just in the UI: the take page shows
+  a lock screen instead of the test for a locked paper/attempt, and
+  `POST /api/results/submit` refuses a locked paper with 403
+  `paper-locked` or a locked attempt with 403 `attempt-locked`, so a
+  direct take URL can never record a result. "Completed" is the same
+  definition everywhere: a finished row in D1 `test_results` (kind
+  `simulation` or `drill`, valid correct/total). The attempt number
+  is stored in the new nullable `attempt` column (migration
+  `0008_results_attempt.sql`; `POST /api/results/submit` validates
+  1–3, anything else is a 400, and an unknown paper id is a 400) —
+  rows written before it count as attempt 1 for the unlock check.
+  `GET /api/results/activity` now also returns `completedAttempts`
+  (finished attempt numbers per paper id); the client rules live in
+  `app/utils/unlock.ts` and the server rules in
+  `server/utils/unlock.ts`, both reading the same catalog order
+  (`server/utils/catalog.ts` `PAPERS_BY_MATERIAL` mirrors
+  `app/data/mock.ts` `PAPERS` — keep in sync). Local fallback in
+  plain `pnpm dev`: the browser's local results (latest result per
+  paper only, so completed attempts are 1..that attempt). Credits
+  note (checked 7 Nov 2026, not changed): the "balance: 12" on the
+  paper detail page is a hardcoded literal in the template, and the
+  "LR · 12" topbar chip reads the static `credits` array in
+  `app/data/mock.ts` — there is no credit ledger, no deduction on
+  submit, and no server endpoint, so the balance never moves; it is
+  demo data until a purchase system exists.
 
 Known limitations: the rate limiter keeps its counters in memory, so on
 Cloudflare Pages each isolate has its own budget (correct on the local
@@ -493,11 +574,12 @@ There are two D1 databases, and they must not be confused:
   DB is scratch, the remote DB is not. Note: a fresh pages-dev file
   starts with NO tables (wrangler does not apply migrations to it), so
   login upserts and the ai-usage endpoint fail with "no such table"
-  until the migrations are applied to that file — apply the six
+  until the migrations are applied to that file — apply the seven
   `migrations/*.sql` files to it with sqlite3 and record them in its
   `d1_migrations` table (same names as wrangler records: `0001_init.sql`,
   `0002_users_google.sql`, `0003_ai_usage.sql`, `0004_ai_usage_reasoning.sql`,
-  `0005_ai_usage_actor.sql`, `0006_leaderboard_results.sql`).
+  `0005_ai_usage_actor.sql`, `0006_leaderboard_results.sql`,
+  `0007_performance_breakdown.sql`).
 
 Remote has no such split — one database, one `migrations apply --remote`.
 
@@ -514,13 +596,14 @@ Per-endpoint behavior, verified 5 Nov 2026 (Playwright, local):
 | `GET /api/auth/session` | 200 | 200 |
 | `POST /api/admin/audit-chat` | 401 without a session; 503 `no-key` without a Meta key | 502 `meta-error` with a dummy key (Meta rejects it, zero real credits) |
 | `GET /api/leaderboard` | 503 | 200, global/material boards (401 without session; 403 without material access) |
+| `GET /api/performance` | 503 | 200, best sim + journey + skills for the material (401 without session; 400 unknown material; 403 without material access) |
 | `POST /api/results/submit` | 503 | 200 (401 without session; 403 without material access; 400 on invalid input) |
 | `GET /api/quests/status` | 503 | 200, this week's quest progress |
 | `POST /api/quests/claim` | 503 | 200 claimed; 409 `not-complete` / `already-claimed` |
 
 A fresh pages-dev file (no tables yet) no longer fails with a bare
 500: `admin/users` and `ai-usage` answer 503 "D1 tables are missing
-for this database — apply the migrations" until the six
+for this database — apply the migrations" until the seven
 `migrations/*.sql` files are applied to that file with sqlite3 (see
 above). The live site is unaffected — its D1 is bound by the Pages
 project and already carries all tables including `ai_usage` and

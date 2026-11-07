@@ -13,17 +13,22 @@
  * access — same rules as GET /api/leaderboard). `completedPaperIds`
  * lists the finished paper ids (same scope as the counts) so paper
  * cards can derive their badge from real data instead of the old
- * hardcoded catalog status.
+ * hardcoded catalog status. `completedAttempts` lists the finished
+ * attempt numbers per paper id (same scope) so the sequential
+ * unlock can tell Attempt 02 from Attempt 01 — rows written before
+ * the attempt column existed count as attempt 1 (see
+ * server/utils/unlock.ts).
  *
  * 401 when not signed in; 503 when the results store is not
  * available on this server (plain `pnpm dev` has no D1 binding, or
- * migration 0006 has not been applied to the local file). Callers
- * fall back to the browser's local results store on 503 (see
+ * migrations 0006/0008 have not been applied to the local file).
+ * Callers fall back to the browser's local results store on 503 (see
  * app/composables/useActivity.ts).
  */
 import { getUserSession } from '../../utils/auth'
 import { getRequestDb } from '../../utils/user-store'
 import { isKnownMaterial } from '../../utils/catalog'
+import { rowsToUnlockState } from '../../utils/unlock'
 
 const VALID_ROW = `kind IN ('simulation', 'drill') AND correct IS NOT NULL AND total IS NOT NULL AND total > 0`
 
@@ -56,16 +61,19 @@ export default defineEventHandler(async (event) => {
       inMaterial = row?.n ?? 0
     }
     const completedTotal = total?.n ?? 0
-    const ids = await db.prepare(
-      `SELECT DISTINCT paper_id AS id FROM test_results WHERE user_sub = ?1 ${material ? 'AND material_slug = ?2' : ''} AND ${VALID_ROW}`
-    ).bind(...(material ? [session.sub, material] : [session.sub])).all<{ id: string }>()
-    const completedPaperIds = (ids.results ?? []).map(r => r.id)
+    // One query for both the finished paper ids and the finished
+    // attempt numbers — the unlock rules need both, same scope.
+    const attemptRows = await db.prepare(
+      `SELECT paper_id AS paperId, attempt FROM test_results WHERE user_sub = ?1 ${material ? 'AND material_slug = ?2' : ''} AND ${VALID_ROW}`
+    ).bind(...(material ? [session.sub, material] : [session.sub])).all<{ paperId: string, attempt: number | null }>()
+    const { completedPaperIds, completedAttempts } = rowsToUnlockState(attemptRows.results ?? [])
     return {
       completedTotal,
       completedInMaterial: inMaterial,
       hasCompleted: completedTotal > 0,
       hasCompletedInMaterial: inMaterial > 0,
-      completedPaperIds
+      completedPaperIds,
+      completedAttempts
     }
   } catch (e) {
     if (e && typeof e === 'object' && 'statusCode' in e) throw e

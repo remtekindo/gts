@@ -46,10 +46,17 @@ const history = ref<AnsweredQuestion[]>([])
 
 /** Live Test unlocks only after one finished paper anywhere (see
  * GET /api/results/activity and the server gate in
- * POST /api/live-test/generate). Until then the page shows a locked
- * banner and the Start button stays disabled. */
+ * POST /api/live-test/generate). The locked banner is NOT shown on
+ * load — it appears only when the user presses "Start live test"
+ * while still locked, and the Start button is disabled from then
+ * on. The server gate stays the enforcement point, so the lock
+ * cannot be bypassed from the client alone. */
 const activity = useMaterialActivity(slug.value)
 const isLocked = computed(() => !activity.loading && !activity.hasCompleted)
+/** Set the first time a locked user presses Start; the banner shows
+ * only once this is true (never on page load). */
+const lockRevealed = ref(false)
+const showLockedBanner = computed(() => isLocked.value && lockRevealed.value)
 
 const current = computed((): AnsweredQuestion | null => batch.value[idx.value] ?? null)
 const answeredInBatch = computed(() => batch.value.filter(q => answers.value[q.qid]).length)
@@ -99,7 +106,10 @@ async function fetchBatch(): Promise<void> {
       ?? (e as { statusCode?: number }).statusCode
     const data = (e as { data?: { data?: { code?: string }, code?: string } }).data
     const code = data?.data?.code || data?.code
-    if (status === 403 && code === 'no-completed-test') error.value = t('liveTest.errorNoCompleted')
+    if (status === 403 && code === 'no-completed-test') {
+      // Server is authoritative: show the locked banner, not a red error.
+      lockRevealed.value = true
+    }
     else if (status === 401) error.value = t('liveTest.errorAuth')
     else if (status === 429) error.value = t('liveTest.errorRateLimit')
     else if (status === 503) error.value = t('liveTest.errorKey')
@@ -108,11 +118,33 @@ async function fetchBatch(): Promise<void> {
   }
 }
 
-function start(): void {
+/**
+ * Wait until the activity gate has resolved (server fetch, or the
+ * local fallback). A locked user who presses Start before the gate
+ * resolves must still get the banner, not a red 403 error from the
+ * generate call — so Start never fires while the gate is unknown.
+ */
+function waitForGate(): Promise<void> {
+  if (!activity.loading) return Promise.resolve()
+  return new Promise((resolve) => {
+    const stop = watch(() => activity.loading, (loading) => {
+      if (!loading) { stop(); resolve() }
+    })
+    // Never hang forever if the gate somehow never resolves.
+    setTimeout(() => { stop(); resolve() }, 8000)
+  })
+}
+
+async function start(): Promise<void> {
+  await waitForGate()
+  if (!activity.hasCompleted) {
+    lockRevealed.value = true
+    return
+  }
   history.value = []
   answers.value = {}
   batchNo.value = 0
-  fetchBatch()
+  await fetchBatch()
 }
 
 function choose(letter: string): void {
@@ -150,12 +182,14 @@ function playAgain(): void {
 
 <template>
   <div class="max-w-3xl mx-auto">
-    <!-- Locked banner: no finished paper yet. The Start button below
-         stays disabled too; the server refuses generation as well
+    <!-- Locked banner: no finished paper yet. It appears ONLY after
+         the user presses "Start live test" (see lockRevealed), never
+         on page load. The Start button is disabled once the banner
+         shows; the server refuses generation as well
          (403 no-completed-test), so the lock cannot be bypassed
          from the client alone. -->
     <div
-      v-if="isLocked"
+      v-if="showLockedBanner"
       class="mb-5 rounded-2xl border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-950/40 p-5"
       role="alert"
     >
@@ -197,7 +231,7 @@ function playAgain(): void {
       <p v-if="error" class="mt-5 text-sm text-red-600 dark:text-red-300 bg-red-50 dark:bg-red-950/60 rounded-xl px-3.5 py-2.5">{{ error }}</p>
 
       <button
-        :disabled="isLocked"
+        :disabled="showLockedBanner"
         class="mt-6 w-full sm:w-auto text-sm font-semibold px-6 py-3 rounded-xl bg-blue-600 text-white hover:bg-blue-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
         @click="start"
       >

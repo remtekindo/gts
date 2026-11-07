@@ -116,6 +116,8 @@ export default {
     seeAnalytics: 'Lihat Analitik Lengkap →',
     journey: 'Perjalanan Performa',
     journeySub: 'Tren prediksi skormu di semua percobaan.',
+    scoreEstimate: 'Estimasi skor — penilaian ETS asli tidak linear.',
+    noSimScore: 'Kerjakan Full Simulation untuk melihat skor keseluruhanmu.',
     continueTitle: 'Lanjutkan dari terakhirmu',
     continueSub: 'lanjutkan tesmu',
     resume: 'Lanjutkan Tes',
@@ -185,6 +187,8 @@ export default {
     statusNotStarted: 'Belum mulai',
     statusInProgress: 'Berlangsung',
     statusCompleted: 'Selesai',
+    locked: 'Terkunci',
+    lockedReason: 'Selesaikan {name} untuk membuka',
     diffBeginner: 'Pemula',
     diffIntermediate: 'Menengah',
     diffAdvanced: 'Lanjutan'
@@ -199,6 +203,7 @@ export default {
     attemptCosts: 'Percobaan ini memakai',
     credits: 'kredit',
     attempt: 'Percobaan',
+    attemptLockedReason: 'Selesaikan Percobaan {prev} untuk membuka Percobaan {next}',
     startTest: 'Mulai Tes',
     lastResult: 'Hasil terakhir',
     predictedScore: 'Prediksi Skor',
@@ -237,7 +242,9 @@ export default {
     notesSave: 'Simpan catatan',
     demoQuestions: 'soal demo',
     skillSpeaking: 'Speaking',
-    skillWriting: 'Writing'
+    skillWriting: 'Writing',
+    lockedTitle: 'Tes ini terkunci',
+    backToPaper: 'Kembali ke paket soal'
   },
   result: {
     crumbOverview: 'Ringkasan',
@@ -274,16 +281,15 @@ export default {
     skill: 'Kemampuan',
     radar: 'Radar Kemampuan',
     download: 'Unduh Laporan',
-    demoNote: 'Data demo — hubungkan percobaan nyata untuk mengisi analitikmu.',
+    noSkillsTitle: 'Belum ada rincian kemampuan',
+    noSkillsText: 'Selesaikan Full Simulation untuk melihat rincian kemampuanmu di sini.',
     total: 'Total Listening & Reading',
     last7: '7 hari terakhir',
     last30: '30 hari terakhir',
     last90: '90 hari terakhir',
     allSkills: 'Semua kemampuan',
     grammar: 'Tata bahasa',
-    vocab: 'Kosakata',
-    timeMgmt: 'Manajemen waktu',
-    speed: 'Kecepatan'
+    vocab: 'Kosakata'
   },
   leaderboard: {
     title: 'Papan Peringkat',

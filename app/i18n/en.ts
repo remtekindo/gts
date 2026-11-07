@@ -116,6 +116,8 @@ export default {
     seeAnalytics: 'See Full Analytics →',
     journey: 'Performance Journey',
     journeySub: 'Your predicted score trend across attempts.',
+    scoreEstimate: 'Estimated score — real ETS scoring is not linear.',
+    noSimScore: 'Take a Full Simulation to see your overall score.',
     continueTitle: 'Continue from where you left off',
     continueSub: 'pick up your test',
     resume: 'Resume Test',
@@ -185,6 +187,8 @@ export default {
     statusNotStarted: 'Not started',
     statusInProgress: 'In progress',
     statusCompleted: 'Completed',
+    locked: 'Locked',
+    lockedReason: 'Complete {name} to unlock',
     diffBeginner: 'Beginner',
     diffIntermediate: 'Intermediate',
     diffAdvanced: 'Advanced'
@@ -199,6 +203,7 @@ export default {
     attemptCosts: 'This attempt costs',
     credits: 'credits',
     attempt: 'Attempt',
+    attemptLockedReason: 'Complete Attempt {prev} to unlock Attempt {next}',
     startTest: 'Start Test',
     lastResult: 'Last result',
     predictedScore: 'Predicted Score',
@@ -237,7 +242,9 @@ export default {
     notesSave: 'Save notes',
     demoQuestions: 'demo questions',
     skillSpeaking: 'Speaking',
-    skillWriting: 'Writing'
+    skillWriting: 'Writing',
+    lockedTitle: 'This test is locked',
+    backToPaper: 'Back to paper'
   },
   result: {
     crumbOverview: 'Overview',
@@ -274,16 +281,15 @@ export default {
     skill: 'Skill',
     radar: 'Skill Radar',
     download: 'Download Report',
-    demoNote: 'Demo data — connect a real attempt to populate your analytics.',
+    noSkillsTitle: 'No skill breakdown yet',
+    noSkillsText: 'Complete a Full Simulation to see your skill breakdown here.',
     total: 'Listening & Reading Total',
     last7: 'Last 7 days',
     last30: 'Last 30 days',
     last90: 'Last 90 days',
     allSkills: 'All skills',
     grammar: 'Grammar',
-    vocab: 'Vocabulary',
-    timeMgmt: 'Time Management',
-    speed: 'Speed'
+    vocab: 'Vocabulary'
   },
   leaderboard: {
     title: 'Leaderboard',

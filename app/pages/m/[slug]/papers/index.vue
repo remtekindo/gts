@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { getMaterialOrFallback, papersForMaterial } from '~/data/mock'
 import type { PaperStatus } from '~/data/mock'
+import { resolvePaperLock, shortPaperName } from '~/utils/unlock'
 
 const { t } = useLocale()
 
@@ -21,6 +22,19 @@ const paperStatus = computed<Record<string, PaperStatus>>(() => {
   return map
 })
 const statusOf = (id: string): PaperStatus => paperStatus.value[id] ?? 'not-started'
+
+/** Sequential unlock per paper (see app/utils/unlock.ts): Sim 02
+ * opens only after Sim 01 is completed, and so on; drills are
+ * always open. Locked cards stay visible with a reason. */
+const paperLock = computed<Record<string, { locked: boolean, unlockAfterName: string | null }>>(() => {
+  const map: Record<string, { locked: boolean, unlockAfterName: string | null }> = {}
+  for (const p of materialPapers.value) {
+    const lock = resolvePaperLock(p, materialPapers.value, activity.completedPaperIds)
+    map[p.id] = { locked: lock.locked, unlockAfterName: lock.unlockAfter ? shortPaperName(lock.unlockAfter.title) : null }
+  }
+  return map
+})
+const lockOf = (id: string) => paperLock.value[id] ?? { locked: false, unlockAfterName: null }
 
 const activeTab = ref<'mine' | 'available'>('available')
 const search = ref('')
@@ -109,7 +123,7 @@ const chips = computed(() => [
 
       <!-- Grid -->
       <div v-if="filtered.length" class="mt-5 grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        <PaperCard v-for="p in filtered" :key="p.id" :paper="p" :status="statusOf(p.id)" :base="base" />
+        <PaperCard v-for="p in filtered" :key="p.id" :paper="p" :status="statusOf(p.id)" :locked="lockOf(p.id).locked" :unlock-after="lockOf(p.id).unlockAfterName ?? ''" :base="base" />
       </div>
       <div v-else class="mt-5 text-center py-16 text-slate-400 dark:text-slate-500 text-sm bg-white dark:bg-slate-900 rounded-2xl border border-dashed border-slate-300 dark:border-slate-600">
         No papers match your filters.
