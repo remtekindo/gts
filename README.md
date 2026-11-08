@@ -303,6 +303,106 @@ by the chosen package, never handed out up front.
   none). i18n parity EN/ID (line-start key extraction). Test users
   deleted afterwards; local D1 back to 0 rows.
 
+## What was built (8 Nov 2026) — TOEFL/IELTS structure activated, questions pending (branch `v2`)
+
+TOEFL iBT and IELTS Academic now exist as real, openable materials —
+structure only. Both were `status: 'coming-soon'` in the hub; they are
+now `owned`, with paper sets modeled on the real tests (formats
+verified against the official sources on 8 Nov 2026: ETS TOEFL iBT
+test content page, ielts.org Guide for Test Takers). The bank has
+**zero questions** for either material, and nothing in the app
+pretends otherwise.
+
+- **Paper sets** (`app/data/mock.ts` PAPERS, mirrored exactly in
+  `server/utils/catalog.ts` PAPERS_BY_MATERIAL — the two must stay in
+  sync or sequential unlock breaks server-side):
+  - `toefl-ibt`: `toefl-ibt-sim-01` (Full Simulation, Reading +
+    Listening MCQ, 59 min), `toefl-reading-drill` (30 min),
+    `toefl-listening-drill` (29 min), `toefl-writing-paper`
+    (Drill Pack, prompt + sample + rubric v1, 23 min),
+    `toefl-speaking-paper` (Drill Pack, prompt + sample + rubric
+    v1, 8 min). Official format from 21 Jan 2026: Reading 50 items
+    ~30 min, Listening 47 ~29 min, Writing 12 ~23 min, Speaking 11
+    ~8 min; Reading/Listening adaptive; scores 1–6 in 0.5 steps.
+  - `ielts-academic`: `ielts-academic-sim-01` (Full Simulation,
+    Listening + Reading MCQ, 90 min), `ielts-listening-drill`
+    (30 min), `ielts-reading-drill` (60 min), `ielts-writing-paper`
+    (Drill Pack, prompt + sample + rubric v1, 60 min),
+    `ielts-speaking-paper` (Drill Pack, prompt + sample + rubric
+    v1, 14 min). Official format: Listening 40 questions ~30 min,
+    Reading 40 questions 60 min, Writing 2 tasks 60 min, Speaking
+    3 parts 11–14 min; total ~2h 45m; bands 1–9, half bands.
+- **Hub:** the "Segera hadir" section now renders only when a
+  coming-soon material exists (`v-if="comingSoon.length"` in
+  `app/pages/materials/index.vue`) — the heading rendered
+  unconditionally before, which would have left a dangling empty
+  heading once both materials were owned. The hub now shows 4
+  material cards and no coming-soon section at all.
+- **Checkout cannot sell empty materials.** The picker
+  (`app/pages/checkout.vue`) offers only materials with real
+  questions in the bank (`hasQuestions`, bank count > 0) — today
+  that is `toeic-lr` + `toeic-sw` only. The server enforces the
+  same rule: new `PURCHASABLE_MATERIAL_SLUGS`
+  (`['toeic-lr', 'toeic-sw']` in `server/utils/catalog.ts`) in
+  `POST /api/orders` validation — an order containing a
+  non-purchasable material is refused 400 `not-purchasable`.
+  TOEFL/IELTS become pickable with **no code change** the moment
+  their first questions land. `OWNED_MATERIAL_SLUGS` has both
+  appended at the end, so the default package mapping is preserved
+  (Bulanan = toeic-lr, Triwulanan = toeic-lr + toeic-sw, Semesteran
+  = all owned). Manual admin grants still offer all owned materials
+  — that is the admin's explicit choice, documented in the catalog
+  comment.
+- **Honest empty states, no fake counts.** A 0-question paper card
+  shows "Soal untuk tes ini sedang disiapkan." with a "Lihat Detail"
+  link instead of a count; the paper detail page disables Start
+  with the same reason; the take page refuses a 0-question paper
+  with "Belum ada soal" (the take guard also protects the
+  `current` computed, which is undefined on an empty bank); the Tes
+  home "Mulai Tes" card skips question-less papers and shows
+  "Soal untuk materi ini sedang disiapkan — cek lagi nanti." when
+  no paper in the material has questions. Server submit already
+  refused empty totals with 400 — verified for these papers.
+- **Performance is scoped to TOEIC.** The round5(10 + accuracy ×
+  980) mapping and ETS CEFR bands apply ONLY to `toeic-lr`
+  (`server/utils/performance.ts` + `app/utils/performance.ts`
+  `buildPerformance`): other materials get no overall score and no
+  CEFR (`bestSim` null), and their journey points carry accuracy %
+  (0–100) instead of a TOEIC number. `JourneyChart` takes a `mode`
+  prop (`'toeic'` | `'accuracy'`, accuracy plots on a 0–100 axis);
+  Skor Saya passes `'accuracy'` for non-TOEIC materials, shows a
+  `%` suffix on history scores, and uses the
+  `dashboard.journeySubAccuracy` subtitle. The skills mapping
+  already returned null for non-TOEIC-LR — unchanged.
+- **Generation specs** (`scripts/generate-questions/TOEFL-IELTS-SPECS.md`):
+  the handover for the content step — official format per material
+  with source links + check date, what the MCQ-only bank model
+  supports vs. what needs a model extension (IELTS
+  True/False/Not Given, matching headings, sentence completion;
+  TOEFL table/prose-summary items; Speaking/Writing are prompt +
+  sample + rubric in v1), the exact `generate.mjs` changes needed
+  first (per-material part descriptions, material-aware prompt —
+  the script is TOEIC-only today and would write TOEIC-style items
+  for these slugs), CLI invocations per material, the QC checklist,
+  and the starter-bank cost: TOEFL 97 MCQ questions ≈ Rp155,
+  IELTS 80 ≈ Rp128, both ≈ Rp283 at ~Rp1.6/question.
+- **Explicitly NOT built:** any questions for either material
+  (pending the generation pipeline — see the specs doc); Full
+  Simulations with real content; per-material scoring scales
+  (TOEFL 1–6, IELTS 1–9); Listening audio; non-MCQ question types;
+  per-material live-test prompts.
+- **Verified:** `vue-tsc` exit 0 (0 errors); `pnpm build` exit 0;
+  Playwright against `wrangler pages dev` on a real local D1
+  (migrations 0001–0009, dummy Meta key): hub shows 4 materials;
+  TOEFL + IELTS open with honest "soal sedang disiapkan" states,
+  no fake counts, no crash; checkout picker offers only toeic-lr +
+  toeic-sw; direct `POST /api/orders` with a toefl-ibt material is
+  400; a 0-question paper's Start is disabled with the reason and
+  the take page refuses it; regression — TOEIC fresh user home →
+  Q1 in 2 taps, result CTAs work, guest checkout → login modal
+  still opens. i18n parity EN/ID (line-start key extraction).
+  Test users deleted afterwards; local D1 back to 0 rows.
+
 ## What is NOT built yet
 
 - Real backend (auth, database, API) — Cloudflare groundwork done 5 Nov 2026 (Pages + D1 binding + schema); **Google Sign-In for everyone + D1 user store with admin/grants done 5 Nov 2026** (see [Auth](#auth)); question bank + results migration pending
@@ -310,7 +410,7 @@ by the chosen package, never handed out up front.
 - Real TTS audio for listening — planned Nov 2026
 - Payment gateway integration (Midtrans/Xendit/Stripe/Play Billing — undecided) — the NEXT step after the orders flow (8 Nov 2026); orders exist and wait in `pending_payment` until an admin approves them, but no online payment is wired up yet
 - Grant-expiry enforcement — `duration_months` is recorded on every order, but grants do not expire yet (backlog)
-- TOEFL / IELTS papers — after v1
+- TOEFL / IELTS questions — structure activated 8 Nov 2026 (branch `v2`): materials are owned, paper sets defined after the official formats, checkout gating + honest empty states + TOEIC-only performance scoping built; the bank has 0 questions for both, pending the generation pipeline (`scripts/generate-questions/TOEFL-IELTS-SPECS.md`); Full Simulations with real content, per-material scoring scales (TOEFL 1–6, IELTS 1–9), and non-MCQ question types are future work
 - AI writing grading — v2
 
 ## Stack

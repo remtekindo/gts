@@ -212,8 +212,8 @@ onMounted(async () => {
     <!-- Journey: one point per completed attempt, chronological. -->
     <div class="mt-5 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 p-5">
       <h2 class="font-bold text-slate-800 dark:text-slate-200">{{ t('dashboard.journey') }}</h2>
-      <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">{{ t('dashboard.journeySub') }}</p>
-      <JourneyChart :attempts="perf.attempts" class="mt-2" />
+      <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">{{ slug === 'toeic-lr' ? t('dashboard.journeySub') : t('dashboard.journeySubAccuracy') }}</p>
+      <JourneyChart :attempts="perf.attempts" :mode="slug === 'toeic-lr' ? 'toeic' : 'accuracy'" class="mt-2" />
     </div>
 
     <!-- Tabs -->
@@ -341,7 +341,7 @@ onMounted(async () => {
               {{ attemptDate(a.date) }} · {{ a.kind === 'simulation' ? t('papers.fullSim') : t('papers.drillPack') }}
             </p>
           </div>
-          <span class="text-base font-extrabold text-slate-800 dark:text-slate-200 tabular-nums">{{ a.score }}</span>
+          <span class="text-base font-extrabold text-slate-800 dark:text-slate-200 tabular-nums">{{ a.score }}<span v-if="slug !== 'toeic-lr'" class="text-xs font-bold text-slate-400 dark:text-slate-500">%</span></span>
         </li>
       </ul>
     </div>

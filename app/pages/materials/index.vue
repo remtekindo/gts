@@ -81,21 +81,23 @@ onMounted(async () => {
       </template>
     </div>
 
-    <h2 class="mt-12 text-lg font-bold text-slate-900 dark:text-slate-100">{{ t('hub.comingSoon') }}</h2>
-    <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">{{ t('hub.comingSoonSub') }}</p>
-    <div class="mt-4 grid gap-5 md:grid-cols-2">
-      <div
-        v-for="m in comingSoon"
-        :key="m.slug"
-        class="bg-white dark:bg-slate-900 rounded-2xl border border-dashed border-slate-300 dark:border-slate-600 p-6 opacity-80"
-      >
-        <div class="flex items-start justify-between gap-3">
-          <span class="w-12 h-12 rounded-xl bg-slate-200 text-slate-500 dark:text-slate-400 font-extrabold flex items-center justify-center text-sm">{{ m.badge }}</span>
-          <span class="text-xs font-semibold px-2.5 py-1 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400">{{ t('hub.comingSoon') }}</span>
+    <template v-if="comingSoon.length">
+      <h2 class="mt-12 text-lg font-bold text-slate-900 dark:text-slate-100">{{ t('hub.comingSoon') }}</h2>
+      <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">{{ t('hub.comingSoonSub') }}</p>
+      <div class="mt-4 grid gap-5 md:grid-cols-2">
+        <div
+          v-for="m in comingSoon"
+          :key="m.slug"
+          class="bg-white dark:bg-slate-900 rounded-2xl border border-dashed border-slate-300 dark:border-slate-600 p-6 opacity-80"
+        >
+          <div class="flex items-start justify-between gap-3">
+            <span class="w-12 h-12 rounded-xl bg-slate-200 text-slate-500 dark:text-slate-400 font-extrabold flex items-center justify-center text-sm">{{ m.badge }}</span>
+            <span class="text-xs font-semibold px-2.5 py-1 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400">{{ t('hub.comingSoon') }}</span>
+          </div>
+          <h3 class="mt-4 text-lg font-bold text-slate-700 dark:text-slate-200">{{ m.name }}</h3>
+          <p class="mt-1 text-sm text-slate-400 dark:text-slate-500">{{ m.description }}</p>
         </div>
-        <h3 class="mt-4 text-lg font-bold text-slate-700 dark:text-slate-200">{{ m.name }}</h3>
-        <p class="mt-1 text-sm text-slate-400 dark:text-slate-500">{{ m.description }}</p>
       </div>
-    </div>
+    </template>
   </div>
 </template>

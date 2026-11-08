@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { MATERIALS } from '~/data/mock'
+import { MATERIALS, hasQuestions } from '~/data/mock'
 import { PACKAGES, formatPriceIdr, getPackage, requiredMaterialCount, type PackageId } from '~/utils/pricing'
 import { fetchSessionState, loginWithGoogle } from '~/utils/server-auth'
 import { postLoginPath } from '~/utils/navigation'
@@ -61,7 +61,14 @@ interface OrderView {
   activatedAt: string | null
 }
 
-const ownedMaterials = computed(() => MATERIALS.filter(m => m.status === 'owned'))
+/**
+ * Materials the buyer may pick: owned AND with real questions in
+ * the bank. A question-less material (TOEFL/IELTS today) is never
+ * offered for sale — it joins this list automatically the moment
+ * its first questions land. The server enforces the same rule
+ * (PURCHASABLE_MATERIAL_SLUGS), so a forged request is refused.
+ */
+const ownedMaterials = computed(() => MATERIALS.filter(m => m.status === 'owned' && hasQuestions(m.slug)))
 const signedIn = ref(false)
 const dashboardTo = ref('/auth')
 

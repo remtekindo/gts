@@ -107,6 +107,7 @@ export default {
     performance: 'Performance',
     journey: 'Performance Journey',
     journeySub: 'Your predicted score trend across attempts.',
+    journeySubAccuracy: 'Your accuracy trend across attempts.',
     scoreEstimate: 'Estimated score — real ETS scoring is not linear.',
     noSimScore: 'Take a Simulation to see your overall score.',
     continueTitle: 'Continue from where you left off',
@@ -120,6 +121,7 @@ export default {
     seeAllTests: 'See all tests',
     lastScore: 'Last score',
     noScoreYet: 'No score yet — take your first test.',
+    noQuestionsYet: 'Questions for this material are being prepared — check back later.',
   },
   liveTest: {
     title: 'Live Test with AI',
@@ -180,7 +182,9 @@ export default {
     lockedReason: 'Complete {name} to unlock',
     diffBeginner: 'Beginner',
     diffIntermediate: 'Intermediate',
-    diffAdvanced: 'Advanced'
+    diffAdvanced: 'Advanced',
+    noQuestionsYet: 'Questions for this test are being prepared.',
+    viewDetail: 'View details'
   },
   overview: {
     crumbPapers: 'All Tests',
@@ -230,7 +234,9 @@ export default {
     skillSpeaking: 'Speaking',
     skillWriting: 'Writing',
     lockedTitle: 'This test is locked',
-    backToPaper: 'Back to paper'
+    backToPaper: 'Back to paper',
+    noQuestionsTitle: 'No questions yet',
+    noQuestionsText: 'Questions for this test are being prepared. Check back later.'
   },
   result: {
     crumbOverview: 'Test Detail',

@@ -31,6 +31,16 @@
  * Free tests and live tests are never submitted to D1, so they never
  * appear here — only finished bank papers (kind 'simulation' /
  * 'drill', valid correct/total).
+ *
+ * TOEIC scale scoping: the round5(10 + accuracy × 980) mapping and
+ * the ETS CEFR bands are the TOEIC LR scale — they apply ONLY to
+ * toeic-lr. Other materials have their own scales (TOEFL 1–6,
+ * IELTS 1–9) which do not exist in this build yet, so a non-TOEIC
+ * material gets NO overall score and NO CEFR (bestSim is null), and
+ * its journey points carry accuracy % (0–100) instead of a TOEIC
+ * number. The journey chart plots those points on a 0–100 scale
+ * (`mode="accuracy"`). When a material's real scale lands, add it
+ * here — never reuse the TOEIC mapping for another test.
  */
 
 export interface PartScore {
@@ -181,9 +191,13 @@ export function hasSkills(skills: SkillBreakdown | null): boolean {
 export function buildPerformance(rows: PerfRow[], materialSlug: string): PerformanceData {
   const valid = rows.filter(r => Number.isInteger(r.correct) && Number.isInteger(r.total) && r.total > 0 && r.correct >= 0 && r.correct <= r.total)
   const sorted = [...valid].sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0))
+  // The TOEIC scale applies ONLY to toeic-lr (see the header
+  // comment): other materials' journey points are accuracy %,
+  // never a TOEIC number.
+  const toeicScale = materialSlug === 'toeic-lr'
   const attempts: PerfAttempt[] = sorted.map(r => ({
     date: r.date,
-    score: accuracyToScore(r.correct / r.total),
+    score: toeicScale ? accuracyToScore(r.correct / r.total) : Math.round((r.correct / r.total) * 100),
     kind: r.kind,
     paperId: r.paperId
   }))
@@ -197,7 +211,7 @@ export function buildPerformance(rows: PerfRow[], materialSlug: string): Perform
     // Highest accuracy wins; on a tie the most recent attempt wins.
     if (acc > bestAcc || (acc === bestAcc && r.date >= best.date)) best = r
   }
-  const bestSim: BestSim | null = best
+  const bestSim: BestSim | null = best && toeicScale
     ? {
         accuracy: Math.round((best.correct / best.total) * 100),
         score: accuracyToScore(best.correct / best.total),

@@ -80,18 +80,18 @@ export const MATERIALS: Material[] = [
   {
     slug: 'toefl-ibt',
     name: 'TOEFL iBT',
-    tagline: 'Coming soon.',
+    tagline: 'Four skills, one adaptive test.',
     description: 'Reading, Listening, Speaking, and Writing simulations for TOEFL iBT.',
     badge: 'EN',
-    status: 'coming-soon',
+    status: 'owned',
   },
   {
     slug: 'ielts-academic',
     name: 'IELTS Academic',
-    tagline: 'Coming soon.',
+    tagline: 'Four sections, bands 1–9.',
     description: 'Academic Reading, Listening, Writing, and Speaking practice for IELTS.',
     badge: 'EN',
-    status: 'coming-soon',
+    status: 'owned',
   }
 ]
 
@@ -116,7 +116,15 @@ export const PARTS: PartInfo[] = [
   { materialSlug: 'toeic-lr', part: 6, skill: 'reading', label: 'Text Completion', description: 'Read the passage and choose the best word or phrase for each blank.' },
   { materialSlug: 'toeic-lr', part: 7, skill: 'reading', label: 'Reading Comprehension', description: 'Read the passage and choose the best answer to each question.' },
   { materialSlug: 'toeic-sw', part: 1, skill: 'speaking', label: 'Respond to Questions', description: 'Choose the most natural spoken response to each question.' },
-  { materialSlug: 'toeic-sw', part: 2, skill: 'writing', label: 'Sentence Choice', description: 'Choose the best sentence for each writing task.' }
+  { materialSlug: 'toeic-sw', part: 2, skill: 'writing', label: 'Sentence Choice', description: 'Choose the best sentence for each writing task.' },
+  { materialSlug: 'toefl-ibt', part: 1, skill: 'reading', label: 'Reading', description: 'Complete the Words, Read in Daily Life, and Read an Academic Passage.' },
+  { materialSlug: 'toefl-ibt', part: 2, skill: 'listening', label: 'Listening', description: 'Listen and choose a response: conversations, announcements, and academic talks.' },
+  { materialSlug: 'toefl-ibt', part: 3, skill: 'speaking', label: 'Speaking', description: 'Listen and Repeat, then Take an Interview.' },
+  { materialSlug: 'toefl-ibt', part: 4, skill: 'writing', label: 'Writing', description: 'Build a Sentence, Write an Email, and Write for an Academic Discussion.' },
+  { materialSlug: 'ielts-academic', part: 1, skill: 'listening', label: 'Listening', description: '4 parts, 40 questions — each recording plays once.' },
+  { materialSlug: 'ielts-academic', part: 2, skill: 'reading', label: 'Reading', description: '3 academic passages, 40 questions.' },
+  { materialSlug: 'ielts-academic', part: 3, skill: 'writing', label: 'Writing', description: 'Task 1: describe a chart or diagram (150+ words). Task 2: essay (250+ words).' },
+  { materialSlug: 'ielts-academic', part: 4, skill: 'speaking', label: 'Speaking', description: '3-part interview with an examiner, 11–14 minutes.' }
 ]
 
 const AUDIO_NOTE = 'No audio — no recording yet.'
@@ -440,6 +448,16 @@ export function questionsForMaterial(slug: string): Question[] {
   return QUESTIONS.filter(q => q.materialSlug === slug)
 }
 
+/**
+ * True when the bank holds at least one question for the material.
+ * Checkout offers only materials with questions — a material with
+ * an empty bank is never sold, and it becomes purchasable
+ * automatically the moment its first questions land (no code change).
+ */
+export function hasQuestions(slug: string): boolean {
+  return questionsForMaterial(slug).length > 0
+}
+
 export function partsForMaterial(slug: string): PartInfo[] {
   return PARTS.filter(p => p.materialSlug === slug)
 }
@@ -507,6 +525,96 @@ export const PAPERS: Paper[] = [
     skillsLabel: 'Speaking & Writing',
     durationMinutes: 30,
     difficulty: 'Beginner',
+  },
+  {
+    id: 'toefl-ibt-sim-01',
+    materialSlug: 'toefl-ibt',
+    title: 'TOEFL iBT — Simulasi 01',
+    category: 'Full Simulation',
+    skillsLabel: 'Reading & Listening',
+    durationMinutes: 59,
+    difficulty: 'Intermediate',
+  },
+  {
+    id: 'toefl-reading-drill',
+    materialSlug: 'toefl-ibt',
+    title: 'Latihan Reading',
+    category: 'Drill Pack',
+    skillsLabel: 'Reading',
+    durationMinutes: 30,
+    difficulty: 'Intermediate',
+  },
+  {
+    id: 'toefl-listening-drill',
+    materialSlug: 'toefl-ibt',
+    title: 'Latihan Listening',
+    category: 'Drill Pack',
+    skillsLabel: 'Listening',
+    durationMinutes: 29,
+    difficulty: 'Intermediate',
+  },
+  {
+    id: 'toefl-writing-paper',
+    materialSlug: 'toefl-ibt',
+    title: 'Latihan Writing',
+    category: 'Drill Pack',
+    skillsLabel: 'Writing',
+    durationMinutes: 23,
+    difficulty: 'Intermediate',
+  },
+  {
+    id: 'toefl-speaking-paper',
+    materialSlug: 'toefl-ibt',
+    title: 'Latihan Speaking',
+    category: 'Drill Pack',
+    skillsLabel: 'Speaking',
+    durationMinutes: 8,
+    difficulty: 'Intermediate',
+  },
+  {
+    id: 'ielts-academic-sim-01',
+    materialSlug: 'ielts-academic',
+    title: 'IELTS Academic — Simulasi 01',
+    category: 'Full Simulation',
+    skillsLabel: 'Listening & Reading',
+    durationMinutes: 90,
+    difficulty: 'Intermediate',
+  },
+  {
+    id: 'ielts-listening-drill',
+    materialSlug: 'ielts-academic',
+    title: 'Latihan Listening',
+    category: 'Drill Pack',
+    skillsLabel: 'Listening',
+    durationMinutes: 30,
+    difficulty: 'Intermediate',
+  },
+  {
+    id: 'ielts-reading-drill',
+    materialSlug: 'ielts-academic',
+    title: 'Latihan Reading',
+    category: 'Drill Pack',
+    skillsLabel: 'Reading',
+    durationMinutes: 60,
+    difficulty: 'Intermediate',
+  },
+  {
+    id: 'ielts-writing-paper',
+    materialSlug: 'ielts-academic',
+    title: 'Latihan Writing',
+    category: 'Drill Pack',
+    skillsLabel: 'Writing',
+    durationMinutes: 60,
+    difficulty: 'Intermediate',
+  },
+  {
+    id: 'ielts-speaking-paper',
+    materialSlug: 'ielts-academic',
+    title: 'Latihan Speaking',
+    category: 'Drill Pack',
+    skillsLabel: 'Speaking',
+    durationMinutes: 14,
+    difficulty: 'Intermediate',
   }
 ]
 

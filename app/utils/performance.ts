@@ -7,6 +7,11 @@
  * source of truth — keep both in sync; the unit script
  * `gts-performance-real-data-evidence/performance-unit.mjs` asserts
  * they agree on every boundary value.
+ *
+ * TOEIC scale scoping (mirrors the server file): the TOEIC mapping
+ * and CEFR bands apply ONLY to toeic-lr. Other materials get NO
+ * overall score/CEFR (bestSim is null) and their journey points
+ * carry accuracy % (0–100) — never a TOEIC number.
  */
 import { papersForMaterial } from '~/data/mock'
 import type { TestResult } from '~/utils/storage'
@@ -133,9 +138,13 @@ export function hasSkills(skills: SkillBreakdown | null): boolean {
 export function buildPerformance(rows: PerfRow[], materialSlug: string): PerformanceData {
   const valid = rows.filter(r => Number.isInteger(r.correct) && Number.isInteger(r.total) && r.total > 0 && r.correct >= 0 && r.correct <= r.total)
   const sorted = [...valid].sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0))
+  // The TOEIC scale applies ONLY to toeic-lr (see the header
+  // comment): other materials' journey points are accuracy %,
+  // never a TOEIC number.
+  const toeicScale = materialSlug === 'toeic-lr'
   const attempts: PerfAttempt[] = sorted.map(r => ({
     date: r.date,
-    score: accuracyToScore(r.correct / r.total),
+    score: toeicScale ? accuracyToScore(r.correct / r.total) : Math.round((r.correct / r.total) * 100),
     kind: r.kind,
     paperId: r.paperId
   }))
@@ -148,7 +157,7 @@ export function buildPerformance(rows: PerfRow[], materialSlug: string): Perform
     const bestAcc = best.correct / best.total
     if (acc > bestAcc || (acc === bestAcc && r.date >= best.date)) best = r
   }
-  const bestSim: BestSim | null = best
+  const bestSim: BestSim | null = best && toeicScale
     ? {
         accuracy: Math.round((best.correct / best.total) * 100),
         score: accuracyToScore(best.correct / best.total),

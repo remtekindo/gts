@@ -30,6 +30,13 @@ const cta = computed(() => {
   if (props.status === 'in-progress') return { label: t('papers.continue'), to: `${props.base}/papers/${props.paper.id}` }
   return { label: t('papers.startTest'), to: `${props.base}/papers/${props.paper.id}` }
 })
+
+/** No questions in the bank yet: the card never shows a fabricated
+ * count ("0 soal" is honest but useless) and never offers Start —
+ * it states plainly that the questions are being prepared and links
+ * to the detail page, where the real test format is described. */
+const questionCount = computed(() => realQuestionCount(props.paper))
+const noQuestions = computed(() => questionCount.value === 0)
 </script>
 
 <template>
@@ -62,7 +69,8 @@ const cta = computed(() => {
         </div>
         <div class="flex items-center gap-1.5">
           <dt class="sr-only">Questions</dt>
-          <dd>{{ realQuestionCount(paper) }} {{ t('papers.questions') }}</dd>
+          <dd v-if="noQuestions" class="font-semibold text-amber-700 dark:text-amber-300">{{ t('papers.noQuestionsYet') }}</dd>
+          <dd v-else>{{ questionCount }} {{ t('papers.questions') }}</dd>
         </div>
         <div class="flex items-center gap-1.5">
           <dt class="sr-only">Difficulty</dt>
@@ -70,12 +78,23 @@ const cta = computed(() => {
         </div>
       </dl>
       <NuxtLink
-        v-if="!locked"
+        v-if="!locked && !noQuestions"
         :to="cta.to"
         class="mt-auto w-full text-center text-sm font-semibold px-4 py-2.5 rounded-xl bg-blue-600 text-white hover:bg-blue-700 transition-colors"
       >
         {{ cta.label }}
       </NuxtLink>
+      <div v-else-if="!locked" class="mt-auto">
+        <p class="text-xs text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/40 rounded-xl px-3 py-2">
+          {{ t('papers.noQuestionsYet') }}
+        </p>
+        <NuxtLink
+          :to="`${base}/papers/${paper.id}`"
+          class="mt-2 block w-full text-center text-sm font-semibold px-4 py-2.5 rounded-xl border border-blue-600 text-blue-600 hover:bg-blue-50 transition-colors"
+        >
+          {{ t('papers.viewDetail') }}
+        </NuxtLink>
+      </div>
       <div v-else class="mt-auto">
         <p class="text-xs text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/40 rounded-xl px-3 py-2">
           {{ t('papers.lockedReason', { name: unlockAfter }) }}

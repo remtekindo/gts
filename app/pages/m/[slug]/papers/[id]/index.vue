@@ -49,7 +49,13 @@ function defaultAttempt(): number {
   return 1
 }
 const attempt = ref(defaultAttempt())
-const startDisabled = computed(() => paperLock.value.locked || attemptLocked(attempt.value))
+/** Start is disabled while the paper/attempt is locked — and while
+ * the bank holds no questions for this paper at all (TOEFL/IELTS
+ * today): the user is told plainly the questions are being prepared,
+ * never offered a test with nothing in it. */
+const questionCount = computed(() => realQuestionCount(paper.value))
+const noQuestions = computed(() => questionCount.value === 0)
+const startDisabled = computed(() => noQuestions.value || paperLock.value.locked || attemptLocked(attempt.value))
 const attempted = computed(() =>
   !!result.value || hasSavedAnswers.value || activity.completedPaperIds.includes(paper.value.id)
 )
@@ -110,7 +116,7 @@ const difficultyLabel = computed(() =>
         <p class="mt-4 text-[11px] font-semibold uppercase tracking-widest text-blue-300">{{ paper.category === 'Full Simulation' ? t('papers.fullSim') : t('papers.drillPack') }}</p>
         <h1 class="mt-1 text-2xl md:text-3xl font-extrabold">{{ paper.title }}</h1>
         <p class="mt-2 text-sm text-slate-300">
-          {{ paper.durationMinutes }} {{ t('overview.minutes') }} · {{ realQuestionCount(paper) }} {{ t('overview.questions') }} · {{ difficultyLabel }}
+          {{ paper.durationMinutes }} {{ t('overview.minutes') }} · <span v-if="noQuestions" class="font-semibold text-amber-300">{{ t('papers.noQuestionsYet') }}</span><span v-else>{{ questionCount }} {{ t('overview.questions') }}</span> · {{ difficultyLabel }}
         </p>
       </div>
     </div>
@@ -141,7 +147,10 @@ const difficultyLabel = computed(() =>
                 {{ t('overview.attempt') }} {{ n }}
               </button>
             </div>
-            <p v-if="paperLock.locked" class="w-full text-sm text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/40 rounded-xl px-3 py-2">
+            <p v-if="noQuestions" class="w-full text-sm text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/40 rounded-xl px-3 py-2">
+              {{ t('papers.noQuestionsYet') }}
+            </p>
+            <p v-else-if="paperLock.locked" class="w-full text-sm text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/40 rounded-xl px-3 py-2">
               {{ t('papers.lockedReason', { name: paperLockName }) }}
             </p>
             <p v-else-if="nextLockedAttempt" class="w-full text-sm text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/40 rounded-xl px-3 py-2">

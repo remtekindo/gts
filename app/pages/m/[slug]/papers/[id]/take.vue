@@ -21,6 +21,13 @@ const paper = computed(() => getPaperOrFallback(paperId.value))
 const attempt = computed(() => Number(route.query.attempt ?? 1) || 1)
 
 const questions = computed(() => questionsForMaterial(slug.value))
+
+/** No questions in the bank for this material yet (TOEFL/IELTS
+ * today): the test can never start — `current` would be undefined
+ * and the template would crash on `current.part`. The page refuses
+ * with a plain message instead (the server also refuses the submit:
+ * total <= 0 is a 400). */
+const noQuestions = computed(() => questions.value.length === 0)
 const paletteParts = computed(() =>
   materialParts.value.map(p => ({
     label: `Part ${p.part}`,
@@ -106,6 +113,9 @@ onMounted(async () => {
   await checkLock()
   gateLoading.value = false
   if (lockState.value) return
+  // Nothing to answer yet — the template shows the refusal screen;
+  // do not load (or later save) answers for an empty paper.
+  if (questions.value.length === 0) return
   answers.value = loadAnswers(paper.value.id, attempt.value)
   noteDraft.value = getNote(paper.value.id)
 })
@@ -214,6 +224,21 @@ function saveNotes(): void {
         {{ lockState.code === 'paper-locked'
           ? t('papers.lockedReason', { name: lockState.unlockAfterName ?? '' })
           : t('overview.attemptLockedReason', { prev: attempt - 1, next: attempt }) }}
+      </p>
+      <NuxtLink
+        :to="`${base}/papers/${paper.id}`"
+        class="mt-5 inline-block text-sm font-semibold px-6 py-3 rounded-xl bg-blue-600 text-white hover:bg-blue-700 transition-colors"
+      >
+        {{ t('take.backToPaper') }}
+      </NuxtLink>
+    </div>
+  </div>
+  <div v-else-if="!gateLoading && noQuestions" class="min-h-screen bg-slate-100 dark:bg-slate-800 flex items-center justify-center px-4">
+    <div class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm p-6 md:p-8 max-w-lg w-full text-center">
+      <p class="text-4xl">📝</p>
+      <h1 class="mt-3 text-xl font-extrabold text-slate-800 dark:text-slate-200">{{ t('take.noQuestionsTitle') }}</h1>
+      <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">
+        {{ t('take.noQuestionsText') }}
       </p>
       <NuxtLink
         :to="`${base}/papers/${paper.id}`"

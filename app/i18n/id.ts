@@ -107,6 +107,7 @@ export default {
     performance: 'Performa',
     journey: 'Perjalanan Performa',
     journeySub: 'Tren prediksi skormu di semua percobaan.',
+    journeySubAccuracy: 'Tren akurasimu di semua percobaan.',
     scoreEstimate: 'Estimasi skor — penilaian ETS asli tidak linear.',
     noSimScore: 'Kerjakan Simulasi untuk melihat skor keseluruhanmu.',
     continueTitle: 'Lanjutkan dari terakhirmu',
@@ -120,6 +121,7 @@ export default {
     seeAllTests: 'Lihat semua tes',
     lastScore: 'Skor terakhir',
     noScoreYet: 'Belum ada skor — kerjakan tes pertamamu.',
+    noQuestionsYet: 'Soal untuk materi ini sedang disiapkan — cek lagi nanti.',
   },
   liveTest: {
     title: 'Tes Live dengan AI',
@@ -180,7 +182,9 @@ export default {
     lockedReason: 'Selesaikan {name} untuk membuka',
     diffBeginner: 'Pemula',
     diffIntermediate: 'Menengah',
-    diffAdvanced: 'Lanjutan'
+    diffAdvanced: 'Lanjutan',
+    noQuestionsYet: 'Soal untuk tes ini sedang disiapkan.',
+    viewDetail: 'Lihat Detail'
   },
   overview: {
     crumbPapers: 'Semua Tes',
@@ -230,7 +234,9 @@ export default {
     skillSpeaking: 'Speaking',
     skillWriting: 'Writing',
     lockedTitle: 'Tes ini terkunci',
-    backToPaper: 'Kembali ke paket soal'
+    backToPaper: 'Kembali ke paket soal',
+    noQuestionsTitle: 'Belum ada soal',
+    noQuestionsText: 'Soal untuk tes ini sedang disiapkan. Cek lagi nanti.'
   },
   result: {
     crumbOverview: 'Detail Tes',

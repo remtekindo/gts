@@ -12,10 +12,30 @@
  * grant uses the DEFAULT mapping below: Semesteran = all owned,
  * Triwulanan = first 2 owned, Bulanan = first 1 owned. Manual picks
  * are not reflected server-side — see README § Auth.
+ *
+ * Owned ≠ purchasable: a material is "owned" when its structure
+ * (papers, parts) exists and it can be opened by anyone with a
+ * grant — including a manual admin grant, which is the admin's
+ * explicit choice. It is "purchasable" only when the bank holds real
+ * questions for it (PURCHASABLE_MATERIAL_SLUGS below): checkout
+ * refuses an order containing anything else, so a buyer can never
+ * pay for an empty material. When a material's first questions land,
+ * add its slug to PURCHASABLE_MATERIAL_SLUGS — the checkout picker
+ * (client `hasQuestions`) picks it up with no code change.
  */
 
-/** Slugs of the materials that exist and can be opened. */
-export const OWNED_MATERIAL_SLUGS = ['toeic-lr', 'toeic-sw']
+/** Slugs of the materials that exist and can be opened. Appended at
+ * the end on purpose: the default package mapping takes the FIRST
+ * 1 / 2 owned slugs, so Bulanan stays toeic-lr and Triwulanan stays
+ * toeic-lr + toeic-sw; only Semesteran (all owned) grows. */
+export const OWNED_MATERIAL_SLUGS = ['toeic-lr', 'toeic-sw', 'toefl-ibt', 'ielts-academic']
+
+/** Slugs a buyer may pay for in checkout. A material joins this
+ * list only when the bank holds real questions for it — never
+ * before. The client picker enforces the same rule from the bank
+ * data (`hasQuestions`), so the two can never drift apart silently:
+ * if they disagree, the server wins and the order is refused. */
+export const PURCHASABLE_MATERIAL_SLUGS = ['toeic-lr', 'toeic-sw']
 
 /** Materials open to every signed-in user without a grant. Empty for
  * now: both owned materials are premium; the free entry point is the
@@ -43,6 +63,20 @@ export const PAPERS_BY_MATERIAL: Record<string, Array<{ id: string, kind: 'simul
   'toeic-sw': [
     { id: 'toeic-sw-drill-01', kind: 'drill' },
     { id: 'toeic-sw-drill-02', kind: 'drill' }
+  ],
+  'toefl-ibt': [
+    { id: 'toefl-ibt-sim-01', kind: 'simulation' },
+    { id: 'toefl-reading-drill', kind: 'drill' },
+    { id: 'toefl-listening-drill', kind: 'drill' },
+    { id: 'toefl-writing-paper', kind: 'drill' },
+    { id: 'toefl-speaking-paper', kind: 'drill' }
+  ],
+  'ielts-academic': [
+    { id: 'ielts-academic-sim-01', kind: 'simulation' },
+    { id: 'ielts-listening-drill', kind: 'drill' },
+    { id: 'ielts-reading-drill', kind: 'drill' },
+    { id: 'ielts-writing-paper', kind: 'drill' },
+    { id: 'ielts-speaking-paper', kind: 'drill' }
   ]
 }
 
@@ -58,6 +92,13 @@ export function getPaperEntry(paperId: string): { id: string, kind: 'simulation'
 
 export function isKnownMaterial(slug: string): boolean {
   return OWNED_MATERIAL_SLUGS.includes(slug)
+}
+
+/** True when the material may appear in a paid order (real
+ * questions in the bank). Known but not purchasable = structure
+ * only, no sale. */
+export function isPurchasableMaterial(slug: string): boolean {
+  return PURCHASABLE_MATERIAL_SLUGS.includes(slug)
 }
 
 export function isKnownPackage(pkgId: string): boolean {

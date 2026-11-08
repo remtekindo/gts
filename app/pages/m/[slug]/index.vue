@@ -51,20 +51,27 @@ interface NextAction {
 const nextAction = computed<NextAction | null>(() => {
   if (activity.inProgress) {
     const p = getPaperOrFallback(activity.inProgress.paperId)
-    return {
-      paper: p,
-      to: `${base.value}/papers/${p.id}/take?attempt=${activity.inProgress.attempt}`,
-      label: t('dashboard.resume'),
-      eyebrow: t('dashboard.continueTitle')
+    // Resume only a paper that has questions (an in-progress attempt
+    // implies questions existed — but never offer an empty test).
+    if (realQuestionCount(p) > 0) {
+      return {
+        paper: p,
+        to: `${base.value}/papers/${p.id}/take?attempt=${activity.inProgress.attempt}`,
+        label: t('dashboard.resume'),
+        eyebrow: t('dashboard.continueTitle')
+      }
     }
   }
   for (const p of papers.value) {
+    // Skip papers with no questions in the bank yet (TOEFL/IELTS
+    // today) — the next test must be one the user can actually take.
+    if (realQuestionCount(p) === 0) continue
     const lock = resolvePaperLock(p, papers.value, activity.completedPaperIds)
     if (!lock.locked && !activity.completedPaperIds.includes(p.id)) {
       return { paper: p, to: `${base.value}/papers/${p.id}`, label: t('papers.startTest'), eyebrow: t('dashboard.nextTest') }
     }
   }
-  const first = papers.value[0]
+  const first = papers.value.find(p => realQuestionCount(p) > 0)
   if (!first) return null
   return { paper: first, to: `${base.value}/papers/${first.id}`, label: t('papers.startTest'), eyebrow: t('dashboard.nextTest') }
 })
@@ -99,6 +106,7 @@ const nextAction = computed<NextAction | null>(() => {
           {{ nextAction.label }}
         </NuxtLink>
       </template>
+      <p v-else-if="!activity.loading" class="text-sm text-slate-500 dark:text-slate-400">{{ t('dashboard.noQuestionsYet') }}</p>
       <p v-else class="text-sm text-slate-400 dark:text-slate-500">{{ t('access.loading') }}</p>
     </div>
 

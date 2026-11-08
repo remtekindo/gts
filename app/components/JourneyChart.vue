@@ -1,12 +1,15 @@
 <!-- Journey chart: one point per completed attempt, chronological.
      Each point is that attempt's accuracy mapped to the TOEIC LR scale
-     (round5(10 + accuracy × 980)). X is evenly spaced by attempt order;
-     a single attempt renders as one dot. No demo points ever — the
-     parent renders this only when attempts exist. -->
+     (round5(10 + accuracy × 980)) — `mode="toeic"` (default). For
+     materials without a TOEIC scale, the parent passes
+     `mode="accuracy"` and each point is accuracy % (0–100) on a
+     0–100 axis — never a TOEIC number for another test. X is evenly
+     spaced by attempt order; a single attempt renders as one dot. No
+     demo points ever — the parent renders this only when attempts exist. -->
 <script setup lang="ts">
 import type { PerfAttempt } from '~/utils/performance'
 
-const props = defineProps<{ attempts: PerfAttempt[] }>()
+const props = withDefaults(defineProps<{ attempts: PerfAttempt[], mode?: 'toeic' | 'accuracy' }>(), { mode: 'toeic' })
 
 const W = 300
 const H = 120
@@ -15,6 +18,7 @@ const TOP = 12
 const BOTTOM = 108
 
 function yFor(score: number): number {
+  if (props.mode === 'accuracy') return BOTTOM - (score / 100) * (BOTTOM - TOP)
   return BOTTOM - ((score - 10) / 980) * (BOTTOM - TOP)
 }
 
