@@ -62,13 +62,13 @@ interface OrderView {
 }
 
 /**
- * Materials the buyer may pick: owned AND with real questions in
- * the bank. A question-less material (TOEFL/IELTS today) is never
- * offered for sale — it joins this list automatically the moment
- * its first questions land. The server enforces the same rule
- * (PURCHASABLE_MATERIAL_SLUGS), so a forged request is refused.
+ * Materials the buyer may pick: every owned material. A
+ * question-less material (TOEFL/IELTS today) is listed WITH an
+ * explicit warning on its card and in the summary — the buyer sees
+ * "soal sedang disiapkan" before paying, never after. The server
+ * accepts every owned material (no purchasable gate anymore).
  */
-const ownedMaterials = computed(() => MATERIALS.filter(m => m.status === 'owned' && hasQuestions(m.slug)))
+const ownedMaterials = computed(() => MATERIALS.filter(m => m.status === 'owned'))
 const signedIn = ref(false)
 const dashboardTo = ref('/auth')
 
@@ -605,7 +605,17 @@ onUnmounted(() => {
             </div>
             <div class="flex justify-between gap-3">
               <dt class="text-slate-400 dark:text-slate-500">{{ t('checkout.materials') }}</dt>
-              <dd class="font-semibold text-slate-700 dark:text-slate-200 text-right">{{ order.materials.map(materialName).join(', ') }}</dd>
+              <dd class="font-semibold text-slate-700 dark:text-slate-200 text-right">
+                <ul class="space-y-1.5">
+                  <li v-for="s in order.materials" :key="s">
+                    {{ materialName(s) }}
+                    <span
+                      v-if="!hasQuestions(s)"
+                      class="ml-1 inline-block text-[11px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-200"
+                    >{{ t('checkout.noQuestionsWarning') }}</span>
+                  </li>
+                </ul>
+              </dd>
             </div>
             <div class="flex justify-between gap-3 border-t border-slate-200 dark:border-slate-700 pt-3">
               <dt class="text-slate-400 dark:text-slate-500">{{ t('checkout.total') }}</dt>
@@ -688,6 +698,10 @@ onUnmounted(() => {
             <span>
               <span class="block font-bold text-slate-900 dark:text-slate-100">{{ m.name }}</span>
               <span class="mt-0.5 block text-sm text-slate-500 dark:text-slate-400">{{ m.description }}</span>
+              <span
+                v-if="!hasQuestions(m.slug)"
+                class="mt-2 inline-block text-xs font-semibold px-2.5 py-1 rounded-full bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-200"
+              >{{ t('checkout.noQuestionsWarning') }}</span>
             </span>
           </button>
         </div>
@@ -707,7 +721,16 @@ onUnmounted(() => {
             <div class="flex justify-between gap-3">
               <dt class="text-slate-400 dark:text-slate-500">{{ t('checkout.materials') }}</dt>
               <dd class="font-semibold text-slate-700 dark:text-slate-200 text-right">
-                {{ selected.length === 0 ? '—' : selected.map(materialName).join(', ') }}
+                <span v-if="selected.length === 0">—</span>
+                <ul v-else class="space-y-1.5">
+                  <li v-for="s in selected" :key="s">
+                    {{ materialName(s) }}
+                    <span
+                      v-if="!hasQuestions(s)"
+                      class="ml-1 inline-block text-[11px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-200"
+                    >{{ t('checkout.noQuestionsWarning') }}</span>
+                  </li>
+                </ul>
               </dd>
             </div>
             <div class="flex justify-between gap-3 border-t border-slate-200 dark:border-slate-700 pt-3">

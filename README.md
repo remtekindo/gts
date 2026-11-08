@@ -338,21 +338,14 @@ pretends otherwise.
   unconditionally before, which would have left a dangling empty
   heading once both materials were owned. The hub now shows 4
   material cards and no coming-soon section at all.
-- **Checkout cannot sell empty materials.** The picker
-  (`app/pages/checkout.vue`) offers only materials with real
-  questions in the bank (`hasQuestions`, bank count > 0) — today
-  that is `toeic-lr` + `toeic-sw` only. The server enforces the
-  same rule: new `PURCHASABLE_MATERIAL_SLUGS`
-  (`['toeic-lr', 'toeic-sw']` in `server/utils/catalog.ts`) in
-  `POST /api/orders` validation — an order containing a
-  non-purchasable material is refused 400 `not-purchasable`.
-  TOEFL/IELTS become pickable with **no code change** the moment
-  their first questions land. `OWNED_MATERIAL_SLUGS` has both
-  appended at the end, so the default package mapping is preserved
-  (Bulanan = toeic-lr, Triwulanan = toeic-lr + toeic-sw, Semesteran
-  = all owned). Manual admin grants still offer all owned materials
-  — that is the admin's explicit choice, documented in the catalog
-  comment.
+- **Checkout and empty materials — REVERSED 8 Nov 2026 (see the
+  section below).** This build originally refused to sell
+  question-less materials (picker filtered by `hasQuestions`,
+  server 400 `not-purchasable`). On Rey's instruction
+  ("materi pada halaman checkout juga perlu ditambah kalau begitu")
+  the picker now offers all 4 owned materials, and a question-less
+  one carries an explicit warning instead of a refusal — see "What
+  was built (8 Nov 2026) — checkout offers all owned materials".
 - **Honest empty states, no fake counts.** A 0-question paper card
   shows "Soal untuk tes ini sedang disiapkan." with a "Lihat Detail"
   link instead of a count; the paper detail page disables Start
@@ -402,6 +395,40 @@ pretends otherwise.
   Q1 in 2 taps, result CTAs work, guest checkout → login modal
   still opens. i18n parity EN/ID (line-start key extraction).
   Test users deleted afterwards; local D1 back to 0 rows.
+
+## What was built (8 Nov 2026) — checkout offers all owned materials, with a warning on empty ones (branch `v2`)
+
+Per Rey's instruction ("materi pada halaman checkout juga perlu
+ditambah kalau begitu"), TOEFL iBT and IELTS Academic now appear in
+the checkout material picker — reversing the exclusion built earlier
+the same day, which had refused to sell question-less materials.
+A buyer must never pay for an empty material WITHOUT KNOWING, so
+the protection is now a visible warning, not a refusal.
+
+- **Picker (`app/pages/checkout.vue`):** lists ALL owned materials
+  (4: toeic-lr, toeic-sw, toefl-ibt, ielts-academic) — the
+  `hasQuestions` filter is gone from the list. A question-less
+  material's card carries an amber warning badge before it can be
+  picked: "Soal sedang disiapkan — materi aktif segera setelah soal
+  tersedia." (`checkout.noQuestionsWarning`, EN + ID.) `hasQuestions`
+  is kept and repurposed for exactly this warning logic.
+- **Order summary:** the same warning badge appears next to every
+  selected question-less material in the summary, and again on the
+  QRIS screen's material list — the buyer sees it twice before
+  paying, and again when returning to pay via Profil "Lanjutkan
+  bayar".
+- **Server:** `POST /api/orders` no longer refuses question-less
+  materials — the 400 `not-purchasable` check is removed, and
+  `PURCHASABLE_MATERIAL_SLUGS` / `isPurchasableMaterial()` are
+  deleted from `server/utils/catalog.ts` (no remaining references).
+  The other validations stay: known package, known material slugs
+  (`isKnownMaterial`), material count matches the package (Bulanan
+  1, Triwulanan 2, Semesteran all 4 owned — the count is now
+  computed from `OWNED_MATERIAL_SLUGS.length`), price computed
+  server-side from the shared table.
+- **Explicitly NOT built:** the questions themselves (bank still 0
+  for TOEFL/IELTS — see the generation specs doc); no payment
+  gateway (unchanged).
 
 ## What is NOT built yet
 
@@ -726,9 +753,11 @@ login was built the same day and replaced before it ever deployed).
     with its button disabled and one line explaining why.
   - Live Test: the dashboard button is enabled only after one
     completed test anywhere; on the live-test page itself the locked
-    banner appears only when the user presses "Start live test" while
-    still locked (never on page load — the button stays enabled until
-    then), and the server refuses generation (403 `no-completed-test`,
+    banner appears as soon as the page is opened (the Live Test
+    menu/tab press — corrected 8 Nov 2026; it previously appeared
+    only after pressing "Start live test", which was the wrong
+    trigger), and the Start button is disabled while the banner
+    shows. The server refuses generation (403 `no-completed-test`,
     see above) — the client button alone is not the gate.
   - Performance page + dashboard Performance card: empty (no journey,
     no score, no radar) until the user has a finished paper in that

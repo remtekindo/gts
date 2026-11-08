@@ -450,9 +450,11 @@ export function questionsForMaterial(slug: string): Question[] {
 
 /**
  * True when the bank holds at least one question for the material.
- * Checkout offers only materials with questions — a material with
- * an empty bank is never sold, and it becomes purchasable
- * automatically the moment its first questions land (no code change).
+ * Checkout lists ALL owned materials and marks a question-less one
+ * with an explicit warning instead of hiding it — a buyer must see
+ * "soal sedang disiapkan" on the card and in the summary before
+ * paying. The warning uses this helper; the server no longer
+ * refuses question-less materials (see server/utils/catalog.ts).
  */
 export function hasQuestions(slug: string): boolean {
   return questionsForMaterial(slug).length > 0

@@ -46,17 +46,16 @@ const history = ref<AnsweredQuestion[]>([])
 
 /** Live Test unlocks only after one finished paper anywhere (see
  * GET /api/results/activity and the server gate in
- * POST /api/live-test/generate). The locked banner is NOT shown on
- * load — it appears only when the user presses "Start live test"
- * while still locked, and the Start button is disabled from then
- * on. The server gate stays the enforcement point, so the lock
- * cannot be bypassed from the client alone. */
+ * POST /api/live-test/generate). Per Rey's instruction, the locked
+ * banner appears as soon as the Live Test menu/tab is opened — its
+ * trigger is opening this page, NOT pressing "Start live test".
+ * The server gate stays the enforcement point, so the lock cannot
+ * be bypassed from the client alone. */
 const activity = useMaterialActivity(slug.value)
 const isLocked = computed(() => !activity.loading && !activity.hasCompleted)
-/** Set the first time a locked user presses Start; the banner shows
- * only once this is true (never on page load). */
-const lockRevealed = ref(false)
-const showLockedBanner = computed(() => isLocked.value && lockRevealed.value)
+/** The banner shows whenever the gate has resolved to locked (see
+ * isLocked) — no extra flag, no Start press needed. */
+const showLockedBanner = computed(() => isLocked.value)
 
 const current = computed((): AnsweredQuestion | null => batch.value[idx.value] ?? null)
 const answeredInBatch = computed(() => batch.value.filter(q => answers.value[q.qid]).length)
@@ -107,8 +106,9 @@ async function fetchBatch(): Promise<void> {
     const data = (e as { data?: { data?: { code?: string }, code?: string } }).data
     const code = data?.data?.code || data?.code
     if (status === 403 && code === 'no-completed-test') {
-      // Server is authoritative: show the locked banner, not a red error.
-      lockRevealed.value = true
+      // Server is authoritative: the locked banner is already
+      // visible (it shows on page open for locked users), so just
+      // show no red error here.
     }
     else if (status === 401) error.value = t('liveTest.errorAuth')
     else if (status === 429) error.value = t('liveTest.errorRateLimit')
@@ -138,7 +138,8 @@ function waitForGate(): Promise<void> {
 async function start(): Promise<void> {
   await waitForGate()
   if (!activity.hasCompleted) {
-    lockRevealed.value = true
+    // Locked: the banner is already visible (it shows on page
+    // open), so there is nothing more to reveal — just don't start.
     return
   }
   history.value = []
@@ -182,12 +183,12 @@ function playAgain(): void {
 
 <template>
   <div class="max-w-3xl mx-auto">
-    <!-- Locked banner: no finished paper yet. It appears ONLY after
-         the user presses "Start live test" (see lockRevealed), never
-         on page load. The Start button is disabled once the banner
-         shows; the server refuses generation as well
-         (403 no-completed-test), so the lock cannot be bypassed
-         from the client alone. -->
+    <!-- Locked banner: no finished paper yet. It appears as soon as
+         this page is opened (the Live Test menu/tab press), never
+         waiting for "Start live test" — per Rey's instruction.
+         The Start button is disabled while the banner shows; the
+         server refuses generation as well (403 no-completed-test),
+         so the lock cannot be bypassed from the client alone. -->
     <div
       v-if="showLockedBanner"
       class="mb-5 rounded-2xl border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-950/40 p-5"

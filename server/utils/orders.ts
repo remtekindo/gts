@@ -14,7 +14,7 @@
  * expiry is also not enforced (duration_months is recorded only).
  */
 import { getPackage, requiredMaterialCount, type PackageId } from '../../app/utils/pricing'
-import { PURCHASABLE_MATERIAL_SLUGS, isKnownMaterial, isPurchasableMaterial } from './catalog'
+import { OWNED_MATERIAL_SLUGS, isKnownMaterial } from './catalog'
 import type { D1Database } from './d1'
 import { grantMaterials } from './user-store'
 
@@ -132,13 +132,13 @@ export function validateOrderDraft(
   if (slugs.some(s => !isKnownMaterial(s))) {
     return { ok: false, code: 'unknown-material', message: 'Unknown material in the order.' }
   }
-  // Owned but question-less materials (TOEFL/IELTS today) can be
-  // opened by a manual admin grant, but never sold — the buyer would
-  // pay for an empty test.
-  if (slugs.some(s => !isPurchasableMaterial(s))) {
-    return { ok: false, code: 'not-purchasable', message: 'This material has no questions yet.' }
-  }
-  const required = requiredMaterialCount(pkg, PURCHASABLE_MATERIAL_SLUGS.length)
+  // Every owned material may be ordered — including a question-less
+  // one (TOEFL/IELTS today). The buyer is warned on the checkout
+  // card and in the summary ("soal sedang disiapkan") before paying;
+  // there is no server-side refusal for empty materials anymore
+  // (the old 400 `not-purchasable` was removed on Rey's instruction,
+  // 8 Nov 2026). Only unknown slugs are refused.
+  const required = requiredMaterialCount(pkg, OWNED_MATERIAL_SLUGS.length)
   if (slugs.length !== required) {
     return {
       ok: false,
@@ -149,7 +149,7 @@ export function validateOrderDraft(
     }
   }
   if (pkg.materialLimit === 'all') {
-    const missing = PURCHASABLE_MATERIAL_SLUGS.filter(s => !slugs.includes(s))
+    const missing = OWNED_MATERIAL_SLUGS.filter(s => !slugs.includes(s))
     if (missing.length > 0) {
       return { ok: false, code: 'wrong-material-count', message: 'This package includes all materials.' }
     }

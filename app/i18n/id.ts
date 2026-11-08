@@ -349,6 +349,7 @@ export default {
     months: '{n} bulan',
     materials: 'Materi',
     allMaterials: 'Semua materi',
+    noQuestionsWarning: 'Soal sedang disiapkan — materi aktif segera setelah soal tersedia.',
     total: 'Total',
     cta: 'Lanjut ke Pembayaran',
     loginNote: 'Kamu akan diminta masuk dengan Google untuk menyimpan pesanan.',

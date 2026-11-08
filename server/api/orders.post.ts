@@ -4,10 +4,12 @@
  * Body: { package, materials }. The price is NEVER taken from the
  * client: it is computed server-side from the shared price table
  * (app/utils/pricing.ts). Material count must match the package
- * (Bulanan 1, Triwulanan 2, Semesteran all PURCHASABLE materials)
- * and every slug must be purchasable — a known material with no
- * questions yet (TOEFL/IELTS today) is refused with 400
- * `not-purchasable`, so a buyer can never pay for an empty test.
+ * (Bulanan 1, Triwulanan 2, Semesteran all owned materials) and
+ * every slug must be a known owned material. A question-less
+ * material (TOEFL/IELTS today) may be ordered — the buyer is warned
+ * on the checkout card and in the summary ("soal sedang disiapkan")
+ * before paying; there is no `not-purchasable` refusal anymore
+ * (removed on Rey's instruction, 8 Nov 2026).
  * The order starts as `pending_payment` — materials unlock only
  * when an admin approves it (POST /api/admin/orders/approve).
  *

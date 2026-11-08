@@ -349,6 +349,7 @@ export default {
     months: '{n} months',
     materials: 'Materials',
     allMaterials: 'All materials',
+    noQuestionsWarning: 'Questions being prepared — the material activates as soon as questions are available.',
     total: 'Total',
     cta: 'Continue to Payment',
     loginNote: 'You will be asked to sign in with Google to save your order.',
